@@ -107,7 +107,7 @@
 
 
 
-  <meta name="keywords" content="phantomjs,爬虫,网页快照,javascript,java," />
+  <meta name="keywords" content="java,phantomjs,爬虫,网页快照,javascript," />
 
 
 
@@ -120,7 +120,7 @@
 
 
 
-<meta name="keywords" content="phantomjs,爬虫,网页快照,javascript,java">
+<meta name="keywords" content="java,phantomjs,爬虫,网页快照,javascript">
 <meta property="og:type" content="article">
 <meta property="og:title" content="java调用phantomjs爬取网页及快照">
 <meta property="og:url" content="http://blog.midaug.win/20180129.html">
@@ -402,6 +402,16 @@
 
           
             
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/20180129.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/20180129.html" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
           
 
           
@@ -539,6 +549,8 @@
       
         <div class="post-tags">
           
+            <a href="/tags/java/" rel="tag"># java</a>
+          
             <a href="/tags/phantomjs/" rel="tag"># phantomjs</a>
           
             <a href="/tags/爬虫/" rel="tag"># 爬虫</a>
@@ -546,8 +558,6 @@
             <a href="/tags/网页快照/" rel="tag"># 网页快照</a>
           
             <a href="/tags/javascript/" rel="tag"># javascript</a>
-          
-            <a href="/tags/java/" rel="tag"># java</a>
           
         </div>
       
@@ -620,9 +630,7 @@
 
   
     <div class="comments" id="comments">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8zMjU1MC85MTEx"></div>
     </div>
-
   
 
 
@@ -976,26 +984,37 @@
 
 
   
-    <script type="text/javascript">
-      (function(d, s) {
-        var j, e = d.getElementsByTagName(s)[0];
-        if (typeof LivereTower === 'function') { return; }
-        j = d.createElement(s);
-        j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-        j.async = true;
-        e.parentNode.insertBefore(j, e);
-      })(document, 'script');
-    </script>
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
   
-
-
-
-
-
-
-
-
-
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: true,
+        appId: '3tlRgmzQ55PKWiaSUEhvVWO7-gzGzoHsz',
+        appKey: 'xu2JzhVkQpM24AzLAsGtMPhz',
+        placeholder: 'Just go go',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
 
 
 

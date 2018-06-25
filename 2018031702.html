@@ -107,7 +107,7 @@
 
 
 
-  <meta name="keywords" content="java,leetCode,算法," />
+  <meta name="keywords" content="leetCode,算法,java," />
 
 
 
@@ -121,7 +121,7 @@
 
 
 <meta name="description" content="题目内容给定一个范围为32 位 int 的整数，将其颠倒。例 1:输入: 123输出: 321例 2:输入: -123输出: -321例 3:输入: 120输出: 21注意:假设我们的环境只能处理 32 位 int 范围内的整数。根据这个假设，如果颠倒后的结果超过这个范围，则返回 0。">
-<meta name="keywords" content="java,leetCode,算法">
+<meta name="keywords" content="leetCode,算法,java">
 <meta property="og:type" content="article">
 <meta property="og:title" content="leetCode习题(简单难度)-int数值翻转">
 <meta property="og:url" content="http://blog.midaug.win/2018031702.html">
@@ -403,6 +403,16 @@
 
           
             
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018031702.html#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count valine-comment-count" data-xid="/2018031702.html" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
           
 
           
@@ -519,11 +529,11 @@
       
         <div class="post-tags">
           
-            <a href="/tags/java/" rel="tag"># java</a>
-          
             <a href="/tags/leetCode/" rel="tag"># leetCode</a>
           
             <a href="/tags/算法/" rel="tag"># 算法</a>
+          
+            <a href="/tags/java/" rel="tag"># java</a>
           
         </div>
       
@@ -592,9 +602,7 @@
 
   
     <div class="comments" id="comments">
-      <div id="lv-container" data-id="city" data-uid="MTAyMC8zMjU1MC85MTEx"></div>
     </div>
-
   
 
 
@@ -948,26 +956,37 @@
 
 
   
-    <script type="text/javascript">
-      (function(d, s) {
-        var j, e = d.getElementsByTagName(s)[0];
-        if (typeof LivereTower === 'function') { return; }
-        j = d.createElement(s);
-        j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
-        j.async = true;
-        e.parentNode.insertBefore(j, e);
-      })(document, 'script');
-    </script>
+
+
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
   
-
-
-
-
-
-
-
-
-
+  <script type="text/javascript">
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item=>{
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: true,
+        appId: '3tlRgmzQ55PKWiaSUEhvVWO7-gzGzoHsz',
+        appKey: 'xu2JzhVkQpM24AzLAsGtMPhz',
+        placeholder: 'Just go go',
+        avatar:'mm',
+        guest_info:guest,
+        pageSize:'10' || 10,
+    });
+  </script>
 
 
 
