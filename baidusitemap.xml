@@ -27,7 +27,6 @@
     
     
     
-    
   <url>
     <loc>http://blog.midaug.win/2018031702.html</loc>
     <lastmod>2018-05-10T09:28:46.888Z</lastmod>
@@ -36,11 +35,11 @@
         <title>leetCode习题(简单难度)-int数值翻转</title>
         <pubTime>2018-03-17T06:33:33.000Z</pubTime>
         
+        <tag>java</tag>
+         
         <tag>leetCode</tag>
          
         <tag>算法</tag>
-         
-        <tag>java</tag>
          
          
            
@@ -52,6 +51,7 @@
     </url>
 
     
+    
   <url>
     <loc>http://blog.midaug.win/20180129.html</loc>
     <lastmod>2018-05-10T09:28:46.886Z</lastmod>
@@ -60,8 +60,6 @@
         <title>java调用phantomjs爬取网页及快照</title>
         <pubTime>2018-01-29T13:11:33.000Z</pubTime>
         
-        <tag>java</tag>
-         
         <tag>phantomjs</tag>
          
         <tag>爬虫</tag>
@@ -69,6 +67,8 @@
         <tag>网页快照</tag>
          
         <tag>javascript</tag>
+         
+        <tag>java</tag>
          
          
            
@@ -88,11 +88,11 @@
         <title>leetCode习题(简单难度)-int数组去重</title>
         <pubTime>2018-03-17T05:33:33.000Z</pubTime>
         
+        <tag>java</tag>
+         
         <tag>leetCode</tag>
          
         <tag>算法</tag>
-         
-        <tag>java</tag>
          
          
            
