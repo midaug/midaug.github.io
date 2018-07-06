@@ -1,3 +1,83 @@
-// build time:Fri Jul 06 2018 10:44:18 GMT+0800 (中国标准时间)
-(function(t){"use strict";t.fn.pin=function(e){var i=0,s=[],o=false,a=t(window);e=e||{};var n=function(){for(var i=0,n=s.length;i<n;i++){var r="s[i];if(e.minWidth&&a.width()<=e.minWidth){if(r.parent().is(".pin-wrapper")){r.unwrap()}r.css({width:"",left:"",top:"",position:""});if(e.activeClass){r.removeClass(e.activeClass)}o=true;continue}else{o=false}var" p="e.containerSelector?r.closest(e.containerSelector):t(document.body);var" f="r.offset();var" c="p.offset();var" l="r.offsetParent().offset();if(!r.parent().is(".pin-wrapper")){r.wrap("<div" class="pin-wrapper">")}var d=t.extend({top:0,bottom:0},e.padding||{});r.data("pin",{pad:d,from:(e.containerSelector?c.top:f.top)-d.top,to:c.top+p.height()-r.outerHeight()-d.bottom,end:c.top+p.height(),parentTop:l.top});r.css({width:r.outerWidth()});r.parent().css("height",r.outerHeight())}};var r=function(){if(o){return}i=a.scrollTop();var n=[];for(var r=0,p=s.length;r<p;r++){var f="t(s[r]),c=f.data("pin");if(!c){continue}n.push(f);var" l="c.from-c.pad.bottom,d=c.to-c.pad.top;if(l+f.outerHeight()">c.end){f.css("position","");continue}if(l<i&&d>i){!(f.css("position")=="fixed")&&f.css({left:f.offset().left,top:c.pad.top}).css("position","fixed");if(e.activeClass){f.addClass(e.activeClass)}}else if(i>=d){f.css({left:"",top:d-c.parentTop+c.pad.top}).css("position","absolute");if(e.activeClass){f.addClass(e.activeClass)}}else{f.css({position:"",top:"",left:""});if(e.activeClass){f.removeClass(e.activeClass)}}}s=n};var p=function(){n();r()};this.each(function(){var e=t(this),i=t(this).data("pin")||{};if(i&&i.update){return}s.push(e);t("img",this).one("load",n);i.update=p;t(this).data("pin",i)});a.scroll(r);a.resize(function(){n()});n();a.load(p);return this}})(jQuery);
-//rebuild by neat </i&&d></p;r++){var></n;i++){var>
+(function ($) {
+    "use strict";
+    $.fn.pin = function (options) {
+        var scrollY = 0, elements = [], disabled = false, $window = $(window);
+
+        options = options || {};
+
+        var recalculateLimits = function () {
+            for (var i=0, len=elements.length; i<len; i++)="" {="" var="" $this="elements[i];" if="" (options.minwidth="" &&="" $window.width()="" <="options.minWidth)" ($this.parent().is(".pin-wrapper"))="" $this.unwrap();="" }="" $this.css({width:="" "",="" left:="" top:="" position:="" ""});="" (options.activeclass)="" $this.removeclass(options.activeclass);="" disabled="true;" continue;="" else="" $container="options.containerSelector" ?="" $this.closest(options.containerselector)="" :="" $(document.body);="" offset="$this.offset();" containeroffset="$container.offset();" parentoffset="$this.offsetParent().offset();" (!$this.parent().is(".pin-wrapper"))="" $this.wrap("<div="" class="pin-wrapper">");
+                }
+
+                var pad = $.extend({
+                  top: 0,
+                  bottom: 0
+                }, options.padding || {});
+
+                $this.data("pin", {
+                    pad: pad,
+                    from: (options.containerSelector ? containerOffset.top : offset.top) - pad.top,
+                    to: containerOffset.top + $container.height() - $this.outerHeight() - pad.bottom,
+                    end: containerOffset.top + $container.height(),
+                    parentTop: parentOffset.top
+                });
+
+                $this.css({width: $this.outerWidth()});
+                $this.parent().css("height", $this.outerHeight());
+            }
+        };
+
+        var onScroll = function () {
+            if (disabled) { return; }
+
+            scrollY = $window.scrollTop();
+
+            var elmts = [];
+            for (var i=0, len=elements.length; i<len; i++)="" {="" var="" $this="$(elements[i])," data="$this.data("pin");" if="" (!data)="" removed="" element="" continue;="" }="" elmts.push($this);="" from="data.from" -="" data.pad.bottom,="" to="data.to" data.pad.top;="" (from="" +="" $this.outerheight()=""> data.end) {
+                    $this.css('position', '');
+                    continue;
+                }
+              
+                if (from < scrollY && to > scrollY) {
+                    !($this.css("position") == "fixed") && $this.css({
+                        left: $this.offset().left,
+                        top: data.pad.top
+                    }).css("position", "fixed");
+                    if (options.activeClass) { $this.addClass(options.activeClass); }
+                } else if (scrollY >= to) {
+                    $this.css({
+                        left: "",
+                        top: to - data.parentTop + data.pad.top
+                    }).css("position", "absolute");
+                    if (options.activeClass) { $this.addClass(options.activeClass); }
+                } else {
+                    $this.css({position: "", top: "", left: ""});
+                    if (options.activeClass) { $this.removeClass(options.activeClass); }
+                }
+          }
+          elements = elmts;
+        };
+
+        var update = function () { recalculateLimits(); onScroll(); };
+
+        this.each(function () {
+            var $this = $(this), 
+                data  = $(this).data('pin') || {};
+
+            if (data && data.update) { return; }
+            elements.push($this);
+            $("img", this).one("load", recalculateLimits);
+            data.update = update;
+            $(this).data('pin', data);
+        });
+
+        $window.scroll(onScroll);
+        $window.resize(function () { recalculateLimits(); });
+        recalculateLimits();
+
+        $window.load(update);
+
+        return this;
+      };
+})(jQuery);
+</len;></len;>

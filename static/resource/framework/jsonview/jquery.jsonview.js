@@ -1,2 +1,250 @@
-// build time:Fri Jul 06 2018 10:44:18 GMT+0800 (中国标准时间)
-(function(e){var n,t,l,r;l=function(){function e(e){if(e==null){e={}}this.options=e}e.prototype.htmlEncode=function(e){if(e!==null){return e.toString().replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(//g,"&gt;")}else{return""}};e.prototype.jsString=function(e){e=JSON.stringify(e).slice(1,-1);return this.htmlEncode(e)};e.prototype.decorateWithSpan=function(e,n){return'<span class="'+n+'">'+this.htmlEncode(e)+"</span>"};e.prototype.valueToHTML=function(e,n){var t;if(n==null){n=0}t=Object.prototype.toString.call(e).match(/\s(.+)]/)[1].toLowerCase();return this[""+t+"ToHTML"].call(this,e,n)};e.prototype.nullToHTML=function(e){return this.decorateWithSpan("null","null")};e.prototype.numberToHTML=function(e){return this.decorateWithSpan(e,"num")};e.prototype.stringToHTML=function(e){var n,t;if(/^(http|https|file):\/\/[^\s]+$/i.test(e)){return'<a href="'+this.htmlEncode(e)+'"><span class="q">"</span>'+this.jsString(e)+'<span class="q">"</span></a>'}else{n="";e=this.jsString(e);if(this.options.nl2br){t=/([^>\\r\\n]?)(\\r\\n|\\n\\r|\\r|\\n)/g;if(t.test(e)){n=" multiline";e=(e+"").replace(t,"$1"+"<br>")}}return'<span class="string'+n+'">"'+e+'"</span>'}};e.prototype.booleanToHTML=function(e){return this.decorateWithSpan(e,"bool")};e.prototype.arrayToHTML=function(e,n){var t,l,r,i,s,o,a,u;if(n==null){n=0}l=false;s="";i=e.length;for(r=a=0,u=e.length;a<u;r=++a){o=e[r];l=true;s+="<li>"+this.valueToHTML(o,n+1);if(i>1){s+=","}s+="";i--}if(l){t=n===0?"":" collapsible";return'[<ul class="array level'+n+t+'">'+s+"</ul>]"}else{return"[ ]"}};e.prototype.objectToHTML=function(e,n){var t,l,r,i,s,o;if(n==null){n=0}l=false;i="";r=0;for(s in e){r++}for(s in e){o=e[s];l=true;i+='<li><span class="prop"><span class="q">"</span>'+this.jsString(s)+'<span class="q">"</span></span>: '+this.valueToHTML(o,n+1);if(r>1){i+=","}i+="</li>";r--}if(l){t=n===0?"":" collapsible";return'{<ul class="obj level'+n+t+'">'+i+"</ul>}"}else{return"{ }"}};e.prototype.jsonToHTML=function(e){return'<div class="jsonview">'+this.valueToHTML(e)+"</div>"};return e}();typeof module!=="undefined"&&module!==null&&(module.exports=l);t={bindEvent:function(e,n){var t;t=document.createElement("div");t.className="collapser";t.innerHTML=n?"+":"-";t.addEventListener("click",function(e){return function(n){return e.toggle(n.target)}}(this));e.insertBefore(t,e.firstChild);if(n){return this.collapse(t)}},expand:function(e){var n,t;t=this.collapseTarget(e);n=t.parentNode.getElementsByClassName("ellipsis")[0];t.parentNode.removeChild(n);t.style.display="";return e.innerHTML="-"},collapse:function(e){var n,t;t=this.collapseTarget(e);t.style.display="none";n=document.createElement("span");n.className="ellipsis";n.innerHTML=" &hellip; ";t.parentNode.insertBefore(n,t);return e.innerHTML="+"},toggle:function(e){var n;n=this.collapseTarget(e);if(n.style.display==="none"){return this.expand(e)}else{return this.collapse(e)}},collapseTarget:function(e){var n,t;t=e.parentNode.getElementsByClassName("collapsible");if(!t.length){return}return n=t[0]}};n=e;r={collapse:function(e){if(e.innerHTML==="-"){return t.collapse(e)}},expand:function(e){if(e.innerHTML==="+"){return t.expand(e)}},toggle:function(e){return t.toggle(e)}};return n.fn.JSONView=function(){var e,i,s,o,a,u,p;e=arguments;if(r[e[0]]!=null){a=e[0];return this.each(function(){var t,l;t=n(this);if(e[1]!=null){l=e[1];return t.find(".jsonview .collapsible.level"+l).siblings(".collapser").each(function(){return r[a](this)})}else{return t.find(".jsonview > ul > li > .collapsible").siblings(".collapser").each(function(){return r[a](this)})}})}else{o=e[0];u=e[1]||{};i={collapsed:false,nl2br:false};u=n.extend(i,u);s=new l({nl2br:u.nl2br});if(Object.prototype.toString.call(o)==="[object String]"){o=JSON.parse(o)}p=s.jsonToHTML(o);return this.each(function(){var e,l,r,i,s,o;e=n(this);e.html(p);r=e[0].getElementsByClassName("collapsible");o=[];for(i=0,s=r.length;i</u;r=++a){o=e[r];l=true;s+="<li>
+(function(jQuery) {
+  var $, Collapser, JSONFormatter, JSONView;
+  JSONFormatter = (function() {
+    function JSONFormatter(options) {
+      if (options == null) {
+        options = {};
+      }
+      this.options = options;
+    }
+
+    JSONFormatter.prototype.htmlEncode = function(html) {
+      if (html !== null) {
+        return html.toString().replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(//g, "&gt;");
+      } else {
+        return '';
+      }
+    };
+
+    JSONFormatter.prototype.jsString = function(s) {
+      s = JSON.stringify(s).slice(1, -1);
+      return this.htmlEncode(s);
+    };
+
+    JSONFormatter.prototype.decorateWithSpan = function(value, className) {
+      return "<span class="\""" +="" classname="" "\"="">" + (this.htmlEncode(value)) + "</span>";
+    };
+
+    JSONFormatter.prototype.valueToHTML = function(value, level) {
+      var valueType;
+      if (level == null) {
+        level = 0;
+      }
+      valueType = Object.prototype.toString.call(value).match(/\s(.+)]/)[1].toLowerCase();
+      return this["" + valueType + "ToHTML"].call(this, value, level);
+    };
+
+    JSONFormatter.prototype.nullToHTML = function(value) {
+      return this.decorateWithSpan('null', 'null');
+    };
+
+    JSONFormatter.prototype.numberToHTML = function(value) {
+      return this.decorateWithSpan(value, 'num');
+    };
+
+    JSONFormatter.prototype.stringToHTML = function(value) {
+      var multilineClass, newLinePattern;
+      if (/^(http|https|file):\/\/[^\s]+$/i.test(value)) {
+        return "<a href="\""" +="" (this.htmlencode(value))="" "\"=""><span class="\"q\"">\"</span>" + (this.jsString(value)) + "<span class="\"q\"">\"</span></a>";
+      } else {
+        multilineClass = '';
+        value = this.jsString(value);
+        if (this.options.nl2br) {
+          newLinePattern = /([^>\\r\\n]?)(\\r\\n|\\n\\r|\\r|\\n)/g;
+          if (newLinePattern.test(value)) {
+            multilineClass = ' multiline';
+            value = (value + '').replace(newLinePattern, '$1' + '<br>');
+          }
+        }
+        return "<span class="\"string"" +="" multilineclass="" "\"="">\"" + value + "\"</span>";
+      }
+    };
+
+    JSONFormatter.prototype.booleanToHTML = function(value) {
+      return this.decorateWithSpan(value, 'bool');
+    };
+
+    JSONFormatter.prototype.arrayToHTML = function(array, level) {
+      var collapsible, hasContents, index, numProps, output, value, _i, _len;
+      if (level == null) {
+        level = 0;
+      }
+      hasContents = false;
+      output = '';
+      numProps = array.length;
+      for (index = _i = 0, _len = array.length; _i < _len; index = ++_i) {
+        value = array[index];
+        hasContents = true;
+        output += '<li>' + this.valueToHTML(value, level + 1);
+        if (numProps > 1) {
+          output += ',';
+        }
+        output += '</li>';
+        numProps--;
+      }
+      if (hasContents) {
+        collapsible = level === 0 ? '' : ' collapsible';
+        return "[<ul class="\"array" level"="" +="" level="" collapsible="" "\"="">" + output + "</ul>]";
+      } else {
+        return '[ ]';
+      }
+    };
+
+    JSONFormatter.prototype.objectToHTML = function(object, level) {
+      var collapsible, hasContents, numProps, output, prop, value;
+      if (level == null) {
+        level = 0;
+      }
+      hasContents = false;
+      output = '';
+      numProps = 0;
+      for (prop in object) {
+        numProps++;
+      }
+      for (prop in object) {
+        value = object[prop];
+        hasContents = true;
+        output += "<li><span class="\"prop\""><span class="\"q\"">\"</span>" + (this.jsString(prop)) + "<span class="\"q\"">\"</span></span>: " + (this.valueToHTML(value, level + 1));
+        if (numProps > 1) {
+          output += ',';
+        }
+        output += '</li>';
+        numProps--;
+      }
+      if (hasContents) {
+        collapsible = level === 0 ? '' : ' collapsible';
+        return "{<ul class="\"obj" level"="" +="" level="" collapsible="" "\"="">" + output + "</ul>}";
+      } else {
+        return '{ }';
+      }
+    };
+
+    JSONFormatter.prototype.jsonToHTML = function(json) {
+      return "<div class="\"jsonview\"">" + (this.valueToHTML(json)) + "</div>";
+    };
+
+    return JSONFormatter;
+
+  })();
+  (typeof module !== "undefined" && module !== null) && (module.exports = JSONFormatter);
+  Collapser = {
+    bindEvent: function(item, collapsed) {
+      var collapser;
+      collapser = document.createElement('div');
+      collapser.className = 'collapser';
+      collapser.innerHTML = collapsed ? '+' : '-';
+      collapser.addEventListener('click', (function(_this) {
+        return function(event) {
+          return _this.toggle(event.target);
+        };
+      })(this));
+      item.insertBefore(collapser, item.firstChild);
+      if (collapsed) {
+        return this.collapse(collapser);
+      }
+    },
+    expand: function(collapser) {
+      var ellipsis, target;
+      target = this.collapseTarget(collapser);
+      ellipsis = target.parentNode.getElementsByClassName('ellipsis')[0];
+      target.parentNode.removeChild(ellipsis);
+      target.style.display = '';
+      return collapser.innerHTML = '-';
+    },
+    collapse: function(collapser) {
+      var ellipsis, target;
+      target = this.collapseTarget(collapser);
+      target.style.display = 'none';
+      ellipsis = document.createElement('span');
+      ellipsis.className = 'ellipsis';
+      ellipsis.innerHTML = ' &hellip; ';
+      target.parentNode.insertBefore(ellipsis, target);
+      return collapser.innerHTML = '+';
+    },
+    toggle: function(collapser) {
+      var target;
+      target = this.collapseTarget(collapser);
+      if (target.style.display === 'none') {
+        return this.expand(collapser);
+      } else {
+        return this.collapse(collapser);
+      }
+    },
+    collapseTarget: function(collapser) {
+      var target, targets;
+      targets = collapser.parentNode.getElementsByClassName('collapsible');
+      if (!targets.length) {
+        return;
+      }
+      return target = targets[0];
+    }
+  };
+  $ = jQuery;
+  JSONView = {
+    collapse: function(el) {
+      if (el.innerHTML === '-') {
+        return Collapser.collapse(el);
+      }
+    },
+    expand: function(el) {
+      if (el.innerHTML === '+') {
+        return Collapser.expand(el);
+      }
+    },
+    toggle: function(el) {
+      return Collapser.toggle(el);
+    }
+  };
+  return $.fn.JSONView = function() {
+    var args, defaultOptions, formatter, json, method, options, outputDoc;
+    args = arguments;
+    if (JSONView[args[0]] != null) {
+      method = args[0];
+      return this.each(function() {
+        var $this, level;
+        $this = $(this);
+        if (args[1] != null) {
+          level = args[1];
+          return $this.find(".jsonview .collapsible.level" + level).siblings('.collapser').each(function() {
+            return JSONView[method](this);
+          });
+        } else {
+          return $this.find('.jsonview > ul > li > .collapsible').siblings('.collapser').each(function() {
+            return JSONView[method](this);
+          });
+        }
+      });
+    } else {
+      json = args[0];
+      options = args[1] || {};
+      defaultOptions = {
+        collapsed: false,
+        nl2br: false
+      };
+      options = $.extend(defaultOptions, options);
+      formatter = new JSONFormatter({
+        nl2br: options.nl2br
+      });
+      if (Object.prototype.toString.call(json) === '[object String]') {
+        json = JSON.parse(json);
+      }
+      outputDoc = formatter.jsonToHTML(json);
+      return this.each(function() {
+        var $this, item, items, _i, _len, _results;
+        $this = $(this);
+        $this.html(outputDoc);
+        items = $this[0].getElementsByClassName('collapsible');
+        _results = [];
+        for (_i = 0, _len = items.length; _i < _len; _i++) {
+          item = items[_i];
+          if (item.parentNode.nodeName === 'LI') {
+            _results.push(Collapser.bindEvent(item.parentNode, options.collapsed));
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      });
+    }
+  };
+})(jQuery);

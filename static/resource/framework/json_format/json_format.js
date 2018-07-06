@@ -1,3 +1,71 @@
-// build time:Fri Jul 06 2018 10:44:18 GMT+0800 (中国标准时间)
-function appendJson(a,e){var r="\n";for(var s=0;s<e;s++){r+=a}return r}function="" formartjson(a){var="" e="0;var" r="  " ;var="" s="" n="0;var" c="false;var" f="" ;for(e="0;e<a.length;e++){f=a.charAt(e);switch(f){case"{":case"[":if(!c){n++;s+=f+appendJson(r,n)}else{s+=f}break;case"}":case"]":if(!c){n--;s+=appendJson(r,n)+f}else{s+=f}break;case",":if(!c){s+=","+appendJson(r,n)}else{s+=f}break;case":":if(!c){s+=":" "}else{s+="f}break;case"" ":case"\n":case"\t":if(c){s+="f}break;case'"':if(e">0&&a.charAt(e-1)!=="\\"){c=!c}s+=f;break;default:s+=f;break}}return s}
-//rebuild by neat </e;s++){r+=a}return>
+
+function appendJson(str, count) {
+	var retStr = "\n";
+	for (var i = 0; i < count; i++) {
+		retStr += str;
+	}
+	return retStr;
+}
+function formartJson(oldJson) {
+	var i = 0;
+	var space = "  ";
+	var formatJson = "";
+	var indentCount = 0;
+	var isStr = false;
+	var currChar = "";
+	
+	for (i = 0; i < oldJson.length; i++) {
+		currChar = oldJson.charAt(i);
+		switch (currChar) {
+			case '{':
+			case '[':
+				if (!isStr) {
+					indentCount++;
+					formatJson += currChar + appendJson(space, indentCount);
+				} else {
+					formatJson += currChar;
+				}
+				break;
+			case '}':
+			case ']':
+				if (!isStr) {
+					indentCount--;
+					formatJson += appendJson(space, indentCount) + currChar;
+				} else {
+					formatJson += currChar;
+				}
+				break;
+			case ',':
+				if (!isStr) {
+					formatJson += "," + appendJson(space, indentCount);
+				} else {
+					formatJson += currChar;
+				}
+				break;
+			case ':':
+				if (!isStr) {
+					formatJson += ": ";
+				} else {
+					formatJson += currChar;
+				}
+				break;
+			case ' ':
+			case '\n':
+			case '\t':
+				if (isStr) {
+					formatJson += currChar;
+				}
+				break;
+			case '"':
+				if (i > 0 && oldJson.charAt(i - 1) !== '\\') {
+					isStr = !isStr;
+				}
+				formatJson += currChar;
+				break;
+			default:
+				formatJson += currChar;
+				break;
+		}
+	}
+	return formatJson;
+}
