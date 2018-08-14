@@ -34,11 +34,11 @@
       <category term="leetCode" scheme="https://blog.midaug.win/categories/leetCode/"/>
     
     
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
-    
       <category term="leetCode" scheme="https://blog.midaug.win/tags/leetCode/"/>
     
       <category term="算法" scheme="https://blog.midaug.win/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   
@@ -60,11 +60,11 @@
       <category term="leetCode" scheme="https://blog.midaug.win/categories/leetCode/"/>
     
     
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
-    
       <category term="leetCode" scheme="https://blog.midaug.win/tags/leetCode/"/>
     
       <category term="算法" scheme="https://blog.midaug.win/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   
@@ -86,6 +86,8 @@
       <category term="爬虫" scheme="https://blog.midaug.win/categories/%E7%88%AC%E8%99%AB/"/>
     
     
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
+    
       <category term="phantomjs" scheme="https://blog.midaug.win/tags/phantomjs/"/>
     
       <category term="爬虫" scheme="https://blog.midaug.win/tags/%E7%88%AC%E8%99%AB/"/>
@@ -93,8 +95,6 @@
       <category term="网页快照" scheme="https://blog.midaug.win/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/"/>
     
       <category term="javascript" scheme="https://blog.midaug.win/tags/javascript/"/>
-    
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   
