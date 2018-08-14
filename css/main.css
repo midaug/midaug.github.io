@@ -1852,7 +1852,7 @@ pre .javascript .function {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #3dffff;
+  background: #e7cc5b;
 }
 .links-of-blogroll {
   font-size: 13px;
@@ -3148,9 +3148,11 @@ pre .javascript .function {
 .posts-expand .post-body img {
   margin: auto;
 }
-.sidebar-inner,
-.header-inner {
-  width: 330px;
+@media (min-width: 767px) {
+  .sidebar-inner,
+  .header-inner {
+    width: 330px;
+  }
 }
 ::-webkit-scrollbar {
   width: 5px;
