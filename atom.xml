@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://blog.midaug.win/"/>
-  <updated>2018-05-10T09:28:46.888Z</updated>
+  <updated>2018-08-14T02:42:42.443Z</updated>
   <id>https://blog.midaug.win/</id>
   
   <author>
@@ -15,6 +15,28 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>CSS自定义滚动条(IE和chrome)</title>
+    <link href="https://blog.midaug.win/2018081401.html"/>
+    <id>https://blog.midaug.win/2018081401.html</id>
+    <published>2018-08-14T02:33:33.000Z</published>
+    <updated>2018-08-14T02:42:42.443Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="Chrome滚动条"><a href="#Chrome滚动条" class="headerlink" title="Chrome滚动条"></a>Chrome滚动条</h1><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*滑道*/</span></span><br><span class="line"><span class="selector-pseudo">::-webkit-scrollbar</span> &#123;</span><br><span class="line">    <span class="attribute">width</span>: <span class="number">5px</span>;</span><br><span class="line">    <span class="attribute">height</span>: <span class="number">5px</span>;</span><br><span class="line">    <span class="attribute">background-color</span>: <span class="number">#f7f7f7</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="selector-pseudo">::-webkit-scrollbar-track</span> &#123;</span><br><span class="line">    <span class="attribute">box-shadow</span>: inset <span class="number">0</span> <span class="number">0</span> <span class="number">6px</span> <span class="number">#f7f7f7</span>;</span><br><span class="line">    <span class="attribute">border-radius</span>: <span class="number">10px</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*滑块*/</span></span><br><span class="line"><span class="selector-pseudo">::-webkit-scrollbar-thumb</span> &#123;</span><br><span class="line">    <span class="attribute">background-color</span>: <span class="number">#222</span>;</span><br><span class="line">    <span class="attribute">border-radius</span>: <span class="number">10px</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="selector-pseudo">::-webkit-scrollbar-thumb</span><span class="selector-pseudo">:hover</span> &#123;</span><br><span class="line">    <span class="attribute">background-color</span>: <span class="number">#222</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><a id="more"></a><h1 id="IE滚动条"><a href="#IE滚动条" class="headerlink" title="IE滚动条"></a>IE滚动条</h1><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span> <span class="attr">type</span>=<span class="string">"text/css"</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="undefined">html&#123; </span></span><br><span class="line"><span class="css"><span class="comment">/*三角箭头的颜色*/</span>  </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-arrow-color</span>: <span class="selector-id">#f4ae21</span>;</span></span><br><span class="line"><span class="css"><span class="comment">/*立体滚动条的颜色*/</span> </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-face-color</span>: <span class="selector-id">#333</span>; </span></span><br><span class="line"><span class="css"><span class="comment">/*立体滚动条亮边的颜色*/</span>  </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-3dlight-color</span>: <span class="selector-id">#666</span>;</span></span><br><span class="line"><span class="css"><span class="comment">/*滚动条空白部分的颜色*/</span> </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-highlight-color</span>: <span class="selector-id">#666</span>;  </span></span><br><span class="line"><span class="css"><span class="comment">/*立体滚动条阴影的颜色*/</span>  </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-shadow-color</span>: <span class="selector-id">#999</span>;</span></span><br><span class="line"><span class="css"><span class="comment">/*立体滚动条强阴影的颜色*/</span>  </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-darkshadow-color</span>: <span class="selector-id">#666</span>;</span></span><br><span class="line"><span class="css"><span class="comment">/*立体滚动条背景颜色*/</span> </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-track-color</span>: <span class="selector-id">#666</span>; </span></span><br><span class="line"><span class="css"><span class="comment">/*滚动条的基本颜色*/</span> </span></span><br><span class="line"><span class="css"><span class="selector-tag">scrollbar-base-color</span>:<span class="selector-id">#f8f8f8</span>; </span></span><br><span class="line"><span class="undefined">&#125;  </span></span><br><span class="line"><span class="undefined"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br></pre></td></tr></table></figure><h1 id="其他滚动条设置"><a href="#其他滚动条设置" class="headerlink" title="其他滚动条设置"></a>其他滚动条设置</h1><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 去掉横向滚动条 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span> <span class="attr">style</span>=<span class="string">"overflow:scroll;overflow-x:hidden"</span>&gt;</span> <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 去掉竖向滚动条 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span> <span class="attr">style</span>=<span class="string">"overflow:scroll;overflow-y:hidden"</span>&gt;</span> <span class="tag">&lt;/<span class="name">body</span>&gt;</span> </span><br><span class="line"><span class="comment">&lt;!-- 两个都去掉 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span> <span class="attr">scroll</span>=<span class="string">"no"</span>&gt;</span> <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br></pre></td></tr></table></figure><h1 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h1><p>css自定义滚动条现仅支持IE和Chrome，火狐可以使用JS设置滚动条<br>附上两个github上不错的JS滚动条插件</p><ul><li><a href="https://github.com/noraesae/perfect-scrollbar" target="_blank" rel="noopener">https://github.com/noraesae/perfect-scrollbar</a></li><li><a href="https://github.com/jnicol/trackpad-scroll-emulator" target="_blank" rel="noopener">https://github.com/jnicol/trackpad-scroll-emulator</a></li></ul>]]></content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;Chrome滚动条&quot;&gt;&lt;a href=&quot;#Chrome滚动条&quot; class=&quot;headerlink&quot; title=&quot;Chrome滚动条&quot;&gt;&lt;/a&gt;Chrome滚动条&lt;/h1&gt;&lt;figure class=&quot;highlight css&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;/*滑道*/&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;::-webkit-scrollbar&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;width&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;5px&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;height&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;5px&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;background-color&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;#f7f7f7&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;::-webkit-scrollbar-track&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;box-shadow&lt;/span&gt;: inset &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;6px&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;#f7f7f7&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;border-radius&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;10px&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;/*滑块*/&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;::-webkit-scrollbar-thumb&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;background-color&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;#222&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;border-radius&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;10px&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;::-webkit-scrollbar-thumb&lt;/span&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;:hover&lt;/span&gt; &amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;attribute&quot;&gt;background-color&lt;/span&gt;: &lt;span class=&quot;number&quot;&gt;#222&lt;/span&gt;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+    
+    </summary>
+    
+      <category term="css" scheme="https://blog.midaug.win/categories/css/"/>
+    
+    
+      <category term="css" scheme="https://blog.midaug.win/tags/css/"/>
+    
+  </entry>
   
   <entry>
     <title>leetCode习题(简单难度)-int数值翻转</title>
@@ -34,11 +56,11 @@
       <category term="leetCode" scheme="https://blog.midaug.win/categories/leetCode/"/>
     
     
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
+    
       <category term="leetCode" scheme="https://blog.midaug.win/tags/leetCode/"/>
     
       <category term="算法" scheme="https://blog.midaug.win/tags/%E7%AE%97%E6%B3%95/"/>
-    
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   
@@ -60,11 +82,11 @@
       <category term="leetCode" scheme="https://blog.midaug.win/categories/leetCode/"/>
     
     
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
+    
       <category term="leetCode" scheme="https://blog.midaug.win/tags/leetCode/"/>
     
       <category term="算法" scheme="https://blog.midaug.win/tags/%E7%AE%97%E6%B3%95/"/>
-    
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   
@@ -86,8 +108,6 @@
       <category term="爬虫" scheme="https://blog.midaug.win/categories/%E7%88%AC%E8%99%AB/"/>
     
     
-      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
-    
       <category term="phantomjs" scheme="https://blog.midaug.win/tags/phantomjs/"/>
     
       <category term="爬虫" scheme="https://blog.midaug.win/tags/%E7%88%AC%E8%99%AB/"/>
@@ -95,6 +115,8 @@
       <category term="网页快照" scheme="https://blog.midaug.win/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/"/>
     
       <category term="javascript" scheme="https://blog.midaug.win/tags/javascript/"/>
+    
+      <category term="java" scheme="https://blog.midaug.win/tags/java/"/>
     
   </entry>
   

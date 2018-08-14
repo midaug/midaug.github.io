@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[CSS自定义滚动条(IE和chrome)]]></title>
+    <url>%2F2018081401.html</url>
+    <content type="text"><![CDATA[Chrome滚动条12345678910111213141516171819/*滑道*/::-webkit-scrollbar &#123; width: 5px; height: 5px; background-color: #f7f7f7;&#125;::-webkit-scrollbar-track &#123; box-shadow: inset 0 0 6px #f7f7f7; border-radius: 10px;&#125;/*滑块*/::-webkit-scrollbar-thumb &#123; background-color: #222; border-radius: 10px;&#125;::-webkit-scrollbar-thumb:hover &#123; background-color: #222;&#125; IE滚动条1234567891011121314151617181920&lt;style type="text/css"&gt; html&#123; /*三角箭头的颜色*/ scrollbar-arrow-color: #f4ae21; /*立体滚动条的颜色*/ scrollbar-face-color: #333; /*立体滚动条亮边的颜色*/ scrollbar-3dlight-color: #666; /*滚动条空白部分的颜色*/ scrollbar-highlight-color: #666; /*立体滚动条阴影的颜色*/ scrollbar-shadow-color: #999; /*立体滚动条强阴影的颜色*/ scrollbar-darkshadow-color: #666; /*立体滚动条背景颜色*/ scrollbar-track-color: #666; /*滚动条的基本颜色*/ scrollbar-base-color:#f8f8f8; &#125; &lt;/style&gt; 其他滚动条设置123456&lt;!-- 去掉横向滚动条 --&gt;&lt;body style="overflow:scroll;overflow-x:hidden"&gt; &lt;/body&gt;&lt;!-- 去掉竖向滚动条 --&gt;&lt;body style="overflow:scroll;overflow-y:hidden"&gt; &lt;/body&gt; &lt;!-- 两个都去掉 --&gt;&lt;body scroll="no"&gt; &lt;/body&gt; 说明css自定义滚动条现仅支持IE和Chrome，火狐可以使用JS设置滚动条附上两个github上不错的JS滚动条插件 https://github.com/noraesae/perfect-scrollbar https://github.com/jnicol/trackpad-scroll-emulator]]></content>
+      <categories>
+        <category>css</category>
+      </categories>
+      <tags>
+        <tag>css</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[leetCode习题(简单难度)-int数值翻转]]></title>
     <url>%2F2018031702.html</url>
     <content type="text"><![CDATA[题目内容给定一个范围为32 位 int 的整数，将其颠倒。例 1:输入: 123输出: 321例 2:输入: -123输出: -321例 3:输入: 120输出: 21注意:假设我们的环境只能处理 32 位 int 范围内的整数。根据这个假设，如果颠倒后的结果超过这个范围，则返回 0。 解法1234567891011121314151617181920212223package com.mid.test;public class LeetCode001 &#123; public static void main(String[] args) &#123; System.out.println(reverse(-1230)); &#125; private static int reverse(int x) &#123; long tmp = x; // 防止结果溢出 long result = 0; while (tmp != 0) &#123; // 当tmp&lt;10时，tmp / 10才等于0 result = result * 10 + tmp % 10; tmp = tmp / 10; // System.out.println(result + " " + tmp); &#125; if (result &lt; Integer.MIN_VALUE || result &gt; Integer.MAX_VALUE) &#123; result = 0; &#125; return (int) result; &#125;&#125; 思路利用取余的特性，对10取余余数就是最后一位数字，然后将这个余数乘以10加上下一个余数。在while里打印就能很清晰的看到过程12340 -123-3 -12-32 -1-321 0]]></content>
@@ -8,9 +19,9 @@
         <category>leetCode</category>
       </categories>
       <tags>
+        <tag>java</tag>
         <tag>leetCode</tag>
         <tag>算法</tag>
-        <tag>java</tag>
       </tags>
   </entry>
   <entry>
@@ -21,9 +32,9 @@
         <category>leetCode</category>
       </categories>
       <tags>
+        <tag>java</tag>
         <tag>leetCode</tag>
         <tag>算法</tag>
-        <tag>java</tag>
       </tags>
   </entry>
   <entry>
@@ -34,11 +45,11 @@
         <category>爬虫</category>
       </categories>
       <tags>
-        <tag>java</tag>
         <tag>phantomjs</tag>
         <tag>爬虫</tag>
         <tag>网页快照</tag>
         <tag>javascript</tag>
+        <tag>java</tag>
       </tags>
   </entry>
   <entry>
