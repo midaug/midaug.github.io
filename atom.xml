@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Midaug&#39;s Blog</title>
   
-  <subtitle>编程不息,作死不止</subtitle>
+  <subtitle>donot repeat yourself</subtitle>
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://blog.midaug.win/"/>
