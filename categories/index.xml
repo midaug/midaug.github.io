@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" 
+  xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+  xmlns:dc="http://purl.org/dc/elements/1.1/" 
+  xmlns:atom="http://www.w3.org/2005/Atom" 
+  xmlns:sy="http://purl.org/rss/1.0/modules/syndication/" 
+  xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Categories on MidAug&#39;s Blog</title>
+    <link>/categories/</link>
+    <description>Recent content in Categories on MidAug&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+    <webMaster>days0814@gmail.com (MidAug)</webMaster>
+    <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
+    <lastBuildDate>Tue, 14 Aug 2018 10:33:33 +0000</lastBuildDate>
+    
+        <atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+
+      
+      <item>
+        <title>css</title>
+        <link>/categories/css/</link>
+        <pubDate>Tue, 14 Aug 2018 10:33:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/categories/css/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>leetCode</title>
+        <link>/categories/leetcode/</link>
+        <pubDate>Sat, 17 Mar 2018 14:33:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/categories/leetcode/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>爬虫</title>
+        <link>/categories/%E7%88%AC%E8%99%AB/</link>
+        <pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/categories/%E7%88%AC%E8%99%AB/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>测试</title>
+        <link>/categories/%E6%B5%8B%E8%AF%95/</link>
+        <pubDate>Wed, 20 Dec 2017 17:11:34 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/categories/%E6%B5%8B%E8%AF%95/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+
+    
+  </channel>
+</rss>
