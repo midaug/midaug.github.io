@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Posts – MidAug&#39;s Blog</title>
+    <title>Posts – MidAug&#39;s  Blog</title>
     
 
 
@@ -238,7 +238,7 @@
     
     var tocFolding = JSON.parse("false");
     
-    var tocLevels = JSON.parse("[\"h2\",\"h3\",\"h4\"]");
+    var tocLevels = JSON.parse("[\"h1\",\"h2\",\"h3\",\"h4\",\"h5\",\"h6\",\"h7\"]");
     
     if (tocLevels) {
       tocLevels = tocLevels.toString();
@@ -1198,7 +1198,7 @@
   
   
     
-    <link rel="stylesheet" href="/css/custom.css">
+    <link rel="stylesheet" href="/css/custom.min.css">
   
 
 
@@ -1208,20 +1208,20 @@
 <meta name="description" content="" />
 
 
-<meta name="created" content="2018-08-14T10:33:33&#43;0000">
-<meta name="modified" content="2018-08-14T10:33:33&#43;0000">
-<meta property="article:published_time" content="2018-08-14T10:33:33&#43;0000">
+<meta name="created" content="2019-07-23T00:00:00&#43;0000">
+<meta name="modified" content="2019-07-23T00:00:00&#43;0000">
+<meta property="article:published_time" content="2019-07-23T00:00:00&#43;0000">
 
 <meta name="author" content="MidAug">
 
 
-<meta property="og:site_name" content="MidAug&#39;s Blog">
+<meta property="og:site_name" content="MidAug&#39;s  Blog">
 <meta property="og:title" content="Posts">
 <meta property="og:url" content="/posts/">
 <meta property="og:type" content="website">
 <meta property="og:description" content="">
 
-<meta name="generator" content="Hugo 0.68.3" />
+<meta name="generator" content="Hugo 0.70.0" />
 <meta name="msapplication-TileColor" content="#fff">
 
 <meta name="theme-color" content="#fff">
@@ -1252,7 +1252,7 @@
     },
     "publisher": {
       "@type": "Organization",
-      "name": "MidAug's Blog",
+      "name": "MidAug's  Blog",
       "url": "/"
     }
   }
@@ -1531,7 +1531,7 @@
   
   <li >
     
-      <a href="/" class="capitalize">MidAug&#39;s Blog</a>
+      <a href="/" class="capitalize">MidAug&#39;s  Blog</a>
     
   </li>
   
@@ -1555,6 +1555,70 @@
 
         <div class="summary__container" data-display="block">
             
+            
+                
+  <article class="summary-classic" data-ani="true">
+  <div class="summary-classic__flex-box" >
+
+    
+
+    <div class="summary-classic__content">
+      <header>
+        <h5 class="title h5"><a href='/posts/20190723/'> ubuntu下rabbitMQ安装及集群配置</a> </h5>
+        <h6 class="subtitle caption">
+          <time title="Written At" dir="ltr">📅&nbsp;Jul 23, 2019 </time>
+          
+          <span title="Reading Time" dir="ltr"> &middot; ☕&nbsp;5&nbsp;min read </span>
+          
+        </h6>
+      </header>
+      <div>
+        <div class="summary-classic__text p2">
+          
+            RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如
+          
+        </div>
+      </div>
+    </div>
+
+    
+    
+  </div>
+  <hr />
+</article>
+
+            
+                
+  <article class="summary-classic" data-ani="true">
+  <div class="summary-classic__flex-box" >
+
+    
+
+    <div class="summary-classic__content">
+      <header>
+        <h5 class="title h5"><a href='/posts/20190615/'> nginx作为文件下载服务器</a> </h5>
+        <h6 class="subtitle caption">
+          <time title="Written At" dir="ltr">📅&nbsp;Jun 15, 2019 </time>
+          
+          <span title="Reading Time" dir="ltr"> &middot; ☕&nbsp;2&nbsp;min read </span>
+          
+        </h6>
+      </header>
+      <div>
+        <div class="summary-classic__text p2">
+          
+            nginx conf 配置 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 server { listen 80; server_name 10.43.0.0; #charset koi8-r; #access_log /var/log/nginx/log/host.access.log main; location / { root /usr/share/nginx/html; index index.html index.htm; } #error_page 404 /404.html; # redirect server error pages to the static page /50x.html # error_page 500 502 503 504 /50x.html; location = /50x.html { root /usr/share/nginx/html; } location /build_results/ { proxy_set_header Host $http_host; root /data/jenkins/; index index.html index.htm; autoindex on;
+          
+        </div>
+      </div>
+    </div>
+
+    
+    
+  </div>
+  <hr />
+</article>
+
             
                 
   <article class="summary-classic" data-ani="true">
@@ -1716,6 +1780,70 @@
 </article>
 
             
+                
+  <article class="summary-classic" data-ani="true">
+  <div class="summary-classic__flex-box" >
+
+    
+
+    <div class="summary-classic__content">
+      <header>
+        <h5 class="title h5"><a href='/posts/20171121/'> mongoDB快速同步脚本</a> </h5>
+        <h6 class="subtitle caption">
+          <time title="Written At" dir="ltr">📅&nbsp;Nov 21, 2017 </time>
+          
+          <span title="Reading Time" dir="ltr"> &middot; ☕&nbsp;1&nbsp;min read </span>
+          
+        </h6>
+      </header>
+      <div>
+        <div class="summary-classic__text p2">
+          
+            1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 #!/bin/bash #锁定脚本执行目录 DIR=&#34;$( cd &#34;$( dirname &#34;$0&#34; )&#34; &amp;&amp; pwd )&#34; cd &#34;${DIR}&#34; #指定执行命令 MONGODUMP=mongodump MONGORESTORE=mongorestore #设置tmp或备份目录 BACKUP_DIR=&#34;./sync/backup&#34; NOW=`date +&#34;%Y-%m-%d-%H%M&#34;` #源数据
+          
+        </div>
+      </div>
+    </div>
+
+    
+    
+  </div>
+  <hr />
+</article>
+
+            
+                
+  <article class="summary-classic" data-ani="true">
+  <div class="summary-classic__flex-box" >
+
+    
+
+    <div class="summary-classic__content">
+      <header>
+        <h5 class="title h5"><a href='/posts/20170821/'> 树莓派3安装centos7的无线WIFI模块</a> </h5>
+        <h6 class="subtitle caption">
+          <time title="Written At" dir="ltr">📅&nbsp;Aug 21, 2017 </time>
+          
+          <span title="Reading Time" dir="ltr"> &middot; ☕&nbsp;1&nbsp;min read </span>
+          
+        </h6>
+      </header>
+      <div>
+        <div class="summary-classic__text p2">
+          
+            入手raspberry pi3，觉着还是刷个centos系统比较顺手。整理了一下刷centos后WIFI问题解决方式。 驱动安装 1 2 3 4 5 6 7 # 直接执行下面命令即可，如果没有网络就使用u盘拷贝到对应的目录
+          
+        </div>
+      </div>
+    </div>
+
+    
+    
+  </div>
+  <hr />
+</article>
+
+            
             
 
 
@@ -1764,6 +1892,14 @@
     
         
         <li class="sidebar-recent">
+            <a href="/posts/20190723/" class="sidebar-recent__title p1">ubuntu下rabbitMQ安装及集群配置</a>
+        </li>
+        
+        <li class="sidebar-recent">
+            <a href="/posts/20190615/" class="sidebar-recent__title p1">nginx作为文件下载服务器</a>
+        </li>
+        
+        <li class="sidebar-recent">
             <a href="/posts/2018081401/" class="sidebar-recent__title p1">CSS自定义滚动条(IE和chrome)</a>
         </li>
         
@@ -1773,14 +1909,6 @@
         
         <li class="sidebar-recent">
             <a href="/posts/2018031701/" class="sidebar-recent__title p1">leetCode习题(简单难度)-int数组去重</a>
-        </li>
-        
-        <li class="sidebar-recent">
-            <a href="/posts/20180129/" class="sidebar-recent__title p1">java调用phantomjs爬取网页及快照</a>
-        </li>
-        
-        <li class="sidebar-recent">
-            <a href="/posts/20171220/" class="sidebar-recent__title p1">Cmd Markdown 复制过来的语法测试</a>
         </li>
         
         <hr class="hr-fade sidebar-hr" />
@@ -1850,6 +1978,32 @@
         
         
             <span class="tag">
+                <a href="/tags/mongodb/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        mongoDB
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/tags/nginx/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        nginx
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
                 <a href="/tags/phantomjs/" class="is-tags taxo__link" data-dir="ltr">
                     <span class="taxo__text">
                         phantomjs
@@ -1863,9 +2017,74 @@
         
         
             <span class="tag">
+                <a href="/tags/rabbitmq/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        rabbitMQ
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/tags/raspberry-pi/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        Raspberry Pi
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
                 <a href="/tags/test/" class="is-tags taxo__link" data-dir="ltr">
                     <span class="taxo__text">
                         test
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        文件下载服务
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        树莓派
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/" class="is-tags taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        消息中间件
                     </span>
                     <span class="taxo__num" dir="auto">
                         1
@@ -1953,9 +2172,139 @@
         
         
             <span class="tag">
+                <a href="/categories/mongodb/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        mongoDB
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/nginx/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        nginx
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/rabbitmq/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        rabbitMQ
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/raspberry-pi/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        Raspberry Pi
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        中间件
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        数据同步
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        数据备份
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E6%A0%91%E8%8E%93%E6%B4%BE/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        树莓派
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
                 <a href="/categories/%E6%B5%8B%E8%AF%95/" class="is-categories taxo__link" data-dir="ltr">
                     <span class="taxo__text">
                         测试
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        消息中间件
+                    </span>
+                    <span class="taxo__num" dir="auto">
+                        1
+                    </span>
+                </a>
+            </span>
+        
+        
+        
+            <span class="tag">
+                <a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" class="is-categories taxo__link" data-dir="ltr">
+                    <span class="taxo__text">
+                        消息队列
                     </span>
                     <span class="taxo__num" dir="auto">
                         1

@@ -6,21 +6,93 @@
   xmlns:sy="http://purl.org/rss/1.0/modules/syndication/" 
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
-    <title>Tags on MidAug&#39;s Blog</title>
+    <title>Tags on MidAug&#39;s  Blog</title>
     <link>/tags/</link>
-    <description>Recent content in Tags on MidAug&#39;s Blog</description>
+    <description>Recent content in Tags on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
-    <lastBuildDate>Tue, 14 Aug 2018 10:33:33 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
     
 
+      
+      <item>
+        <title>rabbitMQ</title>
+        <link>/tags/rabbitmq/</link>
+        <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/rabbitmq/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>消息中间件</title>
+        <link>/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
+        <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>nginx</title>
+        <link>/tags/nginx/</link>
+        <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/nginx/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>文件下载服务</title>
+        <link>/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</link>
+        <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
       
       <item>
         <title>css</title>
@@ -173,6 +245,60 @@
         <author>days0814@gmail.com (MidAug)</author>
         
         <guid>/tags/test/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>mongoDB</title>
+        <link>/tags/mongodb/</link>
+        <pubDate>Tue, 21 Nov 2017 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/mongodb/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>Raspberry Pi</title>
+        <link>/tags/raspberry-pi/</link>
+        <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/raspberry-pi/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
+      
+      <item>
+        <title>树莓派</title>
+        <link>/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</link>
+        <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>

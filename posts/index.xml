@@ -6,21 +6,101 @@
   xmlns:sy="http://purl.org/rss/1.0/modules/syndication/" 
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
-    <title>Posts on MidAug&#39;s Blog</title>
+    <title>Posts on MidAug&#39;s  Blog</title>
     <link>/posts/</link>
-    <description>Recent content in Posts on MidAug&#39;s Blog</description>
+    <description>Recent content in Posts on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
-    <lastBuildDate>Tue, 14 Aug 2018 10:33:33 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate>
     
         <atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     
 
+      
+      <item>
+        <title>ubuntu下rabbitMQ安装及集群配置</title>
+        <link>/posts/20190723/</link>
+        <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Tue, 23 Jul 2019 00:00:00 +0000</atom:modified>
+        <guid>/posts/20190723/</guid>
+        <description>RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>rabbitMQ</category>
+            
+          
+            
+              <category>消息中间件</category>
+            
+          
+        
+        
+          
+            
+              <category>消息中间件</category>
+            
+          
+            
+              <category>中间件</category>
+            
+          
+            
+              <category>消息队列</category>
+            
+          
+            
+              <category>rabbitMQ</category>
+            
+          
+        
+        
+      </item>
+      
+      <item>
+        <title>nginx作为文件下载服务器</title>
+        <link>/posts/20190615/</link>
+        <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Sat, 15 Jun 2019 00:00:00 +0000</atom:modified>
+        <guid>/posts/20190615/</guid>
+        <description>nginx conf 配置 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 server { listen 80; server_name 10.43.0.0; #charset koi8-r; #access_log /var/log/nginx/log/host.access.log main; location / { root /usr/share/nginx/html; index index.html index.htm; } #error_page 404 /404.html; # redirect server error pages to the static page /50x.html # error_page 500 502 503 504 /50x.html; location = /50x.html { root /usr/share/nginx/html; } location /build_results/ { proxy_set_header Host $http_host; root /data/jenkins/; index index.html index.htm; autoindex on;</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>nginx</category>
+            
+          
+            
+              <category>文件下载服务</category>
+            
+          
+        
+        
+          
+            
+              <category>nginx</category>
+            
+          
+        
+        
+      </item>
       
       <item>
         <title>CSS自定义滚动条(IE和chrome)</title>
@@ -198,6 +278,82 @@
           
             
               <category>测试</category>
+            
+          
+        
+        
+      </item>
+      
+      <item>
+        <title>mongoDB快速同步脚本</title>
+        <link>/posts/20171121/</link>
+        <pubDate>Tue, 21 Nov 2017 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Tue, 21 Nov 2017 00:00:00 +0000</atom:modified>
+        <guid>/posts/20171121/</guid>
+        <description>1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 #!/bin/bash #锁定脚本执行目录 DIR=&amp;#34;$( cd &amp;#34;$( dirname &amp;#34;$0&amp;#34; )&amp;#34; &amp;amp;&amp;amp; pwd )&amp;#34; cd &amp;#34;${DIR}&amp;#34; #指定执行命令 MONGODUMP=mongodump MONGORESTORE=mongorestore #设置tmp或备份目录 BACKUP_DIR=&amp;#34;./sync/backup&amp;#34; NOW=`date +&amp;#34;%Y-%m-%d-%H%M&amp;#34;` #源数据</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>mongoDB</category>
+            
+          
+        
+        
+          
+            
+              <category>mongoDB</category>
+            
+          
+            
+              <category>数据同步</category>
+            
+          
+            
+              <category>数据备份</category>
+            
+          
+        
+        
+      </item>
+      
+      <item>
+        <title>树莓派3安装centos7的无线WIFI模块</title>
+        <link>/posts/20170821/</link>
+        <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Mon, 21 Aug 2017 00:00:00 +0000</atom:modified>
+        <guid>/posts/20170821/</guid>
+        <description>入手raspberry pi3，觉着还是刷个centos系统比较顺手。整理了一下刷centos后WIFI问题解决方式。 驱动安装 1 2 3 4 5 6 7 # 直接执行下面命令即可，如果没有网络就使用u盘拷贝到对应的目录</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>树莓派</category>
+            
+          
+            
+              <category>Raspberry Pi</category>
+            
+          
+        
+        
+          
+            
+              <category>树莓派</category>
+            
+          
+            
+              <category>Raspberry Pi</category>
             
           
         
