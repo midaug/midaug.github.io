@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>ubuntu下rabbitMQ安装及集群配置 – MidAug&#39;s  Blog</title>
+    <title>ubuntu下RabbitMQ安装及集群配置 – MidAug&#39;s  Blog</title>
     
 
 
@@ -1206,7 +1206,7 @@
 <meta name="description" content="" />
 
 
-<meta name="keywords" content="rabbitMQ,消息中间件">
+<meta name="keywords" content="RabbitMQ,消息中间件">
 
 <meta name="created" content="2019-07-23T00:00:00&#43;0000">
 <meta name="modified" content="2019-07-23T00:00:00&#43;0000">
@@ -1216,7 +1216,7 @@
 
 
 <meta property="og:site_name" content="MidAug&#39;s  Blog">
-<meta property="og:title" content="ubuntu下rabbitMQ安装及集群配置">
+<meta property="og:title" content="ubuntu下RabbitMQ安装及集群配置">
 <meta property="og:url" content="/posts/20190723/">
 <meta property="og:type" content="article">
 <meta property="og:description" content="">
@@ -1244,12 +1244,12 @@
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "headline": "ubuntu下rabbitMQ安装及集群配置",
+    "headline": "ubuntu下RabbitMQ安装及集群配置",
     "datePublished": "2019-07-23T00:00:00Z",
     "dateModified": "2019-07-23T00:00:00Z",
     "url" : "/posts/20190723/",
     "description": "RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如",
-    "keywords": ["rabbitMQ","消息中间件"],
+    "keywords": ["RabbitMQ","消息中间件"],
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": "/"
@@ -1551,7 +1551,7 @@
   
   <li  class="is-active" >
     
-      <span>ubuntu下rabbitMQ安装及集群配置</span>
+      <span>ubuntu下RabbitMQ安装及集群配置</span>
     
   </li>
   
@@ -1563,7 +1563,7 @@
   <div class="single ">
     <div class="single__nojs">This page looks best with JavaScript enabled</div>
     <script>document.querySelector('.single').classList.remove('hide'); document.querySelector('.single__nojs').classList.add('hide');</script>
-    <h2 class="single__title" data-ani="true">ubuntu下rabbitMQ安装及集群配置</h2>
+    <h2 class="single__title" data-ani="true">ubuntu下RabbitMQ安装及集群配置</h2>
     <div class="single__meta">
       
 <div class="single__infos">
@@ -1581,7 +1581,7 @@
   🏷️
   
 
-  <li><a href="/tags/rabbitmq/" class="single__tag" title="rabbitMQ">#rabbitMQ</a></li>
+  <li><a href="/tags/rabbitmq/" class="single__tag" title="RabbitMQ">#RabbitMQ</a></li>
 
   <li><a href="/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/" class="single__tag" title="消息中间件">#消息中间件</a></li>
 
@@ -1673,7 +1673,7 @@ sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_tracing
 </code></pre></td></tr></table>
 </div>
 </div><h2 id="4加入集群">4.加入集群</h2>
-<p>因为rabbitMQ集群是基于erlang同步的，所以先配置使各个节点 中 .erlang.cookie文件一致。</p>
+<p>因为RabbitMQ集群是基于erlang同步的，所以先配置使各个节点 中 .erlang.cookie文件一致。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre class="chroma"><code><span class="lnt">1
@@ -1704,7 +1704,7 @@ rabbitmqctl start_app
 <li>启动顺序：磁盘节点 =&gt; 内存节点</li>
 <li>关闭顺序：内存节点 =&gt; 磁盘节点</li>
 </ul>
-<h2 id="5创建rabbitmq用户">5.创建rabbitMQ用户</h2>
+<h2 id="5创建rabbitmq用户">5.创建RabbitMQ用户</h2>
 <p>设置用户命令, 建议创建好集群后再设置， 不然会被集群配置覆盖</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -2039,7 +2039,7 @@ priority：可选参数，policy的优先级
         <div class="pagination-single__icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path fill="currentColor" d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
         </div>
-        <div class="pagination-single__left-title">nginx作为文件下载服务器</div>      
+        <div class="pagination-single__left-title">Nginx作为文件下载服务器</div>      
       </a>
     
     <div class="grow"></div>
@@ -2411,7 +2411,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <li><a href="#2rabbitmq-server安装">2.rabbitmq-server安装</a></li>
         <li><a href="#3在每个节点启用管理插件">3.在每个节点启用管理插件</a></li>
         <li><a href="#4加入集群">4.加入集群</a></li>
-        <li><a href="#5创建rabbitmq用户">5.创建rabbitMQ用户</a></li>
+        <li><a href="#5创建rabbitmq用户">5.创建RabbitMQ用户</a></li>
         <li><a href="#6命令行开启镜像策略">6.命令行开启镜像策略</a></li>
       </ul>
     </li>

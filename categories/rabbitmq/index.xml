@@ -6,9 +6,9 @@
   xmlns:sy="http://purl.org/rss/1.0/modules/syndication/" 
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
-    <title>rabbitMQ on MidAug&#39;s  Blog</title>
+    <title>RabbitMQ on MidAug&#39;s  Blog</title>
     <link>/categories/rabbitmq/</link>
-    <description>Recent content in rabbitMQ on MidAug&#39;s  Blog</description>
+    <description>Recent content in RabbitMQ on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
@@ -23,7 +23,7 @@
 
       
       <item>
-        <title>ubuntu下rabbitMQ安装及集群配置</title>
+        <title>ubuntu下RabbitMQ安装及集群配置</title>
         <link>/posts/20190723/</link>
         <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
@@ -38,7 +38,7 @@
         
           
             
-              <category>rabbitMQ</category>
+              <category>RabbitMQ</category>
             
           
             
@@ -61,7 +61,7 @@
             
           
             
-              <category>rabbitMQ</category>
+              <category>RabbitMQ</category>
             
           
         
