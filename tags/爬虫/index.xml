@@ -29,7 +29,7 @@
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Mon, 29 Jan 2018 21:11:33 +0000</atom:modified>
         <guid>/posts/20180129/</guid>
-        <description>前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发现了 phantomjs，可以由服务端去做类似爬虫的操作来爬取</description>
+        <description>前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发现了 phantomj</description>
         
         <dc:creator>MidAug</dc:creator>
         

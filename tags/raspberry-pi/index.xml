@@ -29,7 +29,7 @@
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Mon, 21 Aug 2017 00:00:00 +0000</atom:modified>
         <guid>/posts/20170821/</guid>
-        <description>入手raspberry pi3，觉着还是刷个centos系统比较顺手。整理了一下刷centos后WIFI问题解决方式。 驱动安装 1 2 3 4 5 6 7 # 直接执行下面命令即可，如果没有网络就使用u盘拷贝到对应的目录</description>
+        <description>入手raspberry pi3，觉着还是刷个centos系统比较顺手。整理了一下刷centos后WIFI问题解决方式。 驱动安装 1 2 3 4 5 6 7 # 直接执行下面命令即可</description>
         
         <dc:creator>MidAug</dc:creator>
         

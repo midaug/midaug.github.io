@@ -29,7 +29,7 @@
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Tue, 23 Jul 2019 00:00:00 +0000</atom:modified>
         <guid>/posts/20190723/</guid>
-        <description>RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如</description>
+        <description>RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过</description>
         
         <dc:creator>MidAug</dc:creator>
         

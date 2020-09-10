@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "default_locale": "en",
   "description": "MidAug's Blog",
-  "start_url": "https://blog.midaug.win/",
+  "start_url": "/",
   "icons": [
     {
       "src": "favicon/android-icon-36x36.png",
