@@ -1647,7 +1647,7 @@
         <span class="c1">#add_before_body /autoindex.html;</span>
 
         <span class="c1">#auth_basic &#34;Restricted&#34;; #启用账号密码限制  #这里是验证时的提示信息</span>
-        <span class="c1">#auth_basic_user_file /etc/nginx/passwd/ecarx; #这里是密码文件</span>
+        <span class="c1">#auth_basic_user_file /etc/nginx/passwd; #这里是密码文件</span>
         <span class="c1">#limit_conn one 8;        #并发数</span>
         <span class="c1">#limit_rate 100k;        #单个线程最大下载速度，单位KB/s</span>
         <span class="c1">#allow 192.168.1.0/24;    #添加允许访问下载 IP 地址段</span>
