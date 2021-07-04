@@ -52,24 +52,6 @@
       </item>
       
       <item>
-        <title>《将博客搬至CSDN》</title>
-        <link>/posts/20210702/</link>
-        <pubDate>Fri, 02 Jul 2021 13:33:33 +0000</pubDate>
-        <author>days0814@gmail.com (MidAug)</author>
-        <atom:modified>Fri, 02 Jul 2021 13:33:33 +0000</atom:modified>
-        <guid>/posts/20210702/</guid>
-        <description>《将博客搬至CSDN》</description>
-        
-        <dc:creator>MidAug</dc:creator>
-        
-        
-        
-        
-        
-        
-      </item>
-      
-      <item>
         <title>ubuntu下RabbitMQ安装及集群配置</title>
         <link>/posts/20190723/</link>
         <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
