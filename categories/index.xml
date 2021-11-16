@@ -14,13 +14,31 @@
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
-    <lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 16 Nov 2021 10:33:33 +0000</lastBuildDate>
     
         <atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
     
 
+      
+      <item>
+        <title>博文收藏</title>
+        <link>/categories/%E5%8D%9A%E6%96%87%E6%94%B6%E8%97%8F/</link>
+        <pubDate>Tue, 16 Nov 2021 10:33:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        
+        <guid>/categories/%E5%8D%9A%E6%96%87%E6%94%B6%E8%97%8F/</guid>
+        <description></description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+        
+        
+      </item>
       
       <item>
         <title>RabbitMQ</title>
