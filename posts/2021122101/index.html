@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>深度分析 IT 职业发展路线，做一个透彻的打工人 – MidAug&#39;s  Blog</title>
+    <title>Nginx 内容缓存及常见参数配置 – MidAug&#39;s  Blog</title>
     
 
 
@@ -543,7 +543,7 @@
 
   
     
-    var permalink = JSON.parse("\"/posts/2021111601/\"");
+    var permalink = JSON.parse("\"/posts/2021122101/\"");
     var searchResults = null;
     var searchMenu = null;
     var searchText = null;
@@ -1206,18 +1206,18 @@
 <meta name="description" content="MidAug blog java docker hugo" />
 
 
-<meta name="keywords" content="修炼">
+<meta name="keywords" content="nginx">
 
-<meta name="created" content="2021-11-16T10:33:33&#43;0000">
-<meta name="modified" content="2021-11-16T10:33:33&#43;0000">
-<meta property="article:published_time" content="2021-11-16T10:33:33&#43;0000">
+<meta name="created" content="2021-12-21T18:11:33&#43;0000">
+<meta name="modified" content="2021-12-21T18:11:33&#43;0000">
+<meta property="article:published_time" content="2021-12-21T18:11:33&#43;0000">
 
 <meta name="author" content="MidAug">
 
 
 <meta property="og:site_name" content="MidAug&#39;s  Blog">
-<meta property="og:title" content="深度分析 IT 职业发展路线，做一个透彻的打工人">
-<meta property="og:url" content="/posts/2021111601/">
+<meta property="og:title" content="Nginx 内容缓存及常见参数配置">
+<meta property="og:url" content="/posts/2021122101/">
 <meta property="og:type" content="article">
 <meta property="og:description" content="MidAug blog java docker hugo">
 
@@ -1230,7 +1230,7 @@
 
 <meta name="apple-mobile-web-app-status-bar-style" content="#fff">
 
-<link rel="canonical" href="/posts/2021111601/">
+<link rel="canonical" href="/posts/2021122101/">
 
 <link rel="manifest" href="/manifest.json">
 
@@ -1244,12 +1244,12 @@
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "headline": "深度分析 IT 职业发展路线，做一个透彻的打工人",
-    "datePublished": "2021-11-16T10:33:33Z",
-    "dateModified": "2021-11-16T10:33:33Z",
-    "url" : "/posts/2021111601/",
-    "description": "一、前言 俗话说，“男怕入错行，女怕嫁错郎”，如果你是互联网/IT 那恭喜你，入对行了，因为： 互联网/IT 行业薪资是第二，仅次于金融行业 薪资排名前列的岗位都是互联网",
-    "keywords": ["修炼"],
+    "headline": "Nginx 内容缓存及常见参数配置",
+    "datePublished": "2021-12-21T18:11:33Z",
+    "dateModified": "2021-12-21T18:11:33Z",
+    "url" : "/posts/2021122101/",
+    "description": "Nginx 内容缓存及常见参数配置 Nginx 内容缓存及常见参数配置 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根",
+    "keywords": ["nginx"],
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": "/"
@@ -1539,7 +1539,7 @@
   
   <li  class="is-active" >
     
-      <span>深度分析 IT 职业发展路线，做一个透彻的打工人</span>
+      <span>Nginx 内容缓存及常见参数配置</span>
     
   </li>
   
@@ -1551,13 +1551,13 @@
   <div class="single ">
     <div class="single__nojs">This page looks best with JavaScript enabled</div>
     <script>document.querySelector('.single').classList.remove('hide'); document.querySelector('.single__nojs').classList.add('hide');</script>
-    <h2 class="single__title" data-ani="false">深度分析 IT 职业发展路线，做一个透彻的打工人</h2>
+    <h2 class="single__title" data-ani="false">Nginx 内容缓存及常见参数配置</h2>
     <div class="single__meta">
       
 <div class="single__infos">
-  <time class="single__info" title="Written At">📅&nbsp;Nov 16, 2021 </time>
+  <time class="single__info" title="Written At">📅&nbsp;Dec 21, 2021 </time>
   
-  &nbsp;&middot;&nbsp; <span class="single__info" title="Reading Time"> ☕&nbsp;13&nbsp;min read </span>
+  &nbsp;&middot;&nbsp; <span class="single__info" title="Reading Time"> ☕&nbsp;5&nbsp;min read </span>
   
   <span class="single__info">
     
@@ -1569,401 +1569,253 @@
   🏷️
   
 
-  <li><a href="/tags/%E4%BF%AE%E7%82%BC/" class="single__tag" title="修炼">#修炼</a></li>
+  <li><a href="/tags/nginx/" class="single__tag" title="Nginx">#Nginx</a></li>
 
 </ul>
     </div>
     <article class="single__contents" data-dir="ltr" data-ani="false">
       
-      <p><img src="/images/post/2021111601/solo-fetchupload-4424764992812506092-7f0fa023.jpeg" alt="l1mX6U" /></p>
-<h2 id="一前言">一、<strong>前言</strong></h2>
-<p>俗话说，“男怕入错行，女怕嫁错郎”，如果你是<strong>互联网/IT</strong> 那恭喜你，入对行了，因为：</p>
+      <h1 id="nginx-内容缓存及常见参数配置">Nginx 内容缓存及常见参数配置</h1>
+<h2 id="nginx-内容缓存及常见参数配置-1">Nginx 内容缓存及常见参数配置</h2>
+<blockquote>
+<p>使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根据请求路由和参数缓存一下结果，使用 Nginx 缓存将大幅度提升请求速度。</p>
+</blockquote>
+<h3 id="基础基础">基础<a href="#%E5%9F%BA%E7%A1%80"></a></h3>
+<p>只需要配置 <code>proxy_cache_path</code> 和 <code>proxy_cache</code> 就可以开启内容缓存，前者用来设置缓存的路径和配置，后者用来启用缓存。</p>
+<pre><code>http {
+    ...
+    proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+
+    server {
+        proxy_cache mycache;
+        location / {
+            proxy_pass http://localhost:8000;
+        }
+    }
+} 
+</code></pre><p><strong>对应参数说明:</strong></p>
+<blockquote>
+<p>1.用于缓存的本地磁盘目录是 /path/to/cache/</p>
+</blockquote>
+<blockquote>
+<p>2.levels 在 /path/to/cache/ 设置了一个两级层次结构的目录。将大量的文件放置在单个目录中会导致文件访问缓慢，所以针对大多数部署，我们推荐使用两级目录层次结构。如果 levels 参数没有配置，则 NGINX 会将所有的文件放到同一个目录中。</p>
+</blockquote>
+<blockquote>
+<p>3.keys_zone 设置一个共享内存区，该内存区用于存储缓存键和元数据，有些类似计时器的用途。将键的拷贝放入内存可以使 NGINX 在不检索磁盘的情况下快速决定一个请求是 <code>HIT</code> 还是 <code>MISS</code>，这样大大提高了检索速度。一个 1MB 的内存空间可以存储大约 8000 个 key，那么上面配置的 10MB 内存空间可以存储差不多 80000 个key。</p>
+</blockquote>
+<blockquote>
+<p>4.max_size 设置了缓存的上限（在上面的例子中是 10G）。这是一个可选项；如果不指定具体值，那就是允许缓存不断增长，占用所有可用的磁盘空间。当缓存达到这个上线，处理器便调用 cache manager 来移除最近最少被使用的文件，这样把缓存的空间降低至这个限制之下。</p>
+</blockquote>
+<blockquote>
+<p>5.inactive 指定了项目在不被访问的情况下能够在内存中保持的时间。在上面的例子中，如果一个文件在 60 分钟之内没有被请求，则缓存管理将会自动将其在内存中删除，不管该文件是否过期。该参数默认值为 10 分钟（10m）。注意，非活动内容有别于过期内容。NGINX 不会自动删除由缓存控制头部指定的过期内容（本例中Cache-Control:max-age=120）。过期内容只有在 inactive 指定时间内没有被访问的情况下才会被删除。如果过期内容被访问了，那么 NGINX 就会将其从原服务器上刷新，并更新对应的 inactive 计时器。</p>
+</blockquote>
+<blockquote>
+<p>6.NGINX 最初会将注定写入缓存的文件先放入一个临时存储区域， use_temp_path=off 命令指示 NGINX 将在缓存这些文件时将它们写入同一个目录下。我们强烈建议你将参数设置为 off 来避免在文件系统中不必要的数据拷贝。use_temp_path 在 NGINX1.7 版本和 NGINX Plus R6 中有所介绍。</p>
+</blockquote>
+<blockquote>
+<p>最终，proxy_cache 命令启动缓存那些 URL 与 location 部分匹配的内容（本例中，为<code>/</code>）。你同样可以将 proxy_cache 命令添加到 server 部分，这将会将缓存应用到所有的那些 location 中未指定自己的 proxy_cache 命令的服务中。</p>
+</blockquote>
+<h3 id="nginx-缓存相关进程nginx-缓存相关进程">Nginx 缓存相关进程<a href="#nginx-%E7%BC%93%E5%AD%98%E7%9B%B8%E5%85%B3%E8%BF%9B%E7%A8%8B"></a></h3>
+<p>缓存中还涉及两个额外的NGINX进程：</p>
+<ul>
+<li><strong>cache manager</strong> 周期性地启动，检查高速缓存的状态。如果高速缓存大小超过 proxy_cache_path 中 max_size 参数设置的限制，则高速缓存管理器将删除最近访问过的数据。在两次缓存管理器启动的间隔，缓存的数据量可能短暂超过配置的大小。</li>
+<li><strong>cache loader</strong> 只运行一次，NGINX 开始之后。它将有关以前缓存的数据的元数据加载到共享内存区域。一次加载整个缓存可能会消耗足够的资源来在启动后的最初几分钟内降低 NGINX 的性能。要避免这种情况，请通过在 proxy_cache_path 指令中包含以下参数来配置缓存的迭代加载：
+<ul>
+<li>loader_threshold - 迭代持续时间，以毫秒为单位（默认情况下 200）</li>
+<li>loader_files - 一次迭代期间加载的最大项目数（默认情况下 100）</li>
+<li>loader_sleeps - 迭代之间的延迟，以毫秒为单位（默认情况下 50）</li>
+</ul>
+</li>
+</ul>
+<p>在以下示例中，迭代持续数300 毫秒或直到 200 个项目被加载进去：</p>
+<pre><code>proxy_cache_path /data/nginx/cache keys_zone=one:10m loader_threshold=300 loader_files=200; 
+</code></pre><h3 id="其他常用参数其他常用参数">其他常用参数<a href="#%E5%85%B6%E4%BB%96%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0"></a></h3>
+<p><strong>配置示例：</strong></p>
+<pre><code>proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+
+server {
+    ...
+    location / {
+        proxy_cache my_cache;
+        # proxy_cache_key &quot;$host$request_uri$cookie_user&quot;;
+        proxy_cache_min_uses 3;
+        proxy_cache_methods GET HEAD POST;
+        proxy_cache_valid 200 302 10m;
+        proxy_cache_valid 404      1m;
+        # proxy_cache_valid any 5m;
+        proxy_pass http://localhost:8000;
+    }
+} 
+</code></pre><p><strong>对应参数说明：</strong><br />
+<code>proxy_cache_key</code> 为更改计算密钥时使用的请求特征，指定缓存的 key，这个不推荐，示例是使用域名，请求url，用户 cookie 来当作 key，意味着一个页面将为不同的用户缓存 n 次，绝大多数情况不需要这样的操作。<br />
+<code>proxy_cache_min_uses</code> 为在缓存响应之前必须使用相同密钥的请求的最小次数。<br />
+<code>proxy_cache_methods</code> 为指定要被缓存的请求方式的响应值，默认为 GET 和 HEAD，新增其他的需要一起列出来，如上示例所示。<br />
+<code>proxy_cache_valid</code> 为响应状态码的缓存时间，示例可以为每个状态码缓存指定时间，也可以使用 any 进行全部状态码的缓存。</p>
+<h3 id="清除缓存清除缓存">清除缓存<a href="#%E6%B8%85%E9%99%A4%E7%BC%93%E5%AD%98"></a></h3>
+<p>需要提前加一个配置，用于标识使用 HTTP PURGE 方法的请求并删除匹配的 URL 对应的缓存。<br />
+1.在 <code>http {}</code> 上下文中创建新变量，例如 <code>$purge_method</code>, 他依赖于 <code>$request_method</code> 变量：</p>
+<pre><code>http {
+    ...
+    map $request_method $purge_method {
+        PURGE 1;
+        default 0;
+    }
+} 
+</code></pre><p>2.在 <code>location {}</code> 块中，已经配置缓存的前提下，引入 <code>proxy_cache_purge</code> 参数来指定清除缓存请求的条件。例如在上一步指定的 <code>$request_method</code></p>
+<pre><code>server {
+    listen      80;
+    server_name www.example.com;
+
+    location / {
+        proxy_pass  https://localhost:8002;
+        proxy_cache mycache;
+
+        proxy_cache_purge $purge_method;
+    }
+} 
+</code></pre><p>配置完并使之生效之后，就可以发送一条 purge 请求来让缓存失效了，例如：</p>
+<pre><code>curl -X PURGE -D – &quot;https://www.example.com/*&quot; 
+</code></pre><p>在该示例中，将清除具有公共 URL 部分（由星号通配符指定）的资源。但这些缓存条目不会从缓存中完全删除：它们会保留在磁盘上，直到它们被视为不活动（由<code>proxy_cache_path</code> 中的 <code>inactive</code>参数决定）的时候才完全删除，或缓存清除器（由 <code>proxy_cache_path</code> 中的 <code>purge</code> 决定），或客户端尝试访问它们的时候。</p>
+<h2 id="nginx-基于url参数的反向代理加缓存实践">Nginx 基于url参数的反向代理加缓存实践</h2>
+<p><strong>nginx.conf：</strong></p>
+<pre><code>user nginx;
+worker_processes auto;
+
+error_log /var/log/nginx/error.log notice;
+pid /var/run/nginx.pid;
+
+
+events {
+    worker_connections 1024;
+}
+
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+    '$status $body_bytes_sent &quot;$http_referer&quot; '
+    '&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;';
+
+    # access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    #tcp_nopush     on;
+
+    keepalive_timeout 65;
+
+    # 配置多个proxy_cache_path以便实现不同的业务
+    proxy_connect_timeout 10;
+    proxy_read_timeout 180;
+    proxy_send_timeout 5;
+    proxy_buffer_size 16k;
+    proxy_buffers 4 32k;
+    proxy_busy_buffers_size 96k;
+    proxy_temp_file_write_size 96k;
+    proxy_temp_path /tmp/nginx/temp_dir;
+    proxy_cache_path /tmp/nginx/cache1m levels=1:2 keys_zone=cache1m:100m inactive=1m max_size=10g;
+    proxy_cache_path /tmp/nginx/cache5m levels=1:2 keys_zone=cache5m:100m inactive=5m max_size=10g;
+    proxy_cache_path /tmp/nginx/cache10m levels=1:2 keys_zone=cache10m:100m inactive=10m max_size=10g;
+    proxy_cache_path /tmp/nginx/cache30m levels=1:2 keys_zone=cache30m:100m inactive=30m max_size=10g;
+    proxy_cache_path /tmp/nginx/cache1h levels=1:2 keys_zone=cache1h:100m inactive=1h max_size=10g;
+    proxy_cache_path /tmp/nginx/cache12h levels=1:2 keys_zone=cache12h:100m inactive=12h max_size=10g;
+    proxy_cache_path /tmp/nginx/cache1d levels=1:2 keys_zone=cache1d:100m inactive=1d max_size=10g;
+    proxy_cache_path /tmp/nginx/cache7d levels=1:2 keys_zone=cache7d:100m inactive=7d max_size=10g;
+    proxy_cache_path /tmp/nginx/cache30d levels=1:2 keys_zone=cache30d:100m inactive=30d max_size=10g;
+
+
+    server {
+        listen 80;
+        server_name .*;
+
+        location / {
+            root html;
+            index index.html index.htm;
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root html;
+        }
+
+        location /_proxy/ {
+            # 跨域支持
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' '*' always;
+                add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE' always;
+                add_header 'Access-Control-Allow-Headers' '*' always;
+                add_header 'Access-Control-Max-Age' 1728000 always;
+                add_header 'Content-Length' 0;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                return 204;
+            }
+
+            if ($request_method ~* '(GET|POST|DELETE|PUT)') {
+                add_header 'Access-Control-Allow-Origin' '*' always;
+            }
+
+            # 解析缓存域
+            set $proxy_cache &quot;cache1m&quot;;
+            if ( $request_uri ~ &quot;/_proxy/(.+)\?&quot; ) {
+                set $proxy_cache $1;
+            }
+            # 不存在的缓存域时返回404异常
+            if (!-e /tmp/nginx/$proxy_cache) {
+                add_header proxy_cache_time 'cache dir is not found';
+                return 404;
+            }
+            # 缓存配置
+            proxy_cache $proxy_cache;
+            # proxy_cache_valid 200 302 24h;
+            # proxy_cache_valid 301 30d;
+            proxy_cache_valid any 30d;
+            expires 30d;
+						 # 增加响应头记录是否命中缓存
+            add_header proxy_cache_time $proxy_cache;
+            add_header proxy_cache_status $upstream_cache_status;
+            # 关闭重定向
+            proxy_redirect off;
+            # 能解析转发 URL 的 DNS
+            resolver 223.5.5.5 8.8.8.8;
+            # 获取真实url
+            if ($query_string ~ &quot;^url=(.+)&quot;) {
+                set $proxy_url $1;
+            }
+            # 获取 host
+            set $proxy_host $host;
+            if ($proxy_url ~ &quot;https?://(.*?)/&quot;) {
+                set $proxy_host $1;
+            }
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_pass $proxy_url;
+        }
+
+    }
+
+}
+</code></pre><p><strong>docker-compose.yml 快速测试：</strong></p>
+<pre><code>version: &quot;3.6&quot;
+services:
+  nginx-cache:
+    image: nginx:1.20.2-alpine
+    container_name: nginx-cache
+    restart: always
+    network_mode: bridge
+    ports:
+    - &quot;8000:80&quot;
+    environment:
+    - TZ=Asia/Shanghai
+    volumes:  
+    - &quot;./nginx.conf:/etc/nginx/nginx.conf:ro&quot;
+    - &quot;./logs:/var/log/nginx:rw&quot;
+    - &quot;./temp:/tmp/nginx&quot;
+</code></pre><p>参考链接：</p>
 <ol>
-<li><strong>互联网/IT</strong> 行业薪资是第二，仅次于金融行业</li>
-<li>薪资排名前列的岗位都是<strong>互联网/IT</strong> 行业。</li>
+<li><a href="https://giphy.com/search/Tom-and-Jerry?utm_source=wechat_session&amp;utm_medium=social&amp;from=singlemessage">Nginx 缓存使用官方指南</a></li>
+<li><a href="https://docs.nginx.com/nginx/admin-guide/content-cache/content-caching/">Nginx 内容缓存文档</a></li>
 </ol>
-<p>好的行业是个好的开始，混的如何，就要看自己的努力了。</p>
-<p><img src="/images/post/2021111601/solo-fetchupload-6194655127494195968-8d502fa8.png" alt="chJ0az" /></p>
-<p><img src="/images/post/2021111601/solo-fetchupload-1047914865427019738-7da1952f.png" alt="sjrU8m" /></p>
-<h2 id="二职业发展路线">二、职业发展路线</h2>
-<p>“打工人，打工魂”，优秀的打工人需要时刻思考自己的打工路线图（职业发展路径），做一个有规划、有目标、有追求的打工人。</p>
-<p><img src="/images/post/2021111601/solo-fetchupload-7777110070292528863-3fbff131.png" alt="2l2Be8" /></p>
-<p><img src="/images/post/2021111601/solo-fetchupload-6875344822187555025-e382d458.jpeg" alt="0hq3r8" /></p>
-<p>结合上述两张图，程序员发展路线还是比较丰富的，仔细对比上面两幅图，可以发现一条比较专业路线</p>
-<blockquote>
-<p>初级程序员（工程师）&mdash;&gt; 中/高级/资深程序员（工程师）&mdash;&gt; 系统架构师&mdash;&gt; 初级/高级技术经理&mdash;-&gt; 技术（研发）总监&mdash;&gt;CTO</p>
-</blockquote>
-<p>接下来，本文从_薪资、技能、职责、岗位特征_等角度一一总结每个阶段。</p>
-<h2 id="三初级程序员">三、初级程序员</h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-6551750562553176410-361e0566.png" alt="image-20210802162404-s4sfrhs.png" /></p>
-<h3 id="31-基本特征">3.1 基本特征</h3>
-<p>计算机、软件相关的童鞋毕业后，大部分会应聘程序员岗位（程序猿、程序猿），英文名 coder/programmer，大家常自嘲叫码农的阶段。</p>
-<p>这个角色核心职责：把需求或产品实现为用户可用的软件产品，白话就是：敲代码，从各种 <code>Hello world</code> 开始。</p>
-<p>此角色为执行级别，因为经验较少，一般需要求助别人，或与别人一起完（ban）成（zhuan）一个任务。大部分公司会安排一个师傅/老手带你。</p>
-<h3 id="32-职责示例">3.2 职责（示例）</h3>
-<blockquote>
-<ol>
-<li>参与需求分析、设计、评审工作；</li>
-<li>执行上级主管安排的工作任务，对负责模块进行数据库表设计、接口文档设计与开发、核心功能开发、冒烟测试 d 等；</li>
-<li>对自己负责的工作质量进行把关，主动进行技术与业务知识总结；</li>
-<li>负责项目的日常开发维护工作等</li>
-<li>对线上产品出现的较为重大的故障进行分析、排查并且解决或协助解决问题，使产品恢复正常使用。</li>
-<li>完成上级安排的其他工作</li>
-</ol>
-</blockquote>
-<h3 id="33-任职要求示例以-java-为例">3.3 任职要求示例（以 Java 为例）</h3>
-<blockquote>
-<ol>
-<li>JAVA 基础扎实，熟悉 JSP/Servlet、spring 、spring mvc 等；</li>
-<li>熟悉 html、css、Jquery、Ajax 、Javascript 等前端技术； 熟悉 SQL 语法 、oracle 数据库；</li>
-<li>熟悉 SQL 语法 、oracle 数据库；具有良好的问题分析、解决能力和沟通表达能力，积极主动，具备一定抗压能力；</li>
-<li>具有良好的问题分析、解决能力和沟通表达能力，积极主动，具备一定抗压能力；</li>
-<li>为人诚恳、诚实、积极、负责；</li>
-<li>有 1 年以上经验或优秀应届毕业生；</li>
-</ol>
-</blockquote>
-<h3 id="34-成长">3.4 成长</h3>
-<p>此阶段大概要经历 3 年，主要是打基础的为主，积累自己的开发经验，掌握开发技巧，熟悉开发流程，也同步锻炼自己的综合素质，比如：总结汇报、演讲、资源协调等等。</p>
-<p>在这个阶段，如果你发现自己不适合做开发，可以转向<strong>技术之外的岗位：测试、产品、售前</strong>等</p>
-<p>这个阶段的薪资水平：<strong>3K~10K</strong> 之间，不包括大厂哦~~</p>
-<h2 id="四中高级资深程序员">四、中/高级/资深程序员</h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-4419889184025865836-d6749fc7.jpeg" alt="5ey2yr" /></p>
-<h3 id="41-基本特征">4.1 基本特征</h3>
-<p>如果你在开发岗站稳脚，不出意外，你会一直往这条路上走下去，随着开发技能、业务经验、公司年限的增加，公司会给予你升职加薪的机会，你得职位也会从低-&gt; 高-&gt; 资深 这样的路径成长，至于所需的时间和你平时的积累努力是分不开的。</p>
-<h3 id="42-职责示例">4.2 职责（示例）</h3>
-<blockquote>
-<ol>
-<li>主要有<strong>核心技术方案设计、封装组件、核心功能/逻辑代码开发、技术评审</strong>等工作</li>
-<li>负责后端的模块设计和开发，并负责完成核心代码；</li>
-<li>完成模块的设计、编码、测试工作，编写各类技术文档等；</li>
-<li>支持解决各项目中提出的定制需求，协调人员及进度控制，把控产品的研发质量；</li>
-<li>配合前端开发人员进行程序调试测试，最好也能掌握基本的前端开发技巧；</li>
-<li>能够按照负责人的要求进行系统程序设计和数据库设计；</li>
-<li>指导中初级软件工程师完成工作任务。</li>
-</ol>
-</blockquote>
-<h3 id="43-任职资格示例以-java-为例">4.3 任职资格示例（以 Java 为例）</h3>
-<blockquote>
-<ol>
-<li>掌握 JAVA 语言，熟练使用 servlet、JDBC、多线程、网络、IO 等技术，熟悉常见算法及数据结构，有良好的编码习惯；</li>
-<li>熟练使用 Spring， Spring Cloud 等开源主流框架，了解框架设计思想及其实现原理；</li>
-<li>熟悉 Linux/Unix 系统，熟悉 Oracle、SQLServer、MySQL 等关系型数据库，SQL 功底扎实；</li>
-<li>熟悉 Reids、MongoDB 等 NoSQL 数据库。</li>
-<li>具备良好的识别和设计通用框架及模块的能力</li>
-</ol>
-</blockquote>
-<h3 id="44-成长">4.4 成长</h3>
-<p>这个阶段，你不仅可以完成任务，开始注重代码的质量，能够写出工业级的代码。</p>
-<p>你的经验可胜任模块级的系统设计，承担完成较为复杂的技术，能有效的自我管理，有帮助别人快速解决问题（trouble shooting）的能力。</p>
-<p>此阶段你需要经历到 <strong>7、8 年左右</strong>的体验，中间要经历一段深刻自我历练的过程。</p>
-<p>有时给人致命一击其实是心里的小蟊贼。一般人在 5 年前后遇到一个门槛，碰到天花板 + 彷徨期，或者你打心眼里不再喜欢编程，可尝试转为其它角色，如<strong>产品经理，售前售后支持</strong>等岗位，也不失为好选择。</p>
-<p>当你做到中高级程序员，基本上组织也会让你当个小组长/主管之类的岗位，让你管理几个小组员，你的思维就要从个人思维转向团队思维了，要多思考团队何去何从。</p>
-<p>当我们熬过这段儿，就会“山随平野尽，江入大荒流“，渐入佳境矣。</p>
-<p>工资范围：10K~30K</p>
-<h2 id="五系统架构师">五、系统架构师</h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-1909504894044523518-d0485df2.jpeg" alt="Obg3sj" /></p>
-<h3 id="51-基本特征">5.1 基本特征</h3>
-<p>到了架构师级别，想必你已经学会降龙十八掌，可登堂入室，成为一位准（lao）专（you）家（tiao）。</p>
-<p>我们大喊声：“单打独斗，老衲谁也不惧！“，遂开始领导一众技术高手，指点武功，来设计和完成一个系统，大多是分布式，高并发的系统架构平台。</p>
-<p>架构师的任务是为公司产品的业务问题提供高质量技术解决方案。可能每条产品线都设置了架构师，也可能多条生产品线的的后端是由一个架构师设计的平台提供。</p>
-<h3 id="52-职责示例">5.2 职责（示例）</h3>
-<blockquote>
-<ol>
-<li>需求分析：“知彼”有时比“知已”还重要。管理市场，产品等的需求，确立关键需求。坚持技术上的优秀与需求的愿景统一，提升技术负债意识，提供技术选项，风险预判，工期等解决方案。</li>
-<li>架构设计：在产品功能中抽取中非功能的需求，由关键需求变成概念型架构。列出功能树，分层治之，如用户界面层、系统交互层，数据管理层。达成高扩展，高可用，高性能，高安全，易运维，易部署，易接入等能力。</li>
-<li>功能设计与实现：对架构设计的底层代码级别实现。如公共核心类，接口实现，应用发现规则、接口变更等。</li>
-<li>负责核心系统的架构设计，重构、优化现有的技术架构，及关键架构设计的落地实现；</li>
-<li>承担业务重点、业内难点的技术攻坚，主导核心组件/服务的编码和上线；</li>
-<li>负责架构和质量意识的布道，驱动研发过程的改进和交付质量的提升。</li>
-<li>项目售前支持，在技术方面配合客户立项及标书规范的制定、规划设计方案、商务报价、合同相关条款等事宜；</li>
-<li>不断优化架构设计的全局性和前瞻性，推动周边系统和相关团队完成系统架构落地，解决业务发展遇到的架构问题，持续提升系统平台能力。</li>
-<li>强烈的自驱力和责任感，面对复杂业务问题，可以从业务和技术多角度推进，最终达成目标；</li>
-</ol>
-</blockquote>
-<p>具体也可以参考：<a href="https://link.ld246.com/forward?goto=http%3A%2F%2Fbugless.site%2Farticles%2F2021%2F03%2F09%2F1615261825470.html">百万年薪架构师综合职业技能</a></p>
-<h3 id="53-任职资格示例">5.3 任职资格示例</h3>
-<blockquote>
-<ol>
-<li>本科或以上学历，6 年以上工作经验，3 年以上系统架构设计经验；</li>
-<li>掌握微服务框架、分布式架构、缓存、日志、消息等大规模集群技术；</li>
-<li>熟悉虚拟化以及 Docker、kubernetes 等容器技术，有 3 年以上云计算设计经验者优先；</li>
-<li>熟悉掌握 Nginx/ElasticSearch/Redis/RabbitMQ 等中间件；</li>
-<li>主导并参与过大型项目的系统设计与研发；</li>
-<li>深刻理解大数据处理(流计算、分布式计算、分布式文件系统、分布式存储等相关技术和实现方法，有架构和设计实践经验；</li>
-<li>熟悉大数据解决方案包括 Hadoop、Spark、Storm、机器学习、深度学习等大数据解决方案；</li>
-<li>精通 java、scala、python 中的一种或多种语言；</li>
-<li>对数据敏感，有严谨的工作思路，良好的沟通能力，和团队合作精神；</li>
-<li>高扩展性、高性能和分布式系统的实践及运维经验者优先；</li>
-<li>有大型数据仓库实施、大数据平台数据开发经验，熟悉数据中台业务者优先。</li>
-<li>有阿里、腾讯、字节等国内外大型互联网企业工作经验优先。</li>
-</ol>
-</blockquote>
-<h3 id="54-成长">5.4 成长</h3>
-<p>成为架构师至少要 6~8 年，经历大大小小的项目。</p>
-<p>架构下一步可以继续往技术方向深度发展，也可以往技术管理岗发展。</p>
-<p>薪资范围：20K~40K</p>
-<h2 id="六技术经理">六、技术经理</h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-6487084968023286555-9a3fca7a.jpeg" alt="mPc5QY" /></p>
-<h3 id="61-基本特征">6.1 基本特征</h3>
-<p>技术经理坦率的讲，就是从高级程序员开始分化而来，一部分同学选择继续专研技术，往纵向发展，一部分同学打算觉得未来管理这条路很好，主动选择开始转型管理这个方向，于是才有里技术主管或者经理经理这个称谓。</p>
-<p>我还是以阿里为参考，阿里的 M 代表管理方向，你可以通过下图可以清晰的看见 P 系列和 T 系列对应的级</p>
-<p><img src="/images/post/2021111601/solo-fetchupload-913902348439634093-cd0a3963.jpeg" alt="J1ThlO" /></p>
-<p>这个时候你就非常清晰了，技术经理本身就是从资深工程师发展而来，很多公司的技术经理根本没有从一线研发做起，大部分就是一个项目经理，带带项目为主，根本无法胜任刚才我讲到的技术经理的工作。</p>
-<h3 id="62示例">6.2（示例）</h3>
-<blockquote>
-<ol>
-<li>负责开发团队的日常管理，制定开发计划、任务分解、工日评估、任务安排等；</li>
-<li>负责开发团队的人员培养，制定培养计划，形成人才梯队；</li>
-<li>对团队所承担的项目开发进程负责，从技术上对团队提供指导；负责项目的软件开发工作及相关的技术问题的跟踪和解决；</li>
-<li>参与公司软件产品或项目的关键性需求分析，以便于能对项目技术、框架选型做出相对比专业的决定；</li>
-<li>深入了解公司基础平台，编写符合自身软件产品或项目的编码规范、技术文档、系统设计文档 ；</li>
-<li>跟踪技术发展潮流，为公司新基础平台提供合理建议，在未来产品或项目中使用上；</li>
-<li>完成直接上级安排的临时或其它工作。</li>
-<li>从架构、框架层、平台层等技术方案设计；技术推广、技术视野、新技术引进等维度上制定；</li>
-</ol>
-</blockquote>
-<h3 id="63-任职资格示例">6.3 任职资格示例</h3>
-<blockquote>
-<p><strong>能力方面</strong></p>
-<ol>
-<li>组织能力</li>
-<li>技术架构能力</li>
-<li>业务分析能力</li>
-<li>项目管理能力</li>
-<li>沟通表达和讲演能力</li>
-<li>培训下属的能力</li>
-<li>风险承受能力</li>
-<li>团队技术引领能力</li>
-</ol>
-<p><strong>意识方面</strong></p>
-<ol start="9">
-<li>组织能力建设意识</li>
-<li>提高团队和个人绩效意识</li>
-</ol>
-</blockquote>
-<h2 id="七技术总监">七、<strong>技术总监</strong></h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-3937772283017107835-300e2757.jpeg" alt="gvtZqH" /></p>
-<p>如果一个研发团队超过 20 人，有多条产品线或业务量很大，这时已经有多个技术经理在负责每个业务，这时需要一位技术总监。：</p>
-<h3 id="71-职责示例">7.1 职责（示例）</h3>
-<blockquote>
-<ol>
-<li>根据公司战略规划与年度工作计划，制定中长期技术规划，提升公司的 IT 竞争力；</li>
-<li>负责制定公司技术管理体系，包括技术规范、业务流程、项目管理、考核机制等；</li>
-<li>全面有效管理研发项目的实施，保证项目的进度和质量控制，并确保项目目标的按期实现；</li>
-<li>负责研发项目的技术选型、整体框架设计评审、核心代码开发评审，制定合理的技术路线，解决系统建设，开发效率，运行质量，用户体验中的问题；</li>
-<li>主导技术难题攻关，持续提升核心功能的性能，解决各类潜在系统技术风险，保证系统的安全、稳定、快速运行；</li>
-<li>负责技术团队的建设与管理，包括培训指导、考核等，全面提升团队技术水平</li>
-</ol>
-</blockquote>
-<h3 id="72-任职资格示例">7.2 任职资格示例</h3>
-<blockquote>
-<ol>
-<li>本科及以上学历，计算机及相关专业；</li>
-<li>全栈开发者，6 年以上后端开发或系统架构师工作经验， 4 年以上技术团队管理经验；</li>
-<li>丰富的产品分析和设计经验，有技术战略推动能力；</li>
-<li>有较强的信息规划能力，对信息技术发展有较强的敏锐度，对公司信息化技术发展提供决策性的建议；</li>
-<li>具备较强的团队管理能力、项目管理能力、队伍培训能力，丰富的团队管理经验，有 PMP 经验或证书为佳。</li>
-</ol>
-</blockquote>
-<h2 id="八cto">八、<strong>CTO</strong></h2>
-<p><img src="/images/post/2021111601/solo-fetchupload-7529551309186864112-fc172903.png" alt="image-20210802163940-wwjdolv" /></p>
-<h3 id="81-基本特征">8.1 基本特征</h3>
-<p>首席技术官，英文名 Chief Technology Officer。是与 CEO、COO、CFO 同级的领导者，是技术和业务融合的领袖。</p>
-<p>国内与国外对 CTO 的定义有些许不同。</p>
-<p>美国对 CTO 的职责是设计公司三年内的产品和服务的技术发展方向，较少参与技术团队的日常管理和项目管理事务。基本是前瞻性的策略思维，比如 Google 的谢尔盖.布林一直保持对技术方向的敏锐，比如无人驾驶汽车，人工智能等走向。</p>
-<p>在国内，CTO 大部分则偏重于研发管理，相当于技术总监的 Plus 版。它相当于美国互联网公司常设的工程师副总裁 + CTO 的工作并集。但总体事情比美国的 CTO 层次低，大部分 CTO 的是领导技术团队开发各类产品，解决技术问题，管理不同的项目，排期交付。还有一部分的职能类似于架构师或总工程师，作为技术侧的权威，为下一步的发展方向 做研究探讨，为 CEO 提供建设型决定参考。</p>
-<h3 id="82-职责示例">8.2 职责（示例）</h3>
-<blockquote>
-<ol>
-<li>结合公司战略规划，协助公司总裁挖掘企业信息资源、制定企业信息化战略、合理布局企业信息化、评估信息化对企业的价值等；</li>
-<li>负责信息流、物流、资金流的整合，完成信息系统的选型实施，收集研究企业内外部的信息，为决策提供依据，负责公司整体 Oracle 全面的集成云平台和云服务的实施与推行情况；</li>
-<li>协助企业完成业务流程重组，运用信息管理技术重建企业的决策体系和执行体系。不仅要推动企业信息化的软硬环境优化，而且要为集总裁当好参谋，与各高层管理者一起促进企业内外部商务环境的改善；</li>
-<li>负责信息系统建设及正常运营使用，包括建立信息系统体系及相关管理制度、规范及业务流程、标准工具，并提供关于信息技术的相关咨询、培训，推动并监督信息技术资源的建立及充分利用；</li>
-<li>负责研究和拟定公司未来三至五年信息化建设战略规划，落实公司信息化建设计划；跟进各信息化作业实施进度及质量，对信息化投入产出负责；推进信息化变被动为主动，推进加强公司信息化建设。</li>
-<li>利用互联网技术进行快速数字化转型，做到制造数字化、管理数据化，并运用这些数字手段让企业战略做出完整的决策；</li>
-<li>负责公司各信息系统、网络、服务器等软、硬件的正常规范运作，确保健壮性、可靠性；实现企业办公信息化，业务信息化，仓储物流信息化；</li>
-<li>负责公司整体信息安全体系建设、推动和实施、检核监控；为公司提供更专业的信息安全服务；</li>
-<li>负责对子公司的信息管理工作进行指导与稽核，确保地区信息化工作的顺畅；</li>
-<li>负责部门内部人员和团队的建立，储备培养信息化体系的梯队人才；</li>
-<li>负责完总裁交办的其它各项工作事务。</li>
-</ol>
-</blockquote>
-<h3 id="83-任职资格示例">8.3 任职资格示例</h3>
-<blockquote>
-<ol>
-<li>全日制本科及以上学历，计算机、信息管理、通信工程相关专业，精通 JAVA，懂.NET;</li>
-<li>精通现代企业经营管理，有较丰富的企业管理经验，有大型食品制造企业大数据系统建立经验优先考虑;</li>
-<li>10 年以上信息化管理相关工作经验，综合性集团公司背景优先考虑； 有知名企业公司相关岗位任职经验优先考虑；</li>
-<li>熟悉移动互联、物联网、大数据、O2O 等发展趋势，对综合型业务集团信息化建设有全局的认识，对行业的新技术如大数据/人工智能有一定的研究及经验；</li>
-<li>掌握基本的 IT 软件开发技术工具，有国内外主流 ERP 系统上线实施管理经历优先考虑；</li>
-<li>熟悉 OA、ERP、CRM、WMS 等常用信息系统，熟悉用友、SAP、Oracle 等项目实施与管理经验；</li>
-<li>独立组织实施过大型企业 IT 项目，熟悉企业内部信息系统的架构、运作和管理；</li>
-<li>具备丰富软件系统分析、软件系统架构经验；</li>
-<li>具备较强的数据安全意识，保证公司信息数据安全。</li>
-</ol>
-</blockquote>
-<h3 id="84-成长">8.4 成长</h3>
-<p><img src="/images/post/2021111601/solo-fetchupload-9182186387253933040-900b0175.jpeg" alt="Tenze7" /></p>
-<p><strong>CTO</strong> 做的事情，是商业、产品、技术、管理、团队相平衡的综合统管，公司的技术研发方向与重点商业化的结果负责，激励员工，营造工程师文化。</p>
-<p>而<strong>技术总监</strong>主要是协调团队内部各个资源，引入工具，和方法提升工作效率。</p>
-<p><strong>技术经理</strong>角色相对具体，绩效考核，产品落地，执行优胜劣汰的规则。</p>
-<p>正像《少有人走的路》，每个人的成长路径都不同，但无一不是兴趣与使命驱动——无论你是程序员，技术经理，还是在 CTO 的角色。大家一起发挥潜力，去迎接不期而遇的挑战与胜利后的曼妙风光。</p>
-<h2 id="九附录企业各职位英文缩写">九、附录：企业各职位英文缩写</h2>
-<table>
-<thead>
-<tr>
-<th>简称</th>
-<th>释义</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GM(General Manager)</td>
-<td>总经理</td>
-</tr>
-<tr>
-<td>VP(Vice President)</td>
-<td>副总裁</td>
-</tr>
-<tr>
-<td>FVP(First Vice President)</td>
-<td>第一副总裁</td>
-</tr>
-<tr>
-<td>AVP(Assistant Vice President)</td>
-<td>副总裁助理</td>
-</tr>
-<tr>
-<td>CEO(Chief Executive Officer)</td>
-<td>首席执行官，类似总经理、总裁，是企业的法人代表</td>
-</tr>
-<tr>
-<td>COO(Chief Operations Officer)</td>
-<td>首席运营官，类似常务总经理</td>
-</tr>
-<tr>
-<td>CFO(Chief Financial Officer)</td>
-<td>首席财务官，类似财务总经理</td>
-</tr>
-<tr>
-<td>CIO(Chief Information Officer)</td>
-<td>首席信息官，主管企业信息的收集和发布</td>
-</tr>
-<tr>
-<td>CTO(Chief technology officer)</td>
-<td>首席技术官 类似总工程师</td>
-</tr>
-<tr>
-<td>HRD(Human Resource Director)</td>
-<td>人力资源总监</td>
-</tr>
-<tr>
-<td>OD(Operations Director)</td>
-<td>运营总监</td>
-</tr>
-<tr>
-<td>MD(Marketing Director)</td>
-<td>市场总监</td>
-</tr>
-<tr>
-<td>OM(Operations Manager)</td>
-<td>运作经理</td>
-</tr>
-<tr>
-<td>PM(Production Manager)</td>
-<td>生产经理(Product Manager)产品经理</td>
-</tr>
-<tr>
-<td>CAO</td>
-<td>Art 艺术总监</td>
-</tr>
-<tr>
-<td>CBO</td>
-<td>Business 商务总监</td>
-</tr>
-<tr>
-<td>CCO</td>
-<td>Content 内容总监</td>
-</tr>
-<tr>
-<td>CDO</td>
-<td>Development 开发总监</td>
-</tr>
-<tr>
-<td>CGO</td>
-<td>Gonverment 政府关系</td>
-</tr>
-<tr>
-<td>CHO</td>
-<td>Human resource 人事总监</td>
-</tr>
-<tr>
-<td>CJO</td>
-<td>Jet 把营运指标都加一个或多个零使公司市值像火箭般上升的人</td>
-</tr>
-<tr>
-<td>CKO</td>
-<td>Knowledge 知识总监</td>
-</tr>
-<tr>
-<td>CLO</td>
-<td>Labour 工会主席</td>
-</tr>
-<tr>
-<td>CMO</td>
-<td>Marketing 市场总监</td>
-</tr>
-<tr>
-<td>CNO</td>
-<td>Negotiation 首席谈判代表</td>
-</tr>
-<tr>
-<td>CPO</td>
-<td>Public relation 公关总监</td>
-</tr>
-<tr>
-<td>CQO</td>
-<td>Quality control 质控总监</td>
-</tr>
-<tr>
-<td>CRO</td>
-<td>Research 研究总监</td>
-</tr>
-<tr>
-<td>CSO</td>
-<td>Sales 销售总监</td>
-</tr>
-<tr>
-<td>CUO</td>
-<td>User 客户总监</td>
-</tr>
-<tr>
-<td>CVO</td>
-<td>Valuation 评估总监</td>
-</tr>
-<tr>
-<td>CWO</td>
-<td>Women 妇联主席</td>
-</tr>
-<tr>
-<td>CXO</td>
-<td>什么都可以管的不管部部长</td>
-</tr>
-<tr>
-<td>CYO</td>
-<td>Yes 什么都点头的老好人</td>
-</tr>
-<tr>
-<td>CZO</td>
-<td>现在排最后，等待接班的太子</td>
-</tr>
-</tbody>
-</table>
-<p><br/>  <br/>  <br/></p>
-<hr />
-<blockquote>
-<p>来源：http://bugless.site/articles/2021/08/03/1627981979162.html</p>
-</blockquote>
 
     </article>
     
@@ -2025,7 +1877,7 @@
     
     
       
-        <a href="https://www.facebook.com/sharer/sharer.php?u=%2fposts%2f2021111601%2f" title="Facebook" aria-label="Facebook Share Button" class="donation__item" target="_blank" rel="noreferrer" data-type="share">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=%2fposts%2f2021122101%2f" title="Facebook" aria-label="Facebook Share Button" class="donation__item" target="_blank" rel="noreferrer" data-type="share">
           <svg data-name="facebook" enable-background="new 0 0 24 24" viewBox="0 0 24 24" width="35" height="35" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="m15.997 3.985h2.191v-3.816c-.378-.052-1.678-.169-3.192-.169-3.159 0-5.323 1.987-5.323 5.639v3.361h-3.486v4.266h3.486v10.734h4.274v-10.733h3.345l.531-4.266h-3.877v-2.939c.001-1.233.333-2.077 2.051-2.077z"/></svg>
         </a>
       
@@ -2163,21 +2015,14 @@
 <nav class="pagination-single">
   
     
-      <a href="/posts/2021070201/" class="pagination-single__left">
+      <a href="/posts/2021111601/" class="pagination-single__left">
         <div class="pagination-single__icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path fill="currentColor" d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
         </div>
-        <div class="pagination-single__left-title">Intel MacOs Big Sur 11.4系统Studio 3T破解</div>      
+        <div class="pagination-single__left-title">深度分析 IT 职业发展路线，做一个透彻的打工人</div>      
       </a>
     
     <div class="grow"></div>
-    
-      <a href="/posts/2021122101/" class="pagination-single__right">      
-        <div class="pagination-single__right-title">Nginx 内容缓存及常见参数配置</div>
-        <div class="pagination-single__icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path fill="currentColor" d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59c.39-.39.39-1.02 0-1.41l-6.58-6.6c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z"/></svg>
-        </div>
-      </a>
     
   
 </nav>
@@ -2533,56 +2378,17 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="toc"   data-dir="ltr" data-folding="false" data-ani="false">
     <nav id="TableOfContents">
   <ul>
-    <li>
+    <li><a href="#nginx-内容缓存及常见参数配置">Nginx 内容缓存及常见参数配置</a>
       <ul>
-        <li><a href="#一前言">一、<strong>前言</strong></a></li>
-        <li><a href="#二职业发展路线">二、职业发展路线</a></li>
-        <li><a href="#三初级程序员">三、初级程序员</a>
+        <li><a href="#nginx-内容缓存及常见参数配置-1">Nginx 内容缓存及常见参数配置</a>
           <ul>
-            <li><a href="#31-基本特征">3.1 基本特征</a></li>
-            <li><a href="#32-职责示例">3.2 职责（示例）</a></li>
-            <li><a href="#33-任职要求示例以-java-为例">3.3 任职要求示例（以 Java 为例）</a></li>
-            <li><a href="#34-成长">3.4 成长</a></li>
+            <li><a href="#基础基础">基础<a href="#%E5%9F%BA%E7%A1%80"></a></a></li>
+            <li><a href="#nginx-缓存相关进程nginx-缓存相关进程">Nginx 缓存相关进程<a href="#nginx-%E7%BC%93%E5%AD%98%E7%9B%B8%E5%85%B3%E8%BF%9B%E7%A8%8B"></a></a></li>
+            <li><a href="#其他常用参数其他常用参数">其他常用参数<a href="#%E5%85%B6%E4%BB%96%E5%B8%B8%E7%94%A8%E5%8F%82%E6%95%B0"></a></a></li>
+            <li><a href="#清除缓存清除缓存">清除缓存<a href="#%E6%B8%85%E9%99%A4%E7%BC%93%E5%AD%98"></a></a></li>
           </ul>
         </li>
-        <li><a href="#四中高级资深程序员">四、中/高级/资深程序员</a>
-          <ul>
-            <li><a href="#41-基本特征">4.1 基本特征</a></li>
-            <li><a href="#42-职责示例">4.2 职责（示例）</a></li>
-            <li><a href="#43-任职资格示例以-java-为例">4.3 任职资格示例（以 Java 为例）</a></li>
-            <li><a href="#44-成长">4.4 成长</a></li>
-          </ul>
-        </li>
-        <li><a href="#五系统架构师">五、系统架构师</a>
-          <ul>
-            <li><a href="#51-基本特征">5.1 基本特征</a></li>
-            <li><a href="#52-职责示例">5.2 职责（示例）</a></li>
-            <li><a href="#53-任职资格示例">5.3 任职资格示例</a></li>
-            <li><a href="#54-成长">5.4 成长</a></li>
-          </ul>
-        </li>
-        <li><a href="#六技术经理">六、技术经理</a>
-          <ul>
-            <li><a href="#61-基本特征">6.1 基本特征</a></li>
-            <li><a href="#62示例">6.2（示例）</a></li>
-            <li><a href="#63-任职资格示例">6.3 任职资格示例</a></li>
-          </ul>
-        </li>
-        <li><a href="#七技术总监">七、<strong>技术总监</strong></a>
-          <ul>
-            <li><a href="#71-职责示例">7.1 职责（示例）</a></li>
-            <li><a href="#72-任职资格示例">7.2 任职资格示例</a></li>
-          </ul>
-        </li>
-        <li><a href="#八cto">八、<strong>CTO</strong></a>
-          <ul>
-            <li><a href="#81-基本特征">8.1 基本特征</a></li>
-            <li><a href="#82-职责示例">8.2 职责（示例）</a></li>
-            <li><a href="#83-任职资格示例">8.3 任职资格示例</a></li>
-            <li><a href="#84-成长">8.4 成长</a></li>
-          </ul>
-        </li>
-        <li><a href="#九附录企业各职位英文缩写">九、附录：企业各职位英文缩写</a></li>
+        <li><a href="#nginx-基于url参数的反向代理加缓存实践">Nginx 基于url参数的反向代理加缓存实践</a></li>
       </ul>
     </li>
   </ul>

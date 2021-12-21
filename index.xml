@@ -14,7 +14,7 @@
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
-    <lastBuildDate>Tue, 16 Nov 2021 10:33:33 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 21 Dec 2021 18:11:33 +0000</lastBuildDate>
     
         <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
@@ -32,6 +32,36 @@
         
       
 
+      
+      <item>
+        <title>Nginx 内容缓存及常见参数配置</title>
+        <link>/posts/2021122101/</link>
+        <pubDate>Tue, 21 Dec 2021 18:11:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Tue, 21 Dec 2021 18:11:33 +0000</atom:modified>
+        <guid>/posts/2021122101/</guid>
+        <description>Nginx 内容缓存及常见参数配置 Nginx 内容缓存及常见参数配置 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>nginx</category>
+            
+          
+        
+        
+          
+            
+              <category>nginx</category>
+            
+          
+        
+        
+      </item>
       
       <item>
         <title>深度分析 IT 职业发展路线，做一个透彻的打工人</title>
