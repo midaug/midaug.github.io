@@ -29,7 +29,7 @@
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Tue, 21 Dec 2021 18:11:33 +0000</atom:modified>
         <guid>/posts/2021122101/</guid>
-        <description>Nginx 内容缓存及常见参数配置 Nginx 内容缓存及常见参数配置 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根</description>
+        <description>场景 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根据请求路由和参数缓存一下结果，使用 Nginx 缓存将大</description>
         
         <dc:creator>MidAug</dc:creator>
         
