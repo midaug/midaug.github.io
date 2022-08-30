@@ -23,6 +23,36 @@
 
       
       <item>
+        <title>Git删除历史版本，保留当前状态</title>
+        <link>/posts/2022083002/</link>
+        <pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Tue, 30 Aug 2022 21:11:33 +0000</atom:modified>
+        <guid>/posts/2022083002/</guid>
+        <description>前言 有时候，我们误提交了某些隐私文件，使用git rm xxx删除后，其实版本库中是有历史记录的，想要删除这些记录，但是又不想删除仓库，重建来提交。那么就想办法删除历</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>git</category>
+            
+          
+        
+        
+          
+            
+              <category>git</category>
+            
+          
+        
+        
+      </item>
+      
+      <item>
         <title>Mac中Git忽略.DS_Store文件</title>
         <link>/posts/2022083001/</link>
         <pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate>
