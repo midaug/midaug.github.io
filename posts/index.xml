@@ -14,13 +14,43 @@
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
-    <lastBuildDate>Tue, 21 Dec 2021 18:11:33 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 30 Aug 2022 21:11:33 +0000</lastBuildDate>
     
         <atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
     
     
     
 
+      
+      <item>
+        <title>Mac中Git忽略.DS_Store文件</title>
+        <link>/posts/2022083001/</link>
+        <pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate>
+        <author>days0814@gmail.com (MidAug)</author>
+        <atom:modified>Tue, 30 Aug 2022 21:11:33 +0000</atom:modified>
+        <guid>/posts/2022083001/</guid>
+        <description>前言 虽然不是第一次使用mac，也不是第一次在mac上使用git，但对mac实际上非常不熟悉。每次git上传时多出来的.DS_Store文件虽然不清楚具体做什么，</description>
+        
+        <dc:creator>MidAug</dc:creator>
+        
+        
+        
+        
+          
+            
+              <category>git</category>
+            
+          
+        
+        
+          
+            
+              <category>git</category>
+            
+          
+        
+        
+      </item>
       
       <item>
         <title>Nginx 内容缓存及常见参数配置</title>
