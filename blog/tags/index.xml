@@ -7,7 +7,7 @@
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>Tags on MidAug&#39;s  Blog</title>
-    <link>./tags/</link>
+    <link>/blog/tags/</link>
     <description>Recent content in Tags on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
@@ -16,7 +16,7 @@
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
     <lastBuildDate>Tue, 30 Aug 2022 21:11:33 +0000</lastBuildDate>
     
-        <atom:link href="./tags/index.xml" rel="self" type="application/rss+xml" />
+        <atom:link href="/blog/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
     
@@ -24,11 +24,11 @@
       
       <item>
         <title>git</title>
-        <link>./tags/git/</link>
+        <link>/blog/tags/git/</link>
         <pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/git/</guid>
+        <guid>/blog/tags/git/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -42,11 +42,11 @@
       
       <item>
         <title>Nginx</title>
-        <link>./tags/nginx/</link>
+        <link>/blog/tags/nginx/</link>
         <pubDate>Tue, 21 Dec 2021 18:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/nginx/</guid>
+        <guid>/blog/tags/nginx/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -60,11 +60,11 @@
       
       <item>
         <title>修炼</title>
-        <link>./tags/%E4%BF%AE%E7%82%BC/</link>
+        <link>/blog/tags/%E4%BF%AE%E7%82%BC/</link>
         <pubDate>Tue, 16 Nov 2021 10:33:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E4%BF%AE%E7%82%BC/</guid>
+        <guid>/blog/tags/%E4%BF%AE%E7%82%BC/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -78,11 +78,11 @@
       
       <item>
         <title>RabbitMQ</title>
-        <link>./tags/rabbitmq/</link>
+        <link>/blog/tags/rabbitmq/</link>
         <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/rabbitmq/</guid>
+        <guid>/blog/tags/rabbitmq/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -96,11 +96,11 @@
       
       <item>
         <title>消息中间件</title>
-        <link>./tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
+        <link>/blog/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
         <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</guid>
+        <guid>/blog/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -114,11 +114,11 @@
       
       <item>
         <title>文件下载服务</title>
-        <link>./tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</link>
+        <link>/blog/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</link>
         <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</guid>
+        <guid>/blog/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -132,11 +132,11 @@
       
       <item>
         <title>css</title>
-        <link>./tags/css/</link>
+        <link>/blog/tags/css/</link>
         <pubDate>Tue, 14 Aug 2018 10:33:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/css/</guid>
+        <guid>/blog/tags/css/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -150,11 +150,11 @@
       
       <item>
         <title>java</title>
-        <link>./tags/java/</link>
+        <link>/blog/tags/java/</link>
         <pubDate>Sat, 17 Mar 2018 14:33:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/java/</guid>
+        <guid>/blog/tags/java/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -168,11 +168,11 @@
       
       <item>
         <title>leetCode</title>
-        <link>./tags/leetcode/</link>
+        <link>/blog/tags/leetcode/</link>
         <pubDate>Sat, 17 Mar 2018 14:33:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/leetcode/</guid>
+        <guid>/blog/tags/leetcode/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -186,11 +186,11 @@
       
       <item>
         <title>算法</title>
-        <link>./tags/%E7%AE%97%E6%B3%95/</link>
+        <link>/blog/tags/%E7%AE%97%E6%B3%95/</link>
         <pubDate>Sat, 17 Mar 2018 14:33:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E7%AE%97%E6%B3%95/</guid>
+        <guid>/blog/tags/%E7%AE%97%E6%B3%95/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -204,11 +204,11 @@
       
       <item>
         <title>javascript</title>
-        <link>./tags/javascript/</link>
+        <link>/blog/tags/javascript/</link>
         <pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/javascript/</guid>
+        <guid>/blog/tags/javascript/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -222,11 +222,11 @@
       
       <item>
         <title>phantomjs</title>
-        <link>./tags/phantomjs/</link>
+        <link>/blog/tags/phantomjs/</link>
         <pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/phantomjs/</guid>
+        <guid>/blog/tags/phantomjs/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -240,11 +240,11 @@
       
       <item>
         <title>爬虫</title>
-        <link>./tags/%E7%88%AC%E8%99%AB/</link>
+        <link>/blog/tags/%E7%88%AC%E8%99%AB/</link>
         <pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E7%88%AC%E8%99%AB/</guid>
+        <guid>/blog/tags/%E7%88%AC%E8%99%AB/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -258,11 +258,11 @@
       
       <item>
         <title>网页快照</title>
-        <link>./tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/</link>
+        <link>/blog/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/</link>
         <pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/</guid>
+        <guid>/blog/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -276,11 +276,11 @@
       
       <item>
         <title>test</title>
-        <link>./tags/test/</link>
+        <link>/blog/tags/test/</link>
         <pubDate>Wed, 20 Dec 2017 17:11:34 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/test/</guid>
+        <guid>/blog/tags/test/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -294,11 +294,11 @@
       
       <item>
         <title>MongoDB</title>
-        <link>./tags/mongodb/</link>
+        <link>/blog/tags/mongodb/</link>
         <pubDate>Tue, 21 Nov 2017 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/mongodb/</guid>
+        <guid>/blog/tags/mongodb/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -312,11 +312,11 @@
       
       <item>
         <title>Raspberry Pi</title>
-        <link>./tags/raspberry-pi/</link>
+        <link>/blog/tags/raspberry-pi/</link>
         <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/raspberry-pi/</guid>
+        <guid>/blog/tags/raspberry-pi/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -330,11 +330,11 @@
       
       <item>
         <title>RPI3</title>
-        <link>./tags/rpi3/</link>
+        <link>/blog/tags/rpi3/</link>
         <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/rpi3/</guid>
+        <guid>/blog/tags/rpi3/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>
@@ -348,11 +348,11 @@
       
       <item>
         <title>树莓派</title>
-        <link>./tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</link>
+        <link>/blog/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</link>
         <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         
-        <guid>./tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</guid>
+        <guid>/blog/tags/%E6%A0%91%E8%8E%93%E6%B4%BE/</guid>
         <description></description>
         
         <dc:creator>MidAug</dc:creator>

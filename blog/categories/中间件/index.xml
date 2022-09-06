@@ -7,7 +7,7 @@
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>中间件 on MidAug&#39;s  Blog</title>
-    <link>./categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
+    <link>/blog/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
     <description>Recent content in 中间件 on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
@@ -16,7 +16,7 @@
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
     <lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate>
     
-        <atom:link href="./categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/index.xml" rel="self" type="application/rss+xml" />
+        <atom:link href="/blog/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/index.xml" rel="self" type="application/rss+xml" />
     
     
     
@@ -24,11 +24,11 @@
       
       <item>
         <title>ubuntu下RabbitMQ安装及集群配置</title>
-        <link>./posts/20190723/</link>
+        <link>/blog/posts/20190723/</link>
         <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Tue, 23 Jul 2019 00:00:00 +0000</atom:modified>
-        <guid>./posts/20190723/</guid>
+        <guid>/blog/posts/20190723/</guid>
         <description>RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过</description>
         
         <dc:creator>MidAug</dc:creator>

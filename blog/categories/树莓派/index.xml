@@ -7,7 +7,7 @@
   xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>树莓派 on MidAug&#39;s  Blog</title>
-    <link>./categories/%E6%A0%91%E8%8E%93%E6%B4%BE/</link>
+    <link>/blog/categories/%E6%A0%91%E8%8E%93%E6%B4%BE/</link>
     <description>Recent content in 树莓派 on MidAug&#39;s  Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
@@ -16,7 +16,7 @@
     <copyright>Copyright ©2017-{year},&amp;nbsp;&amp;nbsp;MidAug All Rights Reserved</copyright>
     <lastBuildDate>Mon, 21 Aug 2017 00:00:00 +0000</lastBuildDate>
     
-        <atom:link href="./categories/%E6%A0%91%E8%8E%93%E6%B4%BE/index.xml" rel="self" type="application/rss+xml" />
+        <atom:link href="/blog/categories/%E6%A0%91%E8%8E%93%E6%B4%BE/index.xml" rel="self" type="application/rss+xml" />
     
     
     
@@ -24,11 +24,11 @@
       
       <item>
         <title>树莓派3安装centos7的无线WIFI模块</title>
-        <link>./posts/20170821/</link>
+        <link>/blog/posts/20170821/</link>
         <pubDate>Mon, 21 Aug 2017 00:00:00 +0000</pubDate>
         <author>days0814@gmail.com (MidAug)</author>
         <atom:modified>Mon, 21 Aug 2017 00:00:00 +0000</atom:modified>
-        <guid>./posts/20170821/</guid>
+        <guid>/blog/posts/20170821/</guid>
         <description>入手raspberry pi3，觉着还是刷个centos系统比较顺手。整理了一下刷centos后WIFI问题解决方式。 驱动安装 1 2 3 4 5 6 7 # 直接执行下面命令即可</description>
         
         <dc:creator>MidAug</dc:creator>
