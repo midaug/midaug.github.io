@@ -1,1 +1,16 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>RabbitMQ - Category - MidAug's Blog</title><link>https://blog.midaug.win/categories/rabbitmq/</link><description>RabbitMQ - Category - MidAug's Blog</description><generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor><webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://blog.midaug.win/categories/rabbitmq/" rel="self" type="application/rss+xml"/><item><title>ubuntu下RabbitMQ安装及集群配置</title><link>https://blog.midaug.win/posts/20190723/</link><pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/20190723/</guid><description>RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按</description></item></channel></rss>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>RabbitMQ - Category - MidAug&#39;s  Blog</title>
+        <link>https://blog.midaug.win/categories/rabbitmq/</link>
+        <description>RabbitMQ - Category - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</lastBuildDate><atom:link href="https://blog.midaug.win/categories/rabbitmq/" rel="self" type="application/rss+xml" /><item>
+    <title>ubuntu下RabbitMQ安装及集群配置</title>
+    <link>https://blog.midaug.win/posts/20190723/</link>
+    <pubDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/20190723/</guid>
+    <description><![CDATA[RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按]]></description>
+</item>
+</channel>
+</rss>

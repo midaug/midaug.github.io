@@ -1,1 +1,32 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>java - Tag - MidAug's Blog</title><link>https://blog.midaug.win/tags/java/</link><description>java - Tag - MidAug's Blog</description><generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor><webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 17 Mar 2018 14:33:33 +0000</lastBuildDate><atom:link href="https://blog.midaug.win/tags/java/" rel="self" type="application/rss+xml"/><item><title>leetCode习题(简单难度)-int数值翻转</title><link>https://blog.midaug.win/posts/2018031702/</link><pubDate>Sat, 17 Mar 2018 14:33:33 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/2018031702/</guid><description>题目内容 给定一个范围为32 位 int 的整数，将其颠倒。 例 1: 输入: 123 输出: 321 例 2: 输入: -123 输出: -321 例 3: 输入: 120 输出: 21 注意: 假设我们的环境只能处理 32 位</description></item><item><title>leetCode习题(简单难度)-int数组去重</title><link>https://blog.midaug.win/posts/2018031701/</link><pubDate>Sat, 17 Mar 2018 13:33:33 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/2018031701/</guid><description>题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原</description></item><item><title>java调用phantomjs爬取网页及快照</title><link>https://blog.midaug.win/posts/20180129/</link><pubDate>Mon, 29 Jan 2018 21:11:33 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/20180129/</guid><description>前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发</description></item></channel></rss>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>java - Tag - MidAug&#39;s  Blog</title>
+        <link>https://blog.midaug.win/tags/java/</link>
+        <description>java - Tag - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 17 Mar 2018 14:33:33 &#43;0000</lastBuildDate><atom:link href="https://blog.midaug.win/tags/java/" rel="self" type="application/rss+xml" /><item>
+    <title>leetCode习题(简单难度)-int数值翻转</title>
+    <link>https://blog.midaug.win/posts/2018031702/</link>
+    <pubDate>Sat, 17 Mar 2018 14:33:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/2018031702/</guid>
+    <description><![CDATA[题目内容 给定一个范围为32 位 int 的整数，将其颠倒。 例 1: 输入: 123 输出: 321 例 2: 输入: -123 输出: -321 例 3: 输入: 120 输出: 21 注意: 假设我们的环境只能处理 32 位]]></description>
+</item>
+<item>
+    <title>leetCode习题(简单难度)-int数组去重</title>
+    <link>https://blog.midaug.win/posts/2018031701/</link>
+    <pubDate>Sat, 17 Mar 2018 13:33:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/2018031701/</guid>
+    <description><![CDATA[题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原]]></description>
+</item>
+<item>
+    <title>java调用phantomjs爬取网页及快照</title>
+    <link>https://blog.midaug.win/posts/20180129/</link>
+    <pubDate>Mon, 29 Jan 2018 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/20180129/</guid>
+    <description><![CDATA[前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发]]></description>
+</item>
+</channel>
+</rss>

@@ -1,1 +1,24 @@
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title>git - Category - MidAug's Blog</title><link>https://blog.midaug.win/categories/git/</link><description>git - Category - MidAug's Blog</description><generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor><webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 30 Aug 2022 21:11:33 +0000</lastBuildDate><atom:link href="https://blog.midaug.win/categories/git/" rel="self" type="application/rss+xml"/><item><title>Git删除历史版本，保留当前状态</title><link>https://blog.midaug.win/posts/2022083002/</link><pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/2022083002/</guid><description>前言 有时候，我们误提交了某些隐私文件，使用git rm xxx删除后，其实版本库中是有历史记录的，想要删除这些记录，但是又不想删除仓库，重建来提交</description></item><item><title>Mac中Git忽略.DS_Store文件</title><link>https://blog.midaug.win/posts/2022083001/</link><pubDate>Tue, 30 Aug 2022 21:11:33 +0000</pubDate><author>MidAug</author><guid>https://blog.midaug.win/posts/2022083001/</guid><description>前言 虽然不是第一次使用mac，也不是第一次在mac上使用git，但对mac实际上非常不熟悉。每次git上传时多出来的.DS_Store文件虽</description></item></channel></rss>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>git - Category - MidAug&#39;s  Blog</title>
+        <link>https://blog.midaug.win/categories/git/</link>
+        <description>git - Category - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</lastBuildDate><atom:link href="https://blog.midaug.win/categories/git/" rel="self" type="application/rss+xml" /><item>
+    <title>Git删除历史版本，保留当前状态</title>
+    <link>https://blog.midaug.win/posts/2022083002/</link>
+    <pubDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/2022083002/</guid>
+    <description><![CDATA[前言 有时候，我们误提交了某些隐私文件，使用git rm xxx删除后，其实版本库中是有历史记录的，想要删除这些记录，但是又不想删除仓库，重建来提交]]></description>
+</item>
+<item>
+    <title>Mac中Git忽略.DS_Store文件</title>
+    <link>https://blog.midaug.win/posts/2022083001/</link>
+    <pubDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/2022083001/</guid>
+    <description><![CDATA[前言 虽然不是第一次使用mac，也不是第一次在mac上使用git，但对mac实际上非常不熟悉。每次git上传时多出来的.DS_Store文件虽]]></description>
+</item>
+</channel>
+</rss>

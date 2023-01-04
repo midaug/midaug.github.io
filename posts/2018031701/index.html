@@ -1,68 +1,235 @@
-<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=robots content="noodp"><title>leetCode习题(简单难度)-int数组去重 - MidAug's Blog</title><meta name=Description content="MidAug blog java docker hugo"><meta property="og:title" content="leetCode习题(简单难度)-int数组去重"><meta property="og:description" content="题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原"><meta property="og:type" content="article"><meta property="og:url" content="https://blog.midaug.win/posts/2018031701/"><meta property="og:image" content="https://blog.midaug.win/images/whoami/avatar.jpg"><meta property="article:published_time" content="2018-03-17T13:33:33+00:00"><meta property="article:modified_time" content="2018-03-17T13:33:33+00:00"><meta property="og:site_name" content="MidAug's  Blog"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://blog.midaug.win/images/whoami/avatar.jpg"><meta name=twitter:title content="leetCode习题(简单难度)-int数组去重"><meta name=twitter:description content="题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原"><meta name=application-name content="MidAug's  Blog"><meta name=apple-mobile-web-app-title content="MidAug's  Blog"><meta name=theme-color content="#ffffff"><meta name=msapplication-TileColor content="#da532c"><link rel="shortcut icon" type=image/x-icon href=/favicon.ico><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5><link rel=manifest href=/site.webmanifest><link rel=canonical href=https://blog.midaug.win/posts/2018031701/><link rel=prev href=https://blog.midaug.win/posts/20180129/><link rel=next href=https://blog.midaug.win/posts/2018031702/><link rel=stylesheet href=/css/style.min.css><link rel=preload href=/lib/fontawesome-free/all.min.css as=style onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel=stylesheet href=/lib/fontawesome-free/all.min.css></noscript><link rel=preload href=/lib/animate/animate.min.css as=style onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel=stylesheet href=/lib/animate/animate.min.css></noscript><script type=application/ld+json>{"@context":"http://schema.org","@type":"BlogPosting","headline":"leetCode习题(简单难度)-int数组去重","inLanguage":"en","mainEntityOfPage":{"@type":"WebPage","@id":"https:\/\/blog.midaug.win\/posts\/2018031701\/"},"image":[{"@type":"ImageObject","url":"https:\/\/blog.midaug.win\/images\/Apple-Devices-Preview.png","width":3200,"height":2048}],"genre":"posts","keywords":"leetCode, 算法, java","wordcount":320,"url":"https:\/\/blog.midaug.win\/posts\/2018031701\/","datePublished":"2018-03-17T13:33:33+00:00","dateModified":"2018-03-17T13:33:33+00:00","license":"This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher":{"@type":"Organization","name":"MidAug","logo":"https:\/\/blog.midaug.win\/images\/whoami\/avatar.jpg"},"author":{"@type":"Person","name":"MidAug"},"description":""}</script></head><body data-header-desktop=fixed data-header-mobile=auto><script type=text/javascript>(window.localStorage&&localStorage.getItem('theme')?localStorage.getItem('theme')==='dark':('auto'==='auto'?window.matchMedia('(prefers-color-scheme: dark)').matches:'auto'==='dark'))&&document.body.setAttribute('theme','dark');</script><div id=mask></div><div class=wrapper><header class=desktop id=header-desktop><div class=header-wrapper><div class=header-title><a href=/ title="MidAug's  Blog"><img class="lazyload logo" src=/svg/loading.min.svg data-src=/favicon/apple-icon-60x60.png data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x" data-sizes=auto alt=/favicon/apple-icon-60x60.png title=/favicon/apple-icon-60x60.png><span id=id-1 class=typeit></span></a></div><div class=menu><div class=menu-inner><a class=menu-item href=/posts/>Posts </a><a class=menu-item href=/tags/>Tags </a><a class=menu-item href=/categories/>Categories </a><a class=menu-item href=/about/>About </a><a class=menu-item href=/disclaimer/>Disclaimer </a><a class=menu-item href=https://github.com/midaug title=GitHub rel="noopener noreffer" target=_blank><i class="fab fa-github fa-fw" aria-hidden=true></i></a><span class="menu-item delimiter"></span><span class="menu-item search" id=search-desktop><input type=text placeholder="Search titles or contents..." id=search-input-desktop>
-<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-desktop title=Search><i class="fas fa-search fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); class="search-button search-clear" id=search-clear-desktop title=Clear><i class="fas fa-times-circle fa-fw" aria-hidden=true></i></a><span class="search-button search-loading" id=search-loading-desktop><i class="fas fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></span><a href=javascript:void(0); class="menu-item theme-switch" title="Switch Theme"><i class="fas fa-adjust fa-fw" aria-hidden=true></i></a></div></div></div></header><header class=mobile id=header-mobile><div class=header-container><div class=header-wrapper><div class=header-title><a href=/ title="MidAug's  Blog"><img class="lazyload logo" src=/svg/loading.min.svg data-src=/favicon/apple-icon-60x60.png data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x" data-sizes=auto alt=/favicon/apple-icon-60x60.png title=/favicon/apple-icon-60x60.png><span id=id-2 class=typeit></span></a></div><div class=menu-toggle id=menu-toggle-mobile><span></span><span></span><span></span></div></div><div class=menu id=menu-mobile><div class=search-wrapper><div class="search mobile" id=search-mobile><input type=text placeholder="Search titles or contents..." id=search-input-mobile>
-<a href=javascript:void(0); class="search-button search-toggle" id=search-toggle-mobile title=Search><i class="fas fa-search fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); class="search-button search-clear" id=search-clear-mobile title=Clear><i class="fas fa-times-circle fa-fw" aria-hidden=true></i></a><span class="search-button search-loading" id=search-loading-mobile><i class="fas fa-spinner fa-fw fa-spin" aria-hidden=true></i></span></div><a href=javascript:void(0); class=search-cancel id=search-cancel-mobile>Cancel</a></div><a class=menu-item href=/posts/>Posts</a><a class=menu-item href=/tags/>Tags</a><a class=menu-item href=/categories/>Categories</a><a class=menu-item href=/about/>About</a><a class=menu-item href=/disclaimer/>Disclaimer</a><a class=menu-item href=https://github.com/midaug title=GitHub rel="noopener noreffer" target=_blank><i class="fab fa-github fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); class="menu-item theme-switch" title="Switch Theme">
-<i class="fas fa-adjust fa-fw" aria-hidden=true></i></a></div></div></header><div class="search-dropdown desktop"><div id=search-dropdown-desktop></div></div><div class="search-dropdown mobile"><div id=search-dropdown-mobile></div></div><main class=main><div class=container><article class="page single"><h1 class="single-title animate__animated animate__flipInX">leetCode习题(简单难度)-int数组去重</h1><div class=post-meta><div class=post-meta-line><span class=post-author><a href=/ title=Author rel=author class=author><i class="fas fa-user-circle fa-fw" aria-hidden=true></i>MidAug</a></span>&nbsp;<span class=post-category>included in <a href=/categories/leetcode/><i class="far fa-folder fa-fw" aria-hidden=true></i>leetCode</a></span></div><div class=post-meta-line><i class="far fa-calendar-alt fa-fw" aria-hidden=true></i>&nbsp;<time datetime=2018-03-17>2018-03-17</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden=true></i>&nbsp;320 words&nbsp;
-<i class="far fa-clock fa-fw" aria-hidden=true></i>&nbsp;One minute&nbsp;</div></div><div class=content id=content><h1 id=题目内容>题目内容</h1><p>给定一个<span style="border-bottom:2px dashed #fc6423">有序数组</span>，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。
-<span style="border-bottom:2px dashed #fc6423">不要另外定义一个数组</span>，您必须通过用 O(1) 额外内存<span style="border-bottom:2px dashed #fc6423">原地修改</span>输入的数组来做到这一点。
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>leetCode习题(简单难度)-int数组去重 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:title" content="leetCode习题(简单难度)-int数组去重" />
+<meta property="og:description" content="题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://blog.midaug.win/posts/2018031701/" />
+<meta property="og:image" content="https://blog.midaug.win/images/whoami/avatar.jpg"/>
+<meta property="article:published_time" content="2018-03-17T13:33:33+00:00" />
+<meta property="article:modified_time" content="2018-03-17T13:33:33+00:00" /><meta property="og:site_name" content="MidAug&#39;s  Blog" />
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://blog.midaug.win/images/whoami/avatar.jpg"/>
+
+<meta name="twitter:title" content="leetCode习题(简单难度)-int数组去重"/>
+<meta name="twitter:description" content="题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原"/>
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://blog.midaug.win/posts/2018031701/" /><link rel="prev" href="https://blog.midaug.win/posts/20180129/" /><link rel="next" href="https://blog.midaug.win/posts/2018031702/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "leetCode习题(简单难度)-int数组去重",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/blog.midaug.win\/posts\/2018031701\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/blog.midaug.win\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "leetCode, 算法, java","wordcount":  320 ,
+        "url": "https:\/\/blog.midaug.win\/posts\/2018031701\/","datePublished": "2018-03-17T13:33:33+00:00","dateModified": "2018-03-17T13:33:33+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/blog.midaug.win\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><article class="page single"><h1 class="single-title animate__animated animate__flipInX">leetCode习题(简单难度)-int数组去重</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/leetcode/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>leetCode</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2018-03-17">2018-03-17</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;320 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;One minute&nbsp;</div>
+        </div><div class="content" id="content"><h1 id="题目内容">题目内容</h1>
+<p>给定一个<span style="border-bottom:2px dashed #fc6423;">有序数组</span>，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。
+<span style="border-bottom:2px dashed #fc6423;">不要另外定义一个数组</span>，您必须通过用 O(1) 额外内存<span style="border-bottom:2px dashed #fc6423;">原地修改</span>输入的数组来做到这一点。
 示例：
 给定数组: nums = [1,1,2],
 你的函数应该返回新长度 2, 并且原数组nums的前两个元素必须是1和2
-不需要理会新的数组长度后面的元素</p><h1 id=解法>解法</h1><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span><span class=lnt>25
-</span><span class=lnt>26
-</span><span class=lnt>27
-</span><span class=lnt>28
-</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-java data-lang=java><span class=kn>package</span> <span class=nn>com.mid.test</span><span class=o>;</span>
-<span class=kn>import</span> <span class=nn>java.util.Arrays</span><span class=o>;</span>
+不需要理会新的数组长度后面的元素</p>
+<!-- more -->
+<h1 id="解法">解法</h1>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre class="chroma"><code class="language-java" data-lang="java"><span class="kn">package</span> <span class="nn">com.mid.test</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
 
-<span class=kd>public</span> <span class=kd>class</span> <span class=nc>LeetCode002</span> <span class=o>{</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">LeetCode002</span> <span class="o">{</span>
 
-	<span class=kd>public</span> <span class=kd>static</span> <span class=kt>void</span> <span class=nf>main</span><span class=o>(</span><span class=n>String</span><span class=o>[]</span> <span class=n>args</span><span class=o>)</span> <span class=o>{</span>
-		<span class=kt>int</span><span class=o>[]</span> <span class=n>nums</span> <span class=o>=</span> <span class=o>{</span> <span class=n>1</span><span class=o>,</span> <span class=n>1</span><span class=o>,</span> <span class=n>1</span><span class=o>,</span> <span class=n>2</span> <span class=o>};</span>
-		<span class=kt>int</span> <span class=n>newLength</span> <span class=o>=</span> <span class=n>removeDuplicates</span><span class=o>(</span><span class=n>nums</span><span class=o>);</span>
-		<span class=n>System</span><span class=o>.</span><span class=na>out</span><span class=o>.</span><span class=na>println</span><span class=o>(</span><span class=n>newLength</span><span class=o>);</span>
-		<span class=n>System</span><span class=o>.</span><span class=na>out</span><span class=o>.</span><span class=na>println</span><span class=o>(</span><span class=n>Arrays</span><span class=o>.</span><span class=na>toString</span><span class=o>(</span><span class=n>Arrays</span><span class=o>.</span><span class=na>copyOf</span><span class=o>(</span><span class=n>nums</span><span class=o>,</span> <span class=n>newLength</span><span class=o>)));</span>
-	<span class=o>}</span>
+	<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+		<span class="kt">int</span><span class="o">[]</span> <span class="n">nums</span> <span class="o">=</span> <span class="o">{</span> <span class="n">1</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">1</span><span class="o">,</span> <span class="n">2</span> <span class="o">};</span>
+		<span class="kt">int</span> <span class="n">newLength</span> <span class="o">=</span> <span class="n">removeDuplicates</span><span class="o">(</span><span class="n">nums</span><span class="o">);</span>
+		<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">newLength</span><span class="o">);</span>
+		<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">Arrays</span><span class="o">.</span><span class="na">copyOf</span><span class="o">(</span><span class="n">nums</span><span class="o">,</span> <span class="n">newLength</span><span class="o">)));</span>
+	<span class="o">}</span>
 
-	<span class=kd>public</span> <span class=kd>static</span> <span class=kt>int</span> <span class=nf>removeDuplicates</span><span class=o>(</span><span class=kt>int</span><span class=o>[]</span> <span class=n>nums</span><span class=o>)</span> <span class=o>{</span>
-		<span class=kt>int</span> <span class=n>len</span> <span class=o>=</span> <span class=n>nums</span><span class=o>.</span><span class=na>length</span><span class=o>;</span>
-		<span class=k>if</span> <span class=o>(</span><span class=n>len</span> <span class=o>&lt;</span> <span class=n>2</span><span class=o>)</span> <span class=o>{</span>
-			<span class=k>return</span> <span class=n>len</span><span class=o>;</span>
-		<span class=o>}</span>
-		<span class=kt>int</span> <span class=n>end</span> <span class=o>=</span> <span class=n>0</span><span class=o>;</span> <span class=c1>//新数组长度
-</span><span class=c1></span>		<span class=k>for</span> <span class=o>(</span><span class=kt>int</span> <span class=n>i</span> <span class=o>=</span> <span class=n>1</span><span class=o>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>len</span><span class=o>;</span> <span class=n>i</span><span class=o>++)</span> <span class=o>{</span>
-			<span class=k>if</span> <span class=o>(</span><span class=n>nums</span><span class=o>[</span><span class=n>i</span><span class=o>]</span> <span class=o>!=</span> <span class=n>nums</span><span class=o>[</span><span class=n>end</span><span class=o>])</span> <span class=o>{</span> <span class=c1>//不同时将不同的值放置在新数组的下一个位置
-</span><span class=c1></span>				<span class=n>end</span><span class=o>++;</span>
-				<span class=n>nums</span><span class=o>[</span><span class=n>end</span><span class=o>]</span> <span class=o>=</span> <span class=n>nums</span><span class=o>[</span><span class=n>i</span><span class=o>];</span>
-			<span class=o>}</span>
-		<span class=o>}</span>
-		<span class=k>return</span> <span class=n>end</span> <span class=o>+</span> <span class=n>1</span><span class=o>;</span>
-	<span class=o>}</span>
+	<span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">removeDuplicates</span><span class="o">(</span><span class="kt">int</span><span class="o">[]</span> <span class="n">nums</span><span class="o">)</span> <span class="o">{</span>
+		<span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">nums</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+		<span class="k">if</span> <span class="o">(</span><span class="n">len</span> <span class="o">&lt;</span> <span class="n">2</span><span class="o">)</span> <span class="o">{</span>
+			<span class="k">return</span> <span class="n">len</span><span class="o">;</span>
+		<span class="o">}</span>
+		<span class="kt">int</span> <span class="n">end</span> <span class="o">=</span> <span class="n">0</span><span class="o">;</span> <span class="c1">//新数组长度
+</span><span class="c1"></span>		<span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">1</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">len</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+			<span class="k">if</span> <span class="o">(</span><span class="n">nums</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="n">nums</span><span class="o">[</span><span class="n">end</span><span class="o">])</span> <span class="o">{</span> <span class="c1">//不同时将不同的值放置在新数组的下一个位置
+</span><span class="c1"></span>				<span class="n">end</span><span class="o">++;</span>
+				<span class="n">nums</span><span class="o">[</span><span class="n">end</span><span class="o">]</span> <span class="o">=</span> <span class="n">nums</span><span class="o">[</span><span class="n">i</span><span class="o">];</span>
+			<span class="o">}</span>
+		<span class="o">}</span>
+		<span class="k">return</span> <span class="n">end</span> <span class="o">+</span> <span class="n">1</span><span class="o">;</span>
+	<span class="o">}</span>
 
-<span class=o>}</span>
-</code></pre></td></tr></table></div></div><h1 id=思路>思路</h1><p>我之前的思路有所差异是将相同的往后移
-新的想法：将不同的往对应顺序上塞</p></div><div class=post-footer id=post-footer><div class=post-info><div class=post-info-line><div class=post-info-mod><span>Updated on 2018-03-17</span></div></div><div class=post-info-line><div class=post-info-md></div><div class=post-info-share><span><a href=javascript:void(0); title="Share on Twitter" data-sharer=twitter data-url=https://blog.midaug.win/posts/2018031701/ data-title=leetCode习题(简单难度)-int数组去重 data-hashtags=leetCode,算法,java><i class="fab fa-twitter fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); title="Share on Facebook" data-sharer=facebook data-url=https://blog.midaug.win/posts/2018031701/ data-hashtag=leetCode><i class="fab fa-facebook-square fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); title="Share on Linkedin" data-sharer=linkedin data-url=https://blog.midaug.win/posts/2018031701/><i class="fab fa-linkedin fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); title="Share on 微博" data-sharer=weibo data-url=https://blog.midaug.win/posts/2018031701/ data-title=leetCode习题(简单难度)-int数组去重><i class="fab fa-weibo fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); title="Share on 百度" data-sharer=baidu data-url=https://blog.midaug.win/posts/2018031701/ data-title=leetCode习题(简单难度)-int数组去重><i data-svg-src=/lib/simple-icons/icons/baidu.min.svg aria-hidden=true></i></a><a href=javascript:void(0); title="Share on Evernote" data-sharer=evernote data-url=https://blog.midaug.win/posts/2018031701/ data-title=leetCode习题(简单难度)-int数组去重><i class="fab fa-evernote fa-fw" aria-hidden=true></i></a><a href=javascript:void(0); title="Share on Skype" data-sharer=skype data-url=https://blog.midaug.win/posts/2018031701/ data-title=leetCode习题(简单难度)-int数组去重><i class="fab fa-skype fa-fw" aria-hidden=true></i></a></span></div></div></div><div class=post-info-more><section class=post-tags><i class="fas fa-tags fa-fw" aria-hidden=true></i>&nbsp;<a href=/tags/leetcode/>leetCode</a>,&nbsp;<a href=/tags/%E7%AE%97%E6%B3%95/>算法</a>,&nbsp;<a href=/tags/java/>java</a></section><section><span><a href=javascript:void(0); onclick=window.history.back();>Back</a></span>&nbsp;|&nbsp;<span><a href=/>Home</a></span></section></div><div class=post-nav><a href=/posts/20180129/ class=prev rel=prev title=java调用phantomjs爬取网页及快照><i class="fas fa-angle-left fa-fw" aria-hidden=true></i>java调用phantomjs爬取网页及快照</a>
-<a href=/posts/2018031702/ class=next rel=next title=leetCode习题(简单难度)-int数值翻转>leetCode习题(简单难度)-int数值翻转<i class="fas fa-angle-right fa-fw" aria-hidden=true></i></a></div></div></article></div></main><footer class=footer><div class=footer-container><div class=footer-line itemscope itemtype=http://schema.org/CreativeWork><i class="far fa-copyright fa-fw" aria-hidden=true></i><span itemprop=copyrightYear>2017 - 2023</span><span class=author itemprop=copyrightHolder>&nbsp;<a href=/ target=_blank>MidAug</a></span>&nbsp;|&nbsp;<span class=license><a rel="license external nofollow noopener noreffer" href=https://creativecommons.org/licenses/by-nc/4.0/ target=_blank>CC BY-NC 4.0</a></span></div></div></footer></div><div id=fixed-buttons><a href=# id=back-to-top class=fixed-button title="Back to Top"><i class="fas fa-arrow-up fa-fw" aria-hidden=true></i></a><a href=# id=view-comments class=fixed-button title="View Comments"><i class="fas fa-comment fa-fw" aria-hidden=true></i></a></div><script type=text/javascript src=/lib/autocomplete/autocomplete.min.js></script><script type=text/javascript src=/lib/lunr/lunr.min.js></script><script type=text/javascript src=/lib/lazysizes/lazysizes.min.js></script><script type=text/javascript src=/lib/clipboard/clipboard.min.js></script><script type=text/javascript src=/lib/sharer/sharer.min.js></script><script type=text/javascript src=/lib/typeit/index.umd.js></script><script type=text/javascript>window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type=text/javascript src=/js/theme.min.js></script></body></html>
+<span class="o">}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h1 id="思路">思路</h1>
+<p>我之前的思路有所差异是将相同的往后移
+新的想法：将不同的往对应顺序上塞</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2018-03-17</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://blog.midaug.win/posts/2018031701/" data-title="leetCode习题(简单难度)-int数组去重" data-hashtags="leetCode,算法,java"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://blog.midaug.win/posts/2018031701/" data-hashtag="leetCode"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://blog.midaug.win/posts/2018031701/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://blog.midaug.win/posts/2018031701/" data-title="leetCode习题(简单难度)-int数组去重"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://blog.midaug.win/posts/2018031701/" data-title="leetCode习题(简单难度)-int数组去重"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://blog.midaug.win/posts/2018031701/" data-title="leetCode习题(简单难度)-int数组去重"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://blog.midaug.win/posts/2018031701/" data-title="leetCode习题(简单难度)-int数组去重"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/leetcode/">leetCode</a>,&nbsp;<a href="/tags/%E7%AE%97%E6%B3%95/">算法</a>,&nbsp;<a href="/tags/java/">java</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/20180129/" class="prev" rel="prev" title="java调用phantomjs爬取网页及快照"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>java调用phantomjs爬取网页及快照</a>
+            <a href="/posts/2018031702/" class="next" rel="next" title="leetCode习题(简单难度)-int数值翻转">leetCode习题(简单难度)-int数值翻转<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2023</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
