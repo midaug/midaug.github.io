@@ -4,9 +4,17 @@
         <link>https://blog.midaug.win/</link>
         <description>MidAug blog java docker hugo</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</lastBuildDate>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Wed, 04 Jan 2023 00:00:00 &#43;0000</lastBuildDate>
             <atom:link href="https://blog.midaug.win/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>前端多终端自适应网页开发模式</title>
+    <link>https://blog.midaug.win/posts/2023010401/</link>
+    <pubDate>Wed, 04 Jan 2023 00:00:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://blog.midaug.win/posts/2023010401/</guid>
+    <description><![CDATA[前端多终端自适应网页开发模式 智能移动终端大爆发的现阶段，手机访问网页已经成为人们不可或缺的使用习惯，开发自适应网页大势所趋，实际上无论改造还]]></description>
+</item>
+<item>
     <title>Git删除历史版本，保留当前状态</title>
     <link>https://blog.midaug.win/posts/2022083002/</link>
     <pubDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</pubDate>
@@ -77,14 +85,6 @@
     <author>MidAug</author>
     <guid>https://blog.midaug.win/posts/2018031702/</guid>
     <description><![CDATA[题目内容 给定一个范围为32 位 int 的整数，将其颠倒。 例 1: 输入: 123 输出: 321 例 2: 输入: -123 输出: -321 例 3: 输入: 120 输出: 21 注意: 假设我们的环境只能处理 32 位]]></description>
-</item>
-<item>
-    <title>leetCode习题(简单难度)-int数组去重</title>
-    <link>https://blog.midaug.win/posts/2018031701/</link>
-    <pubDate>Sat, 17 Mar 2018 13:33:33 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://blog.midaug.win/posts/2018031701/</guid>
-    <description><![CDATA[题目内容 给定一个有序数组，你需要原地删除其中的重复内容，使每个元素只出现一次,并返回新的长度。 不要另外定义一个数组，您必须通过用 O(1) 额外内存原]]></description>
 </item>
 </channel>
 </rss>
