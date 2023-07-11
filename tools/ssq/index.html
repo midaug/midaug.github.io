@@ -10,8 +10,10 @@
         rel="stylesheet" async="async">
     <style>
         .bd-placeholder-img{font-size:1.125rem;text-anchor:middle;-webkit-user-select:none;-moz-user-select:none;user-select:none}
-        @media (min-width:768px){.bd-placeholder-img-lg{font-size:3.5rem}
-        }.ocr-ssq-item{min-width:285px}
+        @media (min-width:576px){.row-cols-sm-2>*{flex:0 0 auto;width:100%}}
+        @media (min-width:768px){.bd-placeholder-img-lg{font-size:3.5rem} .row-cols-sm-2>*{flex:0 0 auto;width:50%}}
+        @media (min-width:992px){.row-cols-md-3>*{flex:0 0 auto;width:33.3333333333%}}
+        .ocr-ssq-item{min-width:285px}
         .ocr-ssq-item h6{text-align:left}
         .ocr-ssq-item .card-text span{font-size:12px;padding:1px;font-family:monospace}
         .ocr-ssq-item .red{color:black;border:1px solid red}
