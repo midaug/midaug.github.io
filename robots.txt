@@ -61,4 +61,4 @@ Disallow: /
 User-agent: ZoominfoBot
 Disallow: /
 
-Sitemap: https://blog.midaug.win/sitemap.xml
+Sitemap: https://midaug.100180.xyz/sitemap.xml
