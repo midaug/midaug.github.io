@@ -7,14 +7,12 @@
         <title>java调用phantomjs爬取网页及快照 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:title" content="java调用phantomjs爬取网页及快照" />
 <meta property="og:description" content="前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://midaug.100180.xyz/posts/20180129/" />
-<meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
+<meta property="og:url" content="https://midaug.100180.xyz/posts/20180129/" /><meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2018-01-29T21:11:33+00:00" />
 <meta property="article:modified_time" content="2018-01-29T21:11:33+00:00" /><meta property="og:site_name" content="MidAug&#39;s  Blog" />
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
 
-<meta name="twitter:title" content="java调用phantomjs爬取网页及快照"/>
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta name="twitter:title" content="java调用phantomjs爬取网页及快照"/>
 <meta name="twitter:description" content="前言 前阵子遇到一个需求，需要爬取学信网学历的查询结果进行解析并截图留证，利用java完成了爬取的html解析功能后发现截图较为困难。我偶然发"/>
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
@@ -169,7 +167,7 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 <h2 id="常用内置对象">常用内置对象</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
@@ -177,18 +175,18 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 </span><span class="lnt">6
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="c1">// 获得系统操作对象，包括命令行参数、phantomjs系统设置等信息
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">system</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;system&#39;</span><span class="p">);</span>
-<span class="c1">// 获取操作dom或web网页的对象，通过它可以打开网页、接收网页内容、request、response参数，其为最核心对象。
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">page</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;webpage&#39;</span><span class="p">);</span>
-<span class="c1">// 获取文件系统对象，通过它可以操作操作系统的文件操作，包括read、write、move、copy、delete等。
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;fs&#39;</span><span class="p">);</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="c1">// 获得系统操作对象，包括命令行参数、phantomjs系统设置等信息
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">system</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;system&#39;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 获取操作dom或web网页的对象，通过它可以打开网页、接收网页内容、request、response参数，其为最核心对象。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">page</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;webpage&#39;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 获取文件系统对象，通过它可以操作操作系统的文件操作，包括read、write、move、copy、delete等。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">fs</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;fs&#39;</span><span class="p">);</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="常用api">常用API</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -216,49 +214,49 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 </span><span class="lnt">26
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="c1">// 通过page对象通过url链接打开页面，加载完成后回调
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">open</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 当page.open调用时，会首先执行该函数，在此可以预置一些参数或函数，用于后边的回调函数中
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onLoadStarted</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{}</span>
-<span class="c1">// page的所要加载的资源在加载过程中，失败回调处理
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceError</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">resourceError</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// page的所要加载的资源在发起请求时，可以回调该函数
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceRequested</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">requestData</span><span class="p">,</span> <span class="nx">networkRequest</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// page的所要加载的资源在加载过程中，每加载一个相关资源，都会在此先做出响应，
-</span><span class="c1">// 它相当于http头部分，核心回调对象为response，可以获取本次请求的cookies、userAgent等
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceReceived</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 打印一些输出信息到控制台
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onConsoleMessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// alert也是无法直接弹出的，但可以回调alert的内容
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onAlert</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 当page.open时，http请求（不包括所引起的其它的加载资源）出现了异常，
-</span><span class="c1">// 如404、no route to web site等，都会在此回调显示。
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onError</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">,</span> <span class="nx">trace</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 当page.open打开的url，或者是在打开过程中进行了跳转，可以在这个函数中回调。
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onUrlChanged</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">targetUrl</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 当page.open的目标URL被真正打开后，会在调用open的回调函数前调用该函数，在此可以进行内部的翻页等操作
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onLoadFinished</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{}</span>
-<span class="c1">// 在所加载的web page内部执行该函数，像翻页、点击、滑动等，均可在此中执行
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">evaluate</span><span class="p">(</span><span class="kd">function</span><span class="p">(){});</span>
-<span class="c1">// 将当前page的现状渲染成图片，输出到指定的文件中去。
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="s2">&#34;&#34;</span><span class="p">);</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="c1">// 通过page对象通过url链接打开页面，加载完成后回调
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">open</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当page.open调用时，会首先执行该函数，在此可以预置一些参数或函数，用于后边的回调函数中
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onLoadStarted</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// page的所要加载的资源在加载过程中，失败回调处理
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceError</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">resourceError</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// page的所要加载的资源在发起请求时，可以回调该函数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceRequested</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">requestData</span><span class="p">,</span> <span class="nx">networkRequest</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// page的所要加载的资源在加载过程中，每加载一个相关资源，都会在此先做出响应，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 它相当于http头部分，核心回调对象为response，可以获取本次请求的cookies、userAgent等
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onResourceReceived</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 打印一些输出信息到控制台
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onConsoleMessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// alert也是无法直接弹出的，但可以回调alert的内容
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onAlert</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当page.open时，http请求（不包括所引起的其它的加载资源）出现了异常，
+</span></span></span><span class="line"><span class="cl"><span class="c1">// 如404、no route to web site等，都会在此回调显示。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onError</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">msg</span><span class="p">,</span> <span class="nx">trace</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当page.open打开的url，或者是在打开过程中进行了跳转，可以在这个函数中回调。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onUrlChanged</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">targetUrl</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 当page.open的目标URL被真正打开后，会在调用open的回调函数前调用该函数，在此可以进行内部的翻页等操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">onLoadFinished</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{}</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 在所加载的web page内部执行该函数，像翻页、点击、滑动等，均可在此中执行
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">evaluate</span><span class="p">(</span><span class="kd">function</span><span class="p">(){});</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 将当前page的现状渲染成图片，输出到指定的文件中去。
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="s2">&#34;&#34;</span><span class="p">);</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="调用方式">调用方式</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-shell" data-lang="shell">$ /bin/phantomjs <span class="o">[</span>配置文件<span class="o">(</span>js文件<span class="o">)]</span> <span class="o">[</span>参数1<span class="o">]</span> <span class="o">[</span>参数2<span class="o">]</span> <span class="o">[</span>参数3<span class="o">]</span> ...
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-shell" data-lang="shell"><span class="line"><span class="cl">$ /bin/phantomjs <span class="o">[</span>配置文件<span class="o">(</span>js文件<span class="o">)]</span> <span class="o">[</span>参数1<span class="o">]</span> <span class="o">[</span>参数2<span class="o">]</span> <span class="o">[</span>参数3<span class="o">]</span> ...
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h1 id="实现">实现</h1>
 <p>java使用java.lang.Runtime调用，接收返回结果进行操作</p>
 <h2 id="configjs-配置文件内容">config.js 配置文件内容</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -314,61 +312,61 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 </span><span class="lnt">54
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">page</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;webpage&#39;</span><span class="p">).</span><span class="nx">create</span><span class="p">();</span>
-<span class="kd">var</span> <span class="nx">system</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;system&#39;</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">ssionid</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> 
-<span class="kd">var</span> <span class="nx">address</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span> <span class="c1">// 请求地址，url
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">output</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span> <span class="c1">// 输出
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">pageWidth</span> <span class="o">=</span> <span class="mi">1366</span><span class="p">;</span> <span class="c1">//初始化游览器宽
-</span><span class="c1"></span><span class="kd">var</span> <span class="nx">pageHeight</span> <span class="o">=</span> <span class="mi">1080</span><span class="p">;</span> <span class="c1">//初始化游览器高
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">viewportSize</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">width</span><span class="o">:</span> <span class="nx">pageWidth</span><span class="p">,</span> <span class="nx">height</span><span class="o">:</span> <span class="nx">pageHeight</span> <span class="p">};</span> <span class="c1">//初始化游览器
-</span><span class="c1"></span>
-<span class="c1">// 添加ssionid至cookie
-</span><span class="c1"></span><span class="nx">phantom</span><span class="p">.</span><span class="nx">addCookie</span><span class="p">({</span>
-  <span class="s1">&#39;name&#39;</span>     <span class="o">:</span> <span class="s1">&#39;JSESSIONID&#39;</span><span class="p">,</span>  
-  <span class="s1">&#39;value&#39;</span>    <span class="o">:</span> <span class="nx">ssionid</span><span class="p">,</span>  
-  <span class="s1">&#39;domain&#39;</span>   <span class="o">:</span> <span class="s1">&#39;job.chsi.com.cn&#39;</span><span class="p">,</span>
-  <span class="s1">&#39;path&#39;</span>     <span class="o">:</span> <span class="s1">&#39;/&#39;</span>
-<span class="p">});</span>
-<span class="c1">//打开地址
-</span><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">open</span><span class="p">(</span><span class="nx">address</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// 打开完毕
-</span><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="nx">status</span> <span class="o">===</span> <span class="s2">&#34;success&#34;</span><span class="p">)</span> <span class="p">{</span>
-      <span class="c1">// dom操作
-</span><span class="c1"></span>        <span class="kd">var</span> <span class="nx">rect</span> <span class="o">=</span> <span class="nx">page</span><span class="p">.</span><span class="nx">evaluate</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-            <span class="kd">var</span> <span class="nx">html</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;html&#39;</span><span class="p">);</span>
-            <span class="k">if</span><span class="p">(</span><span class="nx">html</span> <span class="o">&amp;&amp;</span> <span class="nx">html</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
-                <span class="k">if</span><span class="p">(</span><span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">innerHTML</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">&#39;id=&#34;contMain&#34;&#39;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">){</span>
-                    <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
-                <span class="p">}</span>
-                <span class="k">return</span> <span class="p">{</span>
-                    <span class="nx">offset</span> <span class="o">:</span> <span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">getBoundingClientRect</span><span class="p">(),</span>
-                    <span class="nx">innerHTML</span> <span class="o">:</span>  <span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">innerHTML</span>   
-                <span class="p">};</span>
-            <span class="p">}</span>
-            <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
-        <span class="p">});</span>
-        <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">rect</span><span class="p">){</span>
-            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span>
-            <span class="nx">page</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
-            <span class="nx">phantom</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span>
-            <span class="k">return</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">rect</span><span class="p">.</span><span class="nx">innerHTML</span><span class="p">);</span> <span class="c1">// 输出html
-</span><span class="c1"></span>        <span class="nx">page</span><span class="p">.</span><span class="nx">clipRect</span> <span class="o">=</span> <span class="p">{</span> <span class="c1">//设置截取区域(此设置为全屏)
-</span><span class="c1"></span>          <span class="nx">top</span><span class="o">:</span><span class="mi">0</span><span class="p">,</span>
-          <span class="nx">left</span><span class="o">:</span><span class="mi">0</span><span class="p">,</span>
-          <span class="nx">width</span><span class="o">:</span><span class="nx">rect</span><span class="p">.</span><span class="nx">offset</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span>
-          <span class="nx">height</span><span class="o">:</span><span class="nx">rect</span><span class="p">.</span><span class="nx">offset</span><span class="p">.</span><span class="nx">height</span>
-        <span class="p">};</span>
-        <span class="nb">window</span><span class="p">.</span><span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
-          <span class="nx">page</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span> <span class="c1">// 输出
-</span><span class="c1"></span>          <span class="nx">page</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span> <span class="c1">// 关闭
-</span><span class="c1"></span>          <span class="nx">phantom</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span> <span class="c1">// 退出
-</span><span class="c1"></span>        <span class="p">},</span> <span class="mi">200</span><span class="p">);</span> 
-    <span class="p">}</span>
-<span class="p">});</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-javascript" data-lang="javascript"><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">page</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;webpage&#39;</span><span class="p">).</span><span class="nx">create</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">system</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;system&#39;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">ssionid</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> 
+</span></span><span class="line"><span class="cl"><span class="kd">var</span> <span class="nx">address</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span> <span class="c1">// 请求地址，url
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">output</span> <span class="o">=</span> <span class="nx">system</span><span class="p">.</span><span class="nx">args</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span> <span class="c1">// 输出
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">pageWidth</span> <span class="o">=</span> <span class="mi">1366</span><span class="p">;</span> <span class="c1">//初始化游览器宽
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="kd">var</span> <span class="nx">pageHeight</span> <span class="o">=</span> <span class="mi">1080</span><span class="p">;</span> <span class="c1">//初始化游览器高
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">viewportSize</span> <span class="o">=</span> <span class="p">{</span> <span class="nx">width</span><span class="o">:</span> <span class="nx">pageWidth</span><span class="p">,</span> <span class="nx">height</span><span class="o">:</span> <span class="nx">pageHeight</span> <span class="p">};</span> <span class="c1">//初始化游览器
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl"><span class="c1">// 添加ssionid至cookie
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">phantom</span><span class="p">.</span><span class="nx">addCookie</span><span class="p">({</span>
+</span></span><span class="line"><span class="cl">  <span class="s1">&#39;name&#39;</span>     <span class="o">:</span> <span class="s1">&#39;JSESSIONID&#39;</span><span class="p">,</span>  
+</span></span><span class="line"><span class="cl">  <span class="s1">&#39;value&#39;</span>    <span class="o">:</span> <span class="nx">ssionid</span><span class="p">,</span>  
+</span></span><span class="line"><span class="cl">  <span class="s1">&#39;domain&#39;</span>   <span class="o">:</span> <span class="s1">&#39;job.chsi.com.cn&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">  <span class="s1">&#39;path&#39;</span>     <span class="o">:</span> <span class="s1">&#39;/&#39;</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span><span class="line"><span class="cl"><span class="c1">//打开地址
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="nx">page</span><span class="p">.</span><span class="nx">open</span><span class="p">(</span><span class="nx">address</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">status</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// 打开完毕
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="k">if</span> <span class="p">(</span><span class="nx">status</span> <span class="o">===</span> <span class="s2">&#34;success&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="c1">// dom操作
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="kd">var</span> <span class="nx">rect</span> <span class="o">=</span> <span class="nx">page</span><span class="p">.</span><span class="nx">evaluate</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="kd">var</span> <span class="nx">html</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementsByTagName</span><span class="p">(</span><span class="s1">&#39;html&#39;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span><span class="p">(</span><span class="nx">html</span> <span class="o">&amp;&amp;</span> <span class="nx">html</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span><span class="p">(</span><span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">innerHTML</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">&#39;id=&#34;contMain&#34;&#39;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="nx">offset</span> <span class="o">:</span> <span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">getBoundingClientRect</span><span class="p">(),</span>
+</span></span><span class="line"><span class="cl">                    <span class="nx">innerHTML</span> <span class="o">:</span>  <span class="nx">html</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">innerHTML</span>   
+</span></span><span class="line"><span class="cl">                <span class="p">};</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">});</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">rect</span><span class="p">){</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">page</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="nx">phantom</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">rect</span><span class="p">.</span><span class="nx">innerHTML</span><span class="p">);</span> <span class="c1">// 输出html
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="nx">page</span><span class="p">.</span><span class="nx">clipRect</span> <span class="o">=</span> <span class="p">{</span> <span class="c1">//设置截取区域(此设置为全屏)
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>          <span class="nx">top</span><span class="o">:</span><span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">left</span><span class="o">:</span><span class="mi">0</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">width</span><span class="o">:</span><span class="nx">rect</span><span class="p">.</span><span class="nx">offset</span><span class="p">.</span><span class="nx">width</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">height</span><span class="o">:</span><span class="nx">rect</span><span class="p">.</span><span class="nx">offset</span><span class="p">.</span><span class="nx">height</span>
+</span></span><span class="line"><span class="cl">        <span class="p">};</span>
+</span></span><span class="line"><span class="cl">        <span class="nb">window</span><span class="p">.</span><span class="nx">setTimeout</span><span class="p">(</span><span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">          <span class="nx">page</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">output</span><span class="p">);</span> <span class="c1">// 输出
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>          <span class="nx">page</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span> <span class="c1">// 关闭
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>          <span class="nx">phantom</span><span class="p">.</span><span class="nx">exit</span><span class="p">();</span> <span class="c1">// 退出
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>        <span class="p">},</span> <span class="mi">200</span><span class="p">);</span> 
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">});</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="配置文件总结">配置文件总结</h3>
 <ul>
@@ -382,7 +380,7 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 <h2 id="java封装">java封装</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -414,37 +412,37 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 </span><span class="lnt">30
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="n">String</span> <span class="nf">phantomjs</span><span class="o">(</span><span class="n">String</span> <span class="n">confPath</span><span class="o">,</span> <span class="n">String</span> <span class="n">url</span><span class="o">,</span> <span class="n">String</span> <span class="n">ssionId</span><span class="o">,</span> <span class="n">String</span> <span class="n">outPath</span><span class="o">)</span> <span class="o">{</span>
-  <span class="n">StringBuilder</span> <span class="n">sb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-  <span class="n">InputStream</span> <span class="n">is</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-  <span class="n">InputStreamReader</span> <span class="n">isr</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-  <span class="n">BufferedReader</span> <span class="n">br</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-  <span class="k">try</span> <span class="o">{</span>
-    <span class="n">String</span> <span class="n">cmd</span> <span class="o">=</span> <span class="s">&#34;phantomjs &#34;</span> <span class="o">+</span> <span class="n">confPath</span> <span class="o">+</span> <span class="s">&#34; &#34;</span> <span class="o">+</span> <span class="n">ssionId</span> <span class="o">+</span> <span class="s">&#34; &#34;</span> <span class="o">+</span> <span class="n">url</span> <span class="o">+</span> <span class="s">&#34; &#34;</span> <span class="o">+</span> <span class="n">outPath</span><span class="o">;</span>
-    <span class="n">Process</span> <span class="n">ps</span> <span class="o">=</span> <span class="n">Runtime</span><span class="o">.</span><span class="na">getRuntime</span><span class="o">().</span><span class="na">exec</span><span class="o">(</span><span class="n">cmd</span><span class="o">);</span>
-    <span class="n">is</span> <span class="o">=</span> <span class="n">ps</span><span class="o">.</span><span class="na">getInputStream</span><span class="o">();</span>
-    <span class="n">isr</span> <span class="o">=</span> <span class="k">new</span> <span class="n">InputStreamReader</span><span class="o">(</span><span class="n">is</span><span class="o">,</span> <span class="s">&#34;utf-8&#34;</span><span class="o">);</span> <span class="c1">// 注意编码格式
-</span><span class="c1"></span>    <span class="n">br</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BufferedReader</span><span class="o">(</span><span class="n">isr</span><span class="o">);</span>
-    <span class="n">String</span> <span class="n">tmp</span><span class="o">;</span>
-    <span class="k">while</span> <span class="o">((</span><span class="n">tmp</span> <span class="o">=</span> <span class="n">br</span><span class="o">.</span><span class="na">readLine</span><span class="o">())</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
-      <span class="n">sb</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">tmp</span><span class="o">);</span>
-    <span class="o">}</span>
-  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">IOException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-    <span class="n">IOUtils</span><span class="o">.</span><span class="na">closeQuietly</span><span class="o">(</span><span class="n">br</span><span class="o">);</span> <span class="c1">// 注意关闭流
-</span><span class="c1"></span>    <span class="n">IOUtils</span><span class="o">.</span><span class="na">closeQuietly</span><span class="o">(</span><span class="n">isr</span><span class="o">);</span>
-    <span class="n">IOUtils</span><span class="o">.</span><span class="na">closeQuietly</span><span class="o">(</span><span class="n">is</span><span class="o">);</span>
-  <span class="o">}</span>
-  <span class="n">String</span> <span class="n">html</span> <span class="o">=</span> <span class="n">sb</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-  <span class="k">if</span> <span class="o">(</span><span class="n">html</span><span class="o">.</span><span class="na">contains</span><span class="o">(</span><span class="n">filePath</span><span class="o">))</span> <span class="o">{</span>
-    <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
-  <span class="o">}</span>
-  <span class="k">return</span> <span class="n">html</span><span class="o">;</span>
-<span class="o">}</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-java" data-lang="java"><span class="line"><span class="cl"><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">phantomjs</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">confPath</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">url</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">ssionId</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">outPath</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">StringBuilder</span><span class="w"> </span><span class="n">sb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">StringBuilder</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">InputStream</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">InputStreamReader</span><span class="w"> </span><span class="n">isr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">BufferedReader</span><span class="w"> </span><span class="n">br</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&#34;phantomjs &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">confPath</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">ssionId</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">url</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&#34; &#34;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">outPath</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">Process</span><span class="w"> </span><span class="n">ps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Runtime</span><span class="p">.</span><span class="na">getRuntime</span><span class="p">().</span><span class="na">exec</span><span class="p">(</span><span class="n">cmd</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">is</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ps</span><span class="p">.</span><span class="na">getInputStream</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">isr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">InputStreamReader</span><span class="p">(</span><span class="n">is</span><span class="p">,</span><span class="w"> </span><span class="s">&#34;utf-8&#34;</span><span class="p">);</span><span class="w"> </span><span class="c1">// 注意编码格式</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">br</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">BufferedReader</span><span class="p">(</span><span class="n">isr</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">tmp</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">tmp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">br</span><span class="p">.</span><span class="na">readLine</span><span class="p">())</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="n">sb</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">IOException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">e</span><span class="p">.</span><span class="na">printStackTrace</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">e</span><span class="p">.</span><span class="na">printStackTrace</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">IOUtils</span><span class="p">.</span><span class="na">closeQuietly</span><span class="p">(</span><span class="n">br</span><span class="p">);</span><span class="w"> </span><span class="c1">// 注意关闭流</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">IOUtils</span><span class="p">.</span><span class="na">closeQuietly</span><span class="p">(</span><span class="n">isr</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="n">IOUtils</span><span class="p">.</span><span class="na">closeQuietly</span><span class="p">(</span><span class="n">is</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">String</span><span class="w"> </span><span class="n">html</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sb</span><span class="p">.</span><span class="na">toString</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">html</span><span class="p">.</span><span class="na">contains</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="p">}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">html</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">}</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="java封装总结">java封装总结</h3>
 <ul>
@@ -470,7 +468,7 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/phantomjs/">phantomjs</a>,&nbsp;<a href="/tags/%E7%88%AC%E8%99%AB/">爬虫</a>,&nbsp;<a href="/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/">网页快照</a>,&nbsp;<a href="/tags/javascript/">javascript</a>,&nbsp;<a href="/tags/java/">java</a></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/phantomjs/">Phantomjs</a>,&nbsp;<a href="/tags/%E7%88%AC%E8%99%AB/">爬虫</a>,&nbsp;<a href="/tags/%E7%BD%91%E9%A1%B5%E5%BF%AB%E7%85%A7/">网页快照</a>,&nbsp;<a href="/tags/javascript/">Javascript</a>,&nbsp;<a href="/tags/java/">Java</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
         </section>
@@ -481,7 +479,7 @@ phantomjs 是 一个基于 webkit 内核的无头浏览器，没有 UI 界面。
 </div>
 </article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2024</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2025</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
 

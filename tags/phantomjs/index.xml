@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>phantomjs - Tag - MidAug&#39;s  Blog</title>
+        <title>Phantomjs - Tag - MidAug&#39;s  Blog</title>
         <link>https://midaug.100180.xyz/tags/phantomjs/</link>
-        <description>phantomjs - Tag - MidAug&#39;s  Blog</description>
+        <description>Phantomjs - Tag - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
             <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Mon, 29 Jan 2018 21:11:33 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/phantomjs/" rel="self" type="application/rss+xml" /><item>
     <title>java调用phantomjs爬取网页及快照</title>

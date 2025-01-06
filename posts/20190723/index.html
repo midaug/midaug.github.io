@@ -7,14 +7,12 @@
         <title>ubuntu下RabbitMQ安装及集群配置 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:title" content="ubuntu下RabbitMQ安装及集群配置" />
 <meta property="og:description" content="RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://midaug.100180.xyz/posts/20190723/" />
-<meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
+<meta property="og:url" content="https://midaug.100180.xyz/posts/20190723/" /><meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2019-07-23T00:00:00+00:00" />
 <meta property="article:modified_time" content="2019-07-23T00:00:00+00:00" /><meta property="og:site_name" content="MidAug&#39;s  Blog" />
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
 
-<meta name="twitter:title" content="ubuntu下RabbitMQ安装及集群配置"/>
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta name="twitter:title" content="ubuntu下RabbitMQ安装及集群配置"/>
 <meta name="twitter:description" content="RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按"/>
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
@@ -35,7 +33,7 @@
                             "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
                             "width":  3200 ,
                             "height":  2048 
-                        }],"genre": "posts","keywords": "RabbitMQ, 消息中间件","wordcount":  2485 ,
+                        }],"genre": "posts","keywords": "RabbitMQ, 消息中间件","wordcount":  2511 ,
         "url": "https:\/\/midaug.100180.xyz\/posts\/20190723\/","datePublished": "2019-07-23T00:00:00+00:00","dateModified": "2019-07-23T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
@@ -123,8 +121,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">ubuntu下RabbitMQ安装及集群配置</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>消息中间件</a>&nbsp;<a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>中间件</a>&nbsp;<a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>消息队列</a>&nbsp;<a href="/categories/rabbitmq/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>RabbitMQ</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2019-07-23">2019-07-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;2485 words&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;5 minutes&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2019-07-23">2019-07-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;2511 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;6 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>Contents</span>
@@ -161,23 +159,23 @@
 <p>先配置节点hosts，用于集群，再安装RabbitMQ， 不然安装后可能读不到配置的hosts。如果有自建DNS更佳。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash">vim /etc/hosts <span class="c1">#在每个节点上编辑/etc/hosts文件写入以下内容</span>
-192.168.10.101 node1
-192.168.10.102 node2
-192.168.10.103 node3
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">vim /etc/hosts <span class="c1">#在每个节点上编辑/etc/hosts文件写入以下内容</span>
+</span></span><span class="line"><span class="cl">192.168.10.101 node1
+</span></span><span class="line"><span class="cl">192.168.10.102 node2
+</span></span><span class="line"><span class="cl">192.168.10.103 node3
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="2rabbitmq-server安装">2.rabbitmq-server安装</h2>
 <p>以ubuntu为例，使用下面快速安装脚本</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -194,45 +192,45 @@
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="cp">#!/bin/sh
-</span><span class="cp"></span><span class="c1">## 官方最新版安装脚本</span>
-<span class="c1">## Install RabbitMQ signing key</span>
-curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc <span class="p">|</span> sudo apt-key add -
-<span class="c1">## Install apt HTTPS transport</span>
-sudo apt-get install apt-transport-https
-<span class="c1">## Add Bintray repositories that provision latest RabbitMQ and Erlang 21.x releases</span>
-sudo tee /etc/apt/sources.list.d/bintray.rabbitmq.list <span class="s">&lt;&lt;EOF
-</span><span class="s">deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang-21.x
-</span><span class="s">deb https://dl.bintray.com/rabbitmq/debian bionic main
-</span><span class="s">EOF</span>
-<span class="c1">## Update package indices</span>
-sudo apt-get update -y
-<span class="c1">## Install rabbitmq-server and its dependencies</span>
-sudo apt-get install rabbitmq-server -y --fix-missing
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/bin/sh
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">## 官方最新版安装脚本</span>
+</span></span><span class="line"><span class="cl"><span class="c1">## Install RabbitMQ signing key</span>
+</span></span><span class="line"><span class="cl">curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc <span class="p">|</span> sudo apt-key add -
+</span></span><span class="line"><span class="cl"><span class="c1">## Install apt HTTPS transport</span>
+</span></span><span class="line"><span class="cl">sudo apt-get install apt-transport-https
+</span></span><span class="line"><span class="cl"><span class="c1">## Add Bintray repositories that provision latest RabbitMQ and Erlang 21.x releases</span>
+</span></span><span class="line"><span class="cl">sudo tee /etc/apt/sources.list.d/bintray.rabbitmq.list <span class="s">&lt;&lt;EOF
+</span></span></span><span class="line"><span class="cl"><span class="s">deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang-21.x
+</span></span></span><span class="line"><span class="cl"><span class="s">deb https://dl.bintray.com/rabbitmq/debian bionic main
+</span></span></span><span class="line"><span class="cl"><span class="s">EOF</span>
+</span></span><span class="line"><span class="cl"><span class="c1">## Update package indices</span>
+</span></span><span class="line"><span class="cl">sudo apt-get update -y
+</span></span><span class="line"><span class="cl"><span class="c1">## Install rabbitmq-server and its dependencies</span>
+</span></span><span class="line"><span class="cl">sudo apt-get install rabbitmq-server -y --fix-missing
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="3在每个节点启用管理插件">3.在每个节点启用管理插件</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
 </span><span class="lnt">5
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash">sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_management
-sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_tracing
-<span class="c1">#如果服务已经在启动则先执行 rabbitmqctl stop_app</span>
-<span class="c1">#然后再执行rabbitmq-plugins enable</span>
-<span class="c1">#最后重新start：rabbitmqctl start_app</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_management
+</span></span><span class="line"><span class="cl">sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_tracing
+</span></span><span class="line"><span class="cl"><span class="c1">#如果服务已经在启动则先执行 rabbitmqctl stop_app</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#然后再执行rabbitmq-plugins enable</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#最后重新start：rabbitmqctl start_app</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="4加入集群">4.加入集群</h2>
 <p>因为RabbitMQ集群是基于erlang同步的，所以先配置使各个节点 中 .erlang.cookie文件一致。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
@@ -243,16 +241,16 @@ sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_tracing
 </span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="c1">#启动集群前先统一所有节点.erlang.cookie文件，注意文件权限</span>
-scp /var/lib/rabbitmq/.erlang.cookie root@node2:/var/lib/rabbitmq/
-<span class="c1">#systemctl start rabbitmq-server.service 启动所有节点</span>
-<span class="c1">#假定node1是主节点， 其他节点依次执行</span>
-rabbitmqctl stop_app
-rabbitmqctl reset
-rabbitmqctl join_cluster rabbit@node1 <span class="c1">#node1的名称与 rabbitmqctl cluster_status 中的信息一致</span>
-<span class="c1">#rabbitmqctl join_cluster rabbit@node1 --ram #添加为内存节点，默认为磁盘</span>
-rabbitmqctl start_app
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1">#启动集群前先统一所有节点.erlang.cookie文件，注意文件权限</span>
+</span></span><span class="line"><span class="cl">scp /var/lib/rabbitmq/.erlang.cookie root@node2:/var/lib/rabbitmq/
+</span></span><span class="line"><span class="cl"><span class="c1">#systemctl start rabbitmq-server.service 启动所有节点</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#假定node1是主节点， 其他节点依次执行</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl stop_app
+</span></span><span class="line"><span class="cl">rabbitmqctl reset
+</span></span><span class="line"><span class="cl">rabbitmqctl join_cluster rabbit@node1 <span class="c1">#node1的名称与 rabbitmqctl cluster_status 中的信息一致</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#rabbitmqctl join_cluster rabbit@node1 --ram #添加为内存节点，默认为磁盘</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl start_app
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>集群重启顺序（如果没有内存节点请忽略）
 集群重启的顺序是固定的，并且是相反的。 如下所述：</p>
@@ -264,7 +262,7 @@ rabbitmqctl start_app
 <p>设置用户命令, 建议创建好集群后再设置， 不然会被集群配置覆盖</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -281,27 +279,27 @@ rabbitmqctl start_app
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash">rabbitmqctl add_user sunday sunday                        <span class="c1"># 创建账号</span>
-rabbitmqctl set_user_tags sunday administrator            <span class="c1"># 设置用户角色</span>
-rabbitmqctl set_permissions -p <span class="s2">&#34;/&#34;</span> sunday <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span>  <span class="c1"># 设置用户权限</span>
-rabbitmqctl list_users                                    <span class="c1"># 查看用户列表</span>
-rabbitmqctl change_password username password <span class="c1"># 修改用户密码</span>
-
-<span class="c1">#其他命令</span>
-rabbitmqctl status          <span class="c1">#查看服务信息</span>
-rabbitmqctl cluster_status  <span class="c1">#查看集群状态</span>
-   Cluster status of node rabbit@node1 ...
-    <span class="o">[{</span>nodes,<span class="o">[{</span>disc,<span class="o">[</span>rabbit@node1,rabbit@node2,rabbit@node3<span class="o">]}]}</span>,
-    <span class="o">{</span>running_nodes,<span class="o">[</span>rabbit@node3,rabbit@node2,rabbit@node1<span class="o">]}</span>,
-    <span class="o">{</span>cluster_name,&lt;&lt;<span class="s2">&#34;rabbit@node1&#34;</span>&gt;&gt;<span class="o">}</span>,
-    <span class="o">{</span>partitions,<span class="o">[]}</span>,
-    <span class="o">{</span>alarms,<span class="o">[{</span>rabbit@node3,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node2,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node1,<span class="o">[]}]}]</span>
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">rabbitmqctl add_user sunday sunday                        <span class="c1"># 创建账号</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_user_tags sunday administrator            <span class="c1"># 设置用户角色</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_permissions -p <span class="s2">&#34;/&#34;</span> sunday <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span>  <span class="c1"># 设置用户权限</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl list_users                                    <span class="c1"># 查看用户列表</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl change_password username password <span class="c1"># 修改用户密码</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">#其他命令</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl status          <span class="c1">#查看服务信息</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl cluster_status  <span class="c1">#查看集群状态</span>
+</span></span><span class="line"><span class="cl">   Cluster status of node rabbit@node1 ...
+</span></span><span class="line"><span class="cl">    <span class="o">[{</span>nodes,<span class="o">[{</span>disc,<span class="o">[</span>rabbit@node1,rabbit@node2,rabbit@node3<span class="o">]}]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>running_nodes,<span class="o">[</span>rabbit@node3,rabbit@node2,rabbit@node1<span class="o">]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>cluster_name,&lt;&lt;<span class="s2">&#34;rabbit@node1&#34;</span>&gt;&gt;<span class="o">}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>partitions,<span class="o">[]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>alarms,<span class="o">[{</span>rabbit@node3,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node2,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node1,<span class="o">[]}]}]</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="6命令行开启镜像策略">6.命令行开启镜像策略</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -319,30 +317,30 @@ rabbitmqctl cluster_status  <span class="c1">#查看集群状态</span>
 </span><span class="lnt">16
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-bash" data-lang="bash"><span class="c1">#开启所有队列为镜像队列&#34;^&#34;匹配名称为所有， &#34;^ha.&#34;匹配名称为ha开头的</span>
-rabbitmqctl set_policy ha-all <span class="s2">&#34;^&#34;</span> <span class="s1">&#39;{&#34;ha-mode&#34;:&#34;all&#34;}&#39;</span>
-
-rabbitmqctl set_policy <span class="o">[</span>-p Vhost<span class="o">]</span> Name Pattern Definition <span class="o">[</span>Priority<span class="o">]</span>
-
--p Vhost： 可选参数，针对指定vhost下的queue进行设置
-Name: policy的名称
-Pattern: queue的匹配模式<span class="o">(</span>正则表达式<span class="o">)</span>
-Definition：镜像定义，包括三个部分ha-mode, ha-params, ha-sync-mode
-        ha-mode:指明镜像队列的模式，有效值为 all/exactly/nodes
-        all：表示在集群中所有的节点上进行镜像
-        exactly：表示在指定个数的节点上进行镜像，节点的个数由ha-params指定
-        nodes：表示在指定的节点上进行镜像，节点名称通过ha-params指定
-        ha-params：ha-mode模式需要用到的参数
-        ha-sync-mode：进行队列中消息的同步方式，有效值为automatic和manual
-priority：可选参数，policy的优先级
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1">#开启所有队列为镜像队列&#34;^&#34;匹配名称为所有， &#34;^ha.&#34;匹配名称为ha开头的</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_policy ha-all <span class="s2">&#34;^&#34;</span> <span class="s1">&#39;{&#34;ha-mode&#34;:&#34;all&#34;}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">rabbitmqctl set_policy <span class="o">[</span>-p Vhost<span class="o">]</span> Name Pattern Definition <span class="o">[</span>Priority<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">-p Vhost： 可选参数，针对指定vhost下的queue进行设置
+</span></span><span class="line"><span class="cl">Name: policy的名称
+</span></span><span class="line"><span class="cl">Pattern: queue的匹配模式<span class="o">(</span>正则表达式<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Definition：镜像定义，包括三个部分ha-mode, ha-params, ha-sync-mode
+</span></span><span class="line"><span class="cl">        ha-mode:指明镜像队列的模式，有效值为 all/exactly/nodes
+</span></span><span class="line"><span class="cl">        all：表示在集群中所有的节点上进行镜像
+</span></span><span class="line"><span class="cl">        exactly：表示在指定个数的节点上进行镜像，节点的个数由ha-params指定
+</span></span><span class="line"><span class="cl">        nodes：表示在指定的节点上进行镜像，节点名称通过ha-params指定
+</span></span><span class="line"><span class="cl">        ha-params：ha-mode模式需要用到的参数
+</span></span><span class="line"><span class="cl">        ha-sync-mode：进行队列中消息的同步方式，有效值为automatic和manual
+</span></span><span class="line"><span class="cl">priority：可选参数，policy的优先级
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h1 id="docker-compose快速安装单节点">docker-compose快速安装单节点</h1>
 <p>这里使用的启用mqtt的镜像，无需mqtt也可以使用别的
 集群安装请参考 <a href="https://www.cnblogs.com/yloved/p/12868892.html" target="_blank" rel="noopener noreffer ">docker-compose安装rabbitmq集群(主从集群&mdash;》镜像集群)</a></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -367,30 +365,30 @@ priority：可选参数，policy的优先级
 </span><span class="lnt">23
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-yaml" data-lang="yaml"><span class="k">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3&#34;</span><span class="w">
-</span><span class="w"></span>services<span class="p">:</span><span class="w">
-</span><span class="w">  </span>rabbitmq-mqtt<span class="p">:</span><span class="w">
-</span><span class="w">    </span><span class="k">container_name</span><span class="p">:</span><span class="w"> </span>rabbitmq-mqtt<span class="w">
-</span><span class="w">    </span>environment<span class="p">:</span><span class="w">
-</span><span class="w">    </span>- RABBITMQ_MQTT_DEFAULT_PASS=admin<span class="w">
-</span><span class="w">    </span>- RABBITMQ_MQTT_DEFAULT_USER=admin<span class="w">
-</span><span class="w">    </span>- RABBITMQ_MQTT_VHOST=/<span class="w">
-</span><span class="w">    </span>- RABBITMQ_DEFAULT_PASS=admin<span class="w">
-</span><span class="w">    </span>- RABBITMQ_DEFAULT_USER=admin<span class="w">
-</span><span class="w">    </span>- RABBITMQ_DEFAULT_VHOST=/<span class="w">
-</span><span class="w">    </span><span class="k">image</span><span class="p">:</span><span class="w"> </span>cyrilix/rabbitmq-mqtt<span class="p">:</span>latest<span class="w">
-</span><span class="w">    </span>volumes<span class="p">:</span><span class="w">
-</span><span class="w">    </span>- ./data<span class="p">:</span>/var/lib/rabbitmq<span class="w">    
-</span><span class="w">    </span>ports<span class="p">:</span><span class="w">
-</span><span class="w">    </span>- <span class="m">25672</span><span class="p">:</span><span class="m">25672</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">4369</span><span class="p">:</span><span class="m">4369</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">5671</span><span class="p">:</span><span class="m">5671</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">5672</span><span class="p">:</span><span class="m">5672</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">8883</span><span class="p">:</span><span class="m">8883</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">15672</span><span class="p">:</span><span class="m">15672</span>/tcp<span class="w">
-</span><span class="w">    </span>- <span class="m">1883</span><span class="p">:</span><span class="m">1883</span>/tcp<span class="w">
-</span><span class="w">    </span><span class="k">restart</span><span class="p">:</span><span class="w"> </span>always<span class="w">
-</span></code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">rabbitmq-mqtt</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l">rabbitmq-mqtt</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">environment</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_DEFAULT_PASS=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_DEFAULT_USER=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_VHOST=/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_PASS=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_USER=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_VHOST=/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">cyrilix/rabbitmq-mqtt:latest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">./data:/var/lib/rabbitmq    </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">25672</span><span class="p">:</span><span class="m">25672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">4369</span><span class="p">:</span><span class="m">4369</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">5671</span><span class="p">:</span><span class="m">5671</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">5672</span><span class="p">:</span><span class="m">5672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">8883</span><span class="p">:</span><span class="m">8883</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">15672</span><span class="p">:</span><span class="m">15672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">1883</span><span class="p">:</span><span class="m">1883</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l">always</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
 </div>
 </div></div><div class="post-footer" id="post-footer">
     <div class="post-info">
@@ -418,7 +416,7 @@ priority：可选参数，policy的优先级
 </div>
 </article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2024</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2025</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
 

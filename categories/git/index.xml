@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>git - Category - MidAug&#39;s  Blog</title>
+        <title>Git - Category - MidAug&#39;s  Blog</title>
         <link>https://midaug.100180.xyz/categories/git/</link>
-        <description>git - Category - MidAug&#39;s  Blog</description>
+        <description>Git - Category - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
             <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/categories/git/" rel="self" type="application/rss+xml" /><item>
     <title>Git删除历史版本，保留当前状态</title>

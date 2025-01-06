@@ -7,14 +7,12 @@
         <title>前端多终端自适应网页开发模式 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:title" content="前端多终端自适应网页开发模式" />
 <meta property="og:description" content="前端多终端自适应网页开发模式 智能移动终端大爆发的现阶段，手机访问网页已经成为人们不可或缺的使用习惯，开发自适应网页大势所趋，实际上无论改造还" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://midaug.100180.xyz/posts/2023010401/" />
-<meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
+<meta property="og:url" content="https://midaug.100180.xyz/posts/2023010401/" /><meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2023-01-04T21:11:33+00:00" />
 <meta property="article:modified_time" content="2023-01-04T21:11:33+00:00" /><meta property="og:site_name" content="MidAug&#39;s  Blog" />
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
 
-<meta name="twitter:title" content="前端多终端自适应网页开发模式"/>
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta name="twitter:title" content="前端多终端自适应网页开发模式"/>
 <meta name="twitter:description" content="前端多终端自适应网页开发模式 智能移动终端大爆发的现阶段，手机访问网页已经成为人们不可或缺的使用习惯，开发自适应网页大势所趋，实际上无论改造还"/>
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
@@ -122,7 +120,7 @@
             <h2 class="toc-title">Contents</h2>
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">前端多终端自适应网页开发模式</h1><div class="post-meta">
-            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/css/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>css</a></span></div>
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/css/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>Css</a></span></div>
             <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2023-01-04">2023-01-04</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;1824 words&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;4 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
@@ -170,7 +168,7 @@
 首先网页的head区域要标注一个这样的viewport元标签。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -184,26 +182,26 @@
 </span><span class="lnt">12
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-html" data-lang="html"><span class="cp">&lt;!DOCTYPE html&gt;</span>
-<span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">&#34;zh_CN&#34;</span><span class="p">&gt;</span>
-<span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
-    <span class="c">&lt;!-- 网页的宽度自动适应手机屏幕的宽度 --&gt;</span> 
-    <span class="c">&lt;!-- width=device-width ：表示宽度是设备屏幕的宽度 --&gt;</span> 
-    <span class="c">&lt;!-- initial-scale=1.0：表示初始的缩放比例，1.0就是占网页的100% --&gt;</span>
-    <span class="c">&lt;!-- minimum-scale=1.0：表示最小的缩放比例 --&gt;</span>
-    <span class="c">&lt;!-- maximum-scale=1.0：表示最大的缩放比例 --&gt;</span>
-    <span class="c">&lt;!-- user-scalable=no：表示用户不可以调整缩放比例 --&gt;</span> 
-    <span class="p">&lt;</span><span class="nt">meta</span> <span class="na">name</span><span class="o">=</span><span class="s">&#34;viewport&#34;</span> <span class="na">content</span><span class="o">=</span><span class="s">&#34;width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no&#34;</span><span class="p">&gt;</span>
-<span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
-<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span> 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-html" data-lang="html"><span class="line"><span class="cl"><span class="cp">&lt;!DOCTYPE html&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">&#34;zh_CN&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- 网页的宽度自动适应手机屏幕的宽度 --&gt;</span> 
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- width=device-width ：表示宽度是设备屏幕的宽度 --&gt;</span> 
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- initial-scale=1.0：表示初始的缩放比例，1.0就是占网页的100% --&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- minimum-scale=1.0：表示最小的缩放比例 --&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- maximum-scale=1.0：表示最大的缩放比例 --&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- user-scalable=no：表示用户不可以调整缩放比例 --&gt;</span> 
+</span></span><span class="line"><span class="cl">    <span class="p">&lt;</span><span class="nt">meta</span> <span class="na">name</span><span class="o">=</span><span class="s">&#34;viewport&#34;</span> <span class="na">content</span><span class="o">=</span><span class="s">&#34;width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span> 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="传统css覆写">传统CSS覆写</h2>
 <p>在原来的CSS文件中增加覆写，举例说明。 <br>
 案例已经完全包括了自适应开发中应用到的所有方法，比较简单。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -235,37 +233,37 @@
 </span><span class="lnt">30
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-css" data-lang="css"><span class="c">/*原始的网页样式*/</span> 
-<span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
-    <span class="k">width</span><span class="p">:</span> <span class="mi">1200</span><span class="kt">px</span><span class="p">;</span>
-    <span class="k">margin-right</span><span class="p">:</span> <span class="kc">auto</span><span class="p">;</span>
-    <span class="k">margin-left</span><span class="p">:</span> <span class="kc">auto</span><span class="p">;</span>
-    <span class="k">padding-left</span><span class="p">:</span> <span class="mi">15</span><span class="kt">px</span><span class="p">;</span>
-    <span class="k">padding-right</span><span class="p">:</span> <span class="mi">15</span><span class="kt">px</span>
-<span class="p">}</span>
-<span class="c">/*当屏幕宽度小于等于991px时，一般多为手机*/</span> 
-<span class="c">/*className为container的元素宽度为100%*/</span>
-<span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">max-width</span><span class="o">:</span> <span class="nt">991px</span><span class="o">)</span> <span class="p">{</span>
-    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
-        <span class="k">width</span><span class="p">:</span> <span class="mi">100</span><span class="kt">%</span> 
-    <span class="p">}</span>
-<span class="p">}</span>
-<span class="c">/*当屏幕宽度大于等于992px且小于等于1099px时，一般多为平板*/</span>
-<span class="c">/*className为container的元素宽度为90%*/</span>
-<span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">min-width</span><span class="o">:</span> <span class="nt">992px</span><span class="o">)</span> <span class="nt">and</span> <span class="o">(</span><span class="nt">max-width</span><span class="o">:</span> <span class="nt">1099px</span><span class="o">)</span> <span class="p">{</span>
-    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
-        <span class="k">width</span><span class="p">:</span> <span class="mi">90</span><span class="kt">%</span>
-    <span class="p">}</span>
-<span class="p">}</span> 
-<span class="c">/*当屏幕宽度大于等于1100px时，常规电脑*/</span>
-<span class="c">/*className为container的元素宽度为1100px*/</span>
-<span class="c">/*此处用于举例，实际这个样式是多余了，默认就是&gt;1100px*/</span>
-<span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">min-width</span><span class="o">:</span> <span class="nt">1100px</span><span class="o">)</span> <span class="p">{</span>
-    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
-        <span class="k">width</span><span class="p">:</span> <span class="mi">1100</span><span class="kt">px</span>
-    <span class="p">}</span>
-<span class="p">}</span> 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-css" data-lang="css"><span class="line"><span class="cl"><span class="c">/*原始的网页样式*/</span> 
+</span></span><span class="line"><span class="cl"><span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">width</span><span class="p">:</span> <span class="mi">1200</span><span class="kt">px</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">margin-right</span><span class="p">:</span> <span class="kc">auto</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">margin-left</span><span class="p">:</span> <span class="kc">auto</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">padding-left</span><span class="p">:</span> <span class="mi">15</span><span class="kt">px</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">padding-right</span><span class="p">:</span> <span class="mi">15</span><span class="kt">px</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c">/*当屏幕宽度小于等于991px时，一般多为手机*/</span> 
+</span></span><span class="line"><span class="cl"><span class="c">/*className为container的元素宽度为100%*/</span>
+</span></span><span class="line"><span class="cl"><span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">max-width</span><span class="o">:</span> <span class="nt">991px</span><span class="o">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">width</span><span class="p">:</span> <span class="mi">100</span><span class="kt">%</span> 
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="c">/*当屏幕宽度大于等于992px且小于等于1099px时，一般多为平板*/</span>
+</span></span><span class="line"><span class="cl"><span class="c">/*className为container的元素宽度为90%*/</span>
+</span></span><span class="line"><span class="cl"><span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">min-width</span><span class="o">:</span> <span class="nt">992px</span><span class="o">)</span> <span class="nt">and</span> <span class="o">(</span><span class="nt">max-width</span><span class="o">:</span> <span class="nt">1099px</span><span class="o">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">width</span><span class="p">:</span> <span class="mi">90</span><span class="kt">%</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> 
+</span></span><span class="line"><span class="cl"><span class="c">/*当屏幕宽度大于等于1100px时，常规电脑*/</span>
+</span></span><span class="line"><span class="cl"><span class="c">/*className为container的元素宽度为1100px*/</span>
+</span></span><span class="line"><span class="cl"><span class="c">/*此处用于举例，实际这个样式是多余了，默认就是&gt;1100px*/</span>
+</span></span><span class="line"><span class="cl"><span class="p">@</span><span class="k">media</span> <span class="o">(</span><span class="nt">min-width</span><span class="o">:</span> <span class="nt">1100px</span><span class="o">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="p">.</span><span class="nc">container</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">width</span><span class="p">:</span> <span class="mi">1100</span><span class="kt">px</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span> 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="关于css覆写">关于CSS覆写</h2>
 <p>我们将根据CSS样式渲染生效原则，在这里简单提一下</p>
@@ -279,7 +277,7 @@ CSS样式渲染生效还有一个基本原则就是，<strong>后者覆写前者
 在开发的时候就和正常编写CSS样式一致，更为高效。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
@@ -290,16 +288,16 @@ CSS样式渲染生效还有一个基本原则就是，<strong>后者覆写前者
 </span><span class="lnt">9
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-html" data-lang="html"><span class="cp">&lt;!DOCTYPE html&gt;</span>
-<span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">&#34;zh_CN&#34;</span><span class="p">&gt;</span>
-<span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
-    <span class="c">&lt;!-- 原始的样式表 --&gt;</span>
-    <span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;stylesheet&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/static/css/index.css&#34;</span><span class="p">&gt;</span>
-    <span class="c">&lt;!-- 当屏幕宽度低于768px时会加载这个CSS文件 --&gt;</span>
-    <span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;stylesheet&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/static/css/mobile.css&#34;</span> <span class="na">media</span><span class="o">=</span><span class="s">&#34;screen and (max-width:768px)&#34;</span><span class="p">&gt;</span>
-<span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
-<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span> 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-html" data-lang="html"><span class="line"><span class="cl"><span class="cp">&lt;!DOCTYPE html&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">html</span> <span class="na">lang</span><span class="o">=</span><span class="s">&#34;zh_CN&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- 原始的样式表 --&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;stylesheet&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/static/css/index.css&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="c">&lt;!-- 当屏幕宽度低于768px时会加载这个CSS文件 --&gt;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">&lt;</span><span class="nt">link</span> <span class="na">rel</span><span class="o">=</span><span class="s">&#34;stylesheet&#34;</span> <span class="na">href</span><span class="o">=</span><span class="s">&#34;/static/css/mobile.css&#34;</span> <span class="na">media</span><span class="o">=</span><span class="s">&#34;screen and (max-width:768px)&#34;</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
+</span></span><span class="line"><span class="cl"><span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span> 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="结尾小结">结尾小结</h2>
 <p>实际开发中更加推荐使用第二种开发模式：</p>
@@ -324,7 +322,7 @@ CSS样式渲染生效还有一个基本原则就是，<strong>后者覆写前者
     </div>
 
     <div class="post-info-more">
-        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/css/">css</a></section>
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/css/">Css</a></section>
         <section>
             <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
         </section>
@@ -334,7 +332,7 @@ CSS样式渲染生效还有一个基本原则就是，<strong>后者覆写前者
 </div>
 </article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2024</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2025</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
 

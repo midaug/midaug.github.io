@@ -9,9 +9,6 @@
     <managingEditor>days0814@gmail.com (MidAug)</managingEditor>
     <webMaster>days0814@gmail.com (MidAug)</webMaster>
     <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
-    
-	<atom:link href="https://midaug.100180.xyz/archive/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <atom:link href="https://midaug.100180.xyz/archive/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>

@@ -7,14 +7,12 @@
         <title>Nginx 内容缓存及常见参数配置 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:title" content="Nginx 内容缓存及常见参数配置" />
 <meta property="og:description" content="场景 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根据请求路由和参数缓存一下" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://midaug.100180.xyz/posts/2021122101/" />
-<meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
+<meta property="og:url" content="https://midaug.100180.xyz/posts/2021122101/" /><meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-12-21T18:11:33+00:00" />
 <meta property="article:modified_time" content="2021-12-21T18:11:33+00:00" /><meta property="og:site_name" content="MidAug&#39;s  Blog" />
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"/>
 
-<meta name="twitter:title" content="Nginx 内容缓存及常见参数配置"/>
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg" /><meta name="twitter:title" content="Nginx 内容缓存及常见参数配置"/>
 <meta name="twitter:description" content="场景 使用场景:项目的页面需要加载很多数据，也不是经常变化的，不涉及个性化定制，为每次请求去动态生成数据，性能比不上根据请求路由和参数缓存一下"/>
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
@@ -151,7 +149,7 @@
 <p>只需要配置 <code>proxy_cache_path</code> 和 <code>proxy_cache</code> 就可以开启内容缓存，前者用来设置缓存的路径和配置，后者用来启用缓存。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -164,18 +162,18 @@
 </span><span class="lnt">11
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">http {
-    ...
-    proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
-
-    server {
-        proxy_cache mycache;
-        location / {
-            proxy_pass http://localhost:8000;
-        }
-    }
-} 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">http {
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    server {
+</span></span><span class="line"><span class="cl">        proxy_cache mycache;
+</span></span><span class="line"><span class="cl">        location / {
+</span></span><span class="line"><span class="cl">            proxy_pass http://localhost:8000;
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">} 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p><strong>对应参数说明:</strong></p>
 <blockquote>
@@ -214,17 +212,17 @@
 <p>在以下示例中，迭代持续数300 毫秒或直到 200 个项目被加载进去：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">proxy_cache_path /data/nginx/cache keys_zone=one:10m loader_threshold=300 loader_files=200; 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">one</span><span class="p">:</span><span class="mi">10</span><span class="n">m</span> <span class="n">loader_threshold</span><span class="o">=</span><span class="mi">300</span> <span class="n">loader_files</span><span class="o">=</span><span class="mi">200</span><span class="p">;</span> 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="其他常用参数其他常用参数">其他常用参数<a href="#%e5%85%b6%e4%bb%96%e5%b8%b8%e7%94%a8%e5%8f%82%e6%95%b0" rel=""></a></h3>
 <p><strong>配置示例：</strong></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -241,22 +239,22 @@
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
-
-server {
-    ...
-    location / {
-        proxy_cache my_cache;
-        # proxy_cache_key &#34;$host$request_uri$cookie_user&#34;;
-        proxy_cache_min_uses 3;
-        proxy_cache_methods GET HEAD POST;
-        proxy_cache_valid 200 302 10m;
-        proxy_cache_valid 404      1m;
-        # proxy_cache_valid any 5m;
-        proxy_pass http://localhost:8000;
-    }
-} 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">proxy_cache_path /path/to/cache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">server {
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    location / {
+</span></span><span class="line"><span class="cl">        proxy_cache my_cache;
+</span></span><span class="line"><span class="cl">        # proxy_cache_key &#34;$host$request_uri$cookie_user&#34;;
+</span></span><span class="line"><span class="cl">        proxy_cache_min_uses 3;
+</span></span><span class="line"><span class="cl">        proxy_cache_methods GET HEAD POST;
+</span></span><span class="line"><span class="cl">        proxy_cache_valid 200 302 10m;
+</span></span><span class="line"><span class="cl">        proxy_cache_valid 404      1m;
+</span></span><span class="line"><span class="cl">        # proxy_cache_valid any 5m;
+</span></span><span class="line"><span class="cl">        proxy_pass http://localhost:8000;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">} 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p><strong>对应参数说明：</strong>
 <code>proxy_cache_key</code> 为更改计算密钥时使用的请求特征，指定缓存的 key，这个不推荐，示例是使用域名，请求url，用户 cookie 来当作 key，意味着一个页面将为不同的用户缓存 n 次，绝大多数情况不需要这样的操作。
@@ -268,7 +266,7 @@ server {
 1.在 <code>http {}</code> 上下文中创建新变量，例如 <code>$purge_method</code>, 他依赖于 <code>$request_method</code> 变量：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span><span class="lnt">2
 </span><span class="lnt">3
 </span><span class="lnt">4
@@ -277,19 +275,19 @@ server {
 </span><span class="lnt">7
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">http {
-    ...
-    map $request_method $purge_method {
-        PURGE 1;
-        default 0;
-    }
-} 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">http {
+</span></span><span class="line"><span class="cl">    ...
+</span></span><span class="line"><span class="cl">    map $request_method $purge_method {
+</span></span><span class="line"><span class="cl">        PURGE 1;
+</span></span><span class="line"><span class="cl">        default 0;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">} 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>2.在 <code>location {}</code> 块中，已经配置缓存的前提下，引入 <code>proxy_cache_purge</code> 参数来指定清除缓存请求的条件。例如在上一步指定的 <code>$request_method</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -302,34 +300,34 @@ server {
 </span><span class="lnt">11
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">server {
-    listen      80;
-    server_name www.example.com;
-
-    location / {
-        proxy_pass  https://localhost:8002;
-        proxy_cache mycache;
-
-        proxy_cache_purge $purge_method;
-    }
-} 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">server {
+</span></span><span class="line"><span class="cl">    listen      80;
+</span></span><span class="line"><span class="cl">    server_name www.example.com;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    location / {
+</span></span><span class="line"><span class="cl">        proxy_pass  https://localhost:8002;
+</span></span><span class="line"><span class="cl">        proxy_cache mycache;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        proxy_cache_purge $purge_method;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">} 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>配置完并使之生效之后，就可以发送一条 purge 请求来让缓存失效了，例如：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">1
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">curl -X PURGE -D – &#34;https://www.example.com/*&#34; 
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">curl -X PURGE -D – &#34;https://www.example.com/*&#34; 
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>在该示例中，将清除具有公共 URL 部分（由星号通配符指定）的资源。但这些缓存条目不会从缓存中完全删除：它们会保留在磁盘上，直到它们被视为不活动（由<code>proxy_cache_path</code> 中的 <code>inactive</code>参数决定）的时候才完全删除，或缓存清除器（由 <code>proxy_cache_path</code> 中的 <code>purge</code> 决定），或客户端尝试访问它们的时候。</p>
 <h2 id="nginx-基于url参数的反向代理加缓存实践">Nginx 基于url参数的反向代理加缓存实践</h2>
 <p><strong>nginx.conf：</strong></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt">  1
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
 </span><span class="lnt">  2
 </span><span class="lnt">  3
 </span><span class="lnt">  4
@@ -448,129 +446,129 @@ server {
 </span><span class="lnt">117
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">user nginx;
-worker_processes auto;
-
-error_log /var/log/nginx/error.log notice;
-pid /var/run/nginx.pid;
-
-
-events {
-    worker_connections 1024;
-}
-
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    log_format main &#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;
-    &#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;
-    &#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;;
-
-    # access_log /var/log/nginx/access.log main;
-
-    sendfile on;
-    #tcp_nopush     on;
-
-    keepalive_timeout 65;
-
-    # 配置多个proxy_cache_path以便实现不同的业务
-    proxy_connect_timeout 10;
-    proxy_read_timeout 180;
-    proxy_send_timeout 5;
-    proxy_buffer_size 16k;
-    proxy_buffers 4 32k;
-    proxy_busy_buffers_size 96k;
-    proxy_temp_file_write_size 96k;
-    proxy_temp_path /tmp/nginx/temp_dir;
-    proxy_cache_path /tmp/nginx/cache1m levels=1:2 keys_zone=cache1m:100m inactive=1m max_size=10g;
-    proxy_cache_path /tmp/nginx/cache5m levels=1:2 keys_zone=cache5m:100m inactive=5m max_size=10g;
-    proxy_cache_path /tmp/nginx/cache10m levels=1:2 keys_zone=cache10m:100m inactive=10m max_size=10g;
-    proxy_cache_path /tmp/nginx/cache30m levels=1:2 keys_zone=cache30m:100m inactive=30m max_size=10g;
-    proxy_cache_path /tmp/nginx/cache1h levels=1:2 keys_zone=cache1h:100m inactive=1h max_size=10g;
-    proxy_cache_path /tmp/nginx/cache12h levels=1:2 keys_zone=cache12h:100m inactive=12h max_size=10g;
-    proxy_cache_path /tmp/nginx/cache1d levels=1:2 keys_zone=cache1d:100m inactive=1d max_size=10g;
-    proxy_cache_path /tmp/nginx/cache7d levels=1:2 keys_zone=cache7d:100m inactive=7d max_size=10g;
-    proxy_cache_path /tmp/nginx/cache30d levels=1:2 keys_zone=cache30d:100m inactive=30d max_size=10g;
-
-
-    server {
-        listen 80;
-        server_name .*;
-
-        location / {
-            root html;
-            index index.html index.htm;
-        }
-
-        error_page 500 502 503 504 /50x.html;
-        location = /50x.html {
-            root html;
-        }
-
-        location /_proxy/ {
-            # 跨域支持
-            if ($request_method = &#39;OPTIONS&#39;) {
-                add_header &#39;Access-Control-Allow-Origin&#39; &#39;*&#39; always;
-                add_header &#39;Access-Control-Allow-Methods&#39; &#39;GET,POST,OPTIONS,PUT,DELETE&#39; always;
-                add_header &#39;Access-Control-Allow-Headers&#39; &#39;*&#39; always;
-                add_header &#39;Access-Control-Max-Age&#39; 1728000 always;
-                add_header &#39;Content-Length&#39; 0;
-                add_header &#39;Content-Type&#39; &#39;text/plain; charset=utf-8&#39;;
-                return 204;
-            }
-
-            if ($request_method ~* &#39;(GET|POST|DELETE|PUT)&#39;) {
-                add_header &#39;Access-Control-Allow-Origin&#39; &#39;*&#39; always;
-            }
-
-            # 解析缓存域
-            set $proxy_cache &#34;cache1m&#34;;
-            if ( $request_uri ~ &#34;/_proxy/(.+)\?&#34; ) {
-                set $proxy_cache $1;
-            }
-            # 不存在的缓存域时返回404异常
-            if (!-e /tmp/nginx/$proxy_cache) {
-                add_header proxy_cache_time &#39;cache dir is not found&#39;;
-                return 404;
-            }
-            # 缓存配置
-            proxy_cache $proxy_cache;
-            # proxy_cache_valid 200 302 24h;
-            # proxy_cache_valid 301 30d;
-            proxy_cache_valid any 30d;
-            expires 30d;
-            # 增加响应头记录是否命中缓存
-            add_header proxy_cache_time $proxy_cache;
-            add_header proxy_cache_status $upstream_cache_status;
-            # 关闭重定向
-            proxy_redirect off;
-            # 能解析转发 URL 的 DNS
-            resolver 223.5.5.5 8.8.8.8;
-            # 获取真实url
-            if ($query_string ~ &#34;^url=(.+)&#34;) {
-                set $proxy_url $1;
-            }
-            # 获取 host
-            set $proxy_host $host;
-            if ($proxy_url ~ &#34;https?://(.*?)/&#34;) {
-                set $proxy_host $1;
-            }
-            proxy_set_header Host $proxy_host;
-            proxy_set_header X-Forwarded-For $remote_addr;
-            proxy_pass $proxy_url;
-        }
-
-    }
-
-}
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="n">user</span> <span class="n">nginx</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">worker_processes</span> <span class="n">auto</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">error_log</span> <span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="nb">log</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">error</span><span class="o">.</span><span class="n">log</span> <span class="n">notice</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="n">pid</span> <span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">run</span><span class="o">/</span><span class="n">nginx</span><span class="o">.</span><span class="n">pid</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">events</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">worker_connections</span> <span class="mi">1024</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="n">http</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">include</span> <span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">mime</span><span class="o">.</span><span class="n">types</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">default_type</span> <span class="n">application</span><span class="o">/</span><span class="n">octet</span><span class="o">-</span><span class="n">stream</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">log_format</span> <span class="n">main</span> <span class="s1">&#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="s1">&#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># access_log /var/log/nginx/access.log main;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">sendfile</span> <span class="n">on</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">#tcp_nopush     on;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">keepalive_timeout</span> <span class="mi">65</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 配置多个proxy_cache_path以便实现不同的业务</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_connect_timeout</span> <span class="mi">10</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_read_timeout</span> <span class="mi">180</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_send_timeout</span> <span class="mi">5</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_buffer_size</span> <span class="mi">16</span><span class="n">k</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_buffers</span> <span class="mi">4</span> <span class="mi">32</span><span class="n">k</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_busy_buffers_size</span> <span class="mi">96</span><span class="n">k</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_temp_file_write_size</span> <span class="mi">96</span><span class="n">k</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_temp_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">temp_dir</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache1m</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache1m</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">1</span><span class="n">m</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache5m</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache5m</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">5</span><span class="n">m</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache10m</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache10m</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">10</span><span class="n">m</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache30m</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache30m</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">30</span><span class="n">m</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache1h</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache1h</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">1</span><span class="n">h</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache12h</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache12h</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">12</span><span class="n">h</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache1d</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache1d</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">1</span><span class="n">d</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache7d</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache7d</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">7</span><span class="n">d</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">proxy_cache_path</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/</span><span class="n">cache30d</span> <span class="n">levels</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="mi">2</span> <span class="n">keys_zone</span><span class="o">=</span><span class="n">cache30d</span><span class="p">:</span><span class="mi">100</span><span class="n">m</span> <span class="n">inactive</span><span class="o">=</span><span class="mi">30</span><span class="n">d</span> <span class="n">max_size</span><span class="o">=</span><span class="mi">10</span><span class="n">g</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">server</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">listen</span> <span class="mi">80</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">server_name</span> <span class="o">.*</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">location</span> <span class="o">/</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">root</span> <span class="n">html</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">index</span> <span class="n">index</span><span class="o">.</span><span class="n">html</span> <span class="n">index</span><span class="o">.</span><span class="n">htm</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">error_page</span> <span class="mi">500</span> <span class="mi">502</span> <span class="mi">503</span> <span class="mi">504</span> <span class="o">/</span><span class="mi">50</span><span class="n">x</span><span class="o">.</span><span class="n">html</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">location</span> <span class="o">=</span> <span class="o">/</span><span class="mi">50</span><span class="n">x</span><span class="o">.</span><span class="n">html</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">root</span> <span class="n">html</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="n">location</span> <span class="o">/</span><span class="n">_proxy</span><span class="o">/</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 跨域支持</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="o">$</span><span class="n">request_method</span> <span class="o">=</span> <span class="s1">&#39;OPTIONS&#39;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Access-Control-Allow-Origin&#39;</span> <span class="s1">&#39;*&#39;</span> <span class="n">always</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Access-Control-Allow-Methods&#39;</span> <span class="s1">&#39;GET,POST,OPTIONS,PUT,DELETE&#39;</span> <span class="n">always</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Access-Control-Allow-Headers&#39;</span> <span class="s1">&#39;*&#39;</span> <span class="n">always</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Access-Control-Max-Age&#39;</span> <span class="mi">1728000</span> <span class="n">always</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Content-Length&#39;</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Content-Type&#39;</span> <span class="s1">&#39;text/plain; charset=utf-8&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="mi">204</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="o">$</span><span class="n">request_method</span> <span class="o">~*</span> <span class="s1">&#39;(GET|POST|DELETE|PUT)&#39;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="s1">&#39;Access-Control-Allow-Origin&#39;</span> <span class="s1">&#39;*&#39;</span> <span class="n">always</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            <span class="c1"># 解析缓存域</span>
+</span></span><span class="line"><span class="cl">            <span class="n">set</span> <span class="o">$</span><span class="n">proxy_cache</span> <span class="s2">&#34;cache1m&#34;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span> <span class="o">$</span><span class="n">request_uri</span> <span class="o">~</span> <span class="s2">&#34;/_proxy/(.+)\?&#34;</span> <span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">set</span> <span class="o">$</span><span class="n">proxy_cache</span> <span class="o">$</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 不存在的缓存域时返回404异常</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="o">!-</span><span class="n">e</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">nginx</span><span class="o">/$</span><span class="n">proxy_cache</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">add_header</span> <span class="n">proxy_cache_time</span> <span class="s1">&#39;cache dir is not found&#39;</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="mi">404</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 缓存配置</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_cache</span> <span class="o">$</span><span class="n">proxy_cache</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># proxy_cache_valid 200 302 24h;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># proxy_cache_valid 301 30d;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_cache_valid</span> <span class="n">any</span> <span class="mi">30</span><span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">expires</span> <span class="mi">30</span><span class="n">d</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 增加响应头记录是否命中缓存</span>
+</span></span><span class="line"><span class="cl">            <span class="n">add_header</span> <span class="n">proxy_cache_time</span> <span class="o">$</span><span class="n">proxy_cache</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">add_header</span> <span class="n">proxy_cache_status</span> <span class="o">$</span><span class="n">upstream_cache_status</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 关闭重定向</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_redirect</span> <span class="n">off</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 能解析转发 URL 的 DNS</span>
+</span></span><span class="line"><span class="cl">            <span class="n">resolver</span> <span class="mf">223.5</span><span class="o">.</span><span class="mf">5.5</span> <span class="mf">8.8</span><span class="o">.</span><span class="mf">8.8</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 获取真实url</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="o">$</span><span class="n">query_string</span> <span class="o">~</span> <span class="s2">&#34;^url=(.+)&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">set</span> <span class="o">$</span><span class="n">proxy_url</span> <span class="o">$</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="c1"># 获取 host</span>
+</span></span><span class="line"><span class="cl">            <span class="n">set</span> <span class="o">$</span><span class="n">proxy_host</span> <span class="o">$</span><span class="n">host</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="o">$</span><span class="n">proxy_url</span> <span class="o">~</span> <span class="s2">&#34;https?://(.*?)/&#34;</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="n">set</span> <span class="o">$</span><span class="n">proxy_host</span> <span class="o">$</span><span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">Host</span> <span class="o">$</span><span class="n">proxy_host</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_set_header</span> <span class="n">X</span><span class="o">-</span><span class="n">Forwarded</span><span class="o">-</span><span class="n">For</span> <span class="o">$</span><span class="n">remote_addr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">proxy_pass</span> <span class="o">$</span><span class="n">proxy_url</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p><strong>docker-compose.yml 快速测试：</strong></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
-<pre class="chroma"><code><span class="lnt"> 1
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
 </span><span class="lnt"> 2
 </span><span class="lnt"> 3
 </span><span class="lnt"> 4
@@ -587,22 +585,22 @@ http {
 </span><span class="lnt">15
 </span></code></pre></td>
 <td class="lntd">
-<pre class="chroma"><code class="language-fallback" data-lang="fallback">version: &#34;3.6&#34;
-services:
-  nginx-cache:
-    image: nginx:1.20.2-alpine
-    container_name: nginx-cache
-    restart: always
-    network_mode: bridge
-    ports:
-    - &#34;8000:80&#34;
-    environment:
-    - TZ=Asia/Shanghai
-    volumes:  
-    - &#34;./nginx.conf:/etc/nginx/nginx.conf:ro&#34;
-    - &#34;./logs:/var/log/nginx:rw&#34;
-    - &#34;./temp:/tmp/nginx&#34;
-</code></pre></td></tr></table>
+<pre tabindex="0" class="chroma"><code class="language-gdscript3" data-lang="gdscript3"><span class="line"><span class="cl"><span class="n">version</span><span class="p">:</span> <span class="s2">&#34;3.6&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="n">services</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">  <span class="n">nginx</span><span class="o">-</span><span class="n">cache</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">image</span><span class="p">:</span> <span class="n">nginx</span><span class="p">:</span><span class="mf">1.20</span><span class="o">.</span><span class="mi">2</span><span class="o">-</span><span class="n">alpine</span>
+</span></span><span class="line"><span class="cl">    <span class="n">container_name</span><span class="p">:</span> <span class="n">nginx</span><span class="o">-</span><span class="n">cache</span>
+</span></span><span class="line"><span class="cl">    <span class="n">restart</span><span class="p">:</span> <span class="n">always</span>
+</span></span><span class="line"><span class="cl">    <span class="n">network_mode</span><span class="p">:</span> <span class="n">bridge</span>
+</span></span><span class="line"><span class="cl">    <span class="n">ports</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="o">-</span> <span class="s2">&#34;8000:80&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">environment</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="o">-</span> <span class="n">TZ</span><span class="o">=</span><span class="n">Asia</span><span class="o">/</span><span class="n">Shanghai</span>
+</span></span><span class="line"><span class="cl">    <span class="n">volumes</span><span class="p">:</span>  
+</span></span><span class="line"><span class="cl">    <span class="o">-</span> <span class="s2">&#34;./nginx.conf:/etc/nginx/nginx.conf:ro&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">-</span> <span class="s2">&#34;./logs:/var/log/nginx:rw&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="o">-</span> <span class="s2">&#34;./temp:/tmp/nginx&#34;</span>
+</span></span></code></pre></td></tr></table>
 </div>
 </div><p>参考链接：</p>
 <ol>
@@ -635,7 +633,7 @@ services:
 </div>
 </article></div>
             </main><footer class="footer">
-        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2024</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2025</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
         </div>
     </footer></div>
 

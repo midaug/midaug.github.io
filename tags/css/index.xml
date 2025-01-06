@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>css - Tag - MidAug&#39;s  Blog</title>
+        <title>Css - Tag - MidAug&#39;s  Blog</title>
         <link>https://midaug.100180.xyz/tags/css/</link>
-        <description>css - Tag - MidAug&#39;s  Blog</description>
+        <description>Css - Tag - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
             <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Wed, 04 Jan 2023 21:11:33 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/css/" rel="self" type="application/rss+xml" /><item>
     <title>前端多终端自适应网页开发模式</title>
@@ -18,7 +18,7 @@
     <pubDate>Tue, 14 Aug 2018 10:33:33 &#43;0000</pubDate>
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/posts/2018081401/</guid>
-    <description><![CDATA[Chrome滚动条 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 /*滑道*/ ::-webkit-scrollbar { width: 5px; height: 5px; background-color: #f7f7f7; } ::-webkit-scrollbar-track { box-shadow: inset 0 0 6px #f7f7f7; border-radius: 10px; } /*滑块*/ ::-webkit-scrollbar-thumb { background-color: #222; border-radius: 10px; } ::-webkit-scrollbar-thumb:hover {]]></description>
+    <description><![CDATA[Chrome滚动条 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 /*滑道*/ ::-webkit-scrollbar { width: 5px; height: 5px; background-color: #f7f7f7; } ::-webkit-scrollbar-track { box-shadow: inset 0 0 6px #f7f7f7; border-radius: 10px; } /*滑块*/ ::-webkit-scrollbar-thumb { background-color: #222; border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background-color:]]></description>
 </item>
 </channel>
 </rss>
