@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Calendar</title>
     <script src="https://cdn.jsdelivr.net/gh/6tail/lunar-javascript/lunar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <style>
-        :root {
+       :root {
             font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
             line-height: 1.5;
             font-weight: 400;
-            color-scheme: light dark;
-            color: #ffffffde;
-            background-color: #242424;
+            color-scheme: light;
+            /* color: #ffffffde; */
+            /* background-color: #242424; */
             font-synthesis: none;
             text-rendering: optimizeLegibility;
             -webkit-font-smoothing: antialiased;
@@ -30,10 +30,11 @@
         }
         body {
             margin: 0;
-            display: flex;
-            place-items: center;
-            min-width: 320px;
-            min-height: 100vh;
+            /* display: flex; */
+            flex-direction: column; /* 使用列方向 */
+            align-items: center; /* 水平居中 */
+            /* min-width: 320px; */
+            /* min-height: 100vh; */
         }
         h1 {
             font-size: 3.2em;
@@ -57,64 +58,38 @@
         button:focus-visible {
             outline: 4px auto -webkit-focus-ring-color;
         }
-        .card {
-            padding: 2em;
-        }
         #app {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 2rem;
+            max-width: 100%; /* 确保占满全宽 */
+            padding: 5px;
             text-align: center;
-        }
-        @media (prefers-color-scheme: light) {
-            :root {
-                color: #213547;
-                background-color: #fff;
-            }
-
-            a:hover {
-                color: #747bff;
-            }
-
-            button {
-                background-color: #f9f9f9;
-            }
-        }
-        .calendar * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
         }
         .calendar {
             box-shadow: 0 2px 5px #0000001a;
             border-radius: 16px;
-            margin: 0;
             box-sizing: border-box;
             border: 2px solid #4E6EF2;
             display: flex;
-            height: 465px;
+            height: auto; /* 高度自动 */
+            width: 100%; /* 占满全宽 */
             overflow: hidden;
         }
         .calendar .container {
             padding-top: 14px;
+            flex: 1; /* 使容器自适应宽度 */
         }
-
         .calendar .container .bar {
             position: relative;
             display: flex;
-            height: 30px;
-            padding: 0 10px;
+            height: auto; /* 自动高度 */
+            padding: 0 5px;
             margin-bottom: 24px;
         }
-
         .calendar .container .bar div {
-            position: relative;
-            flex: 1;
+            /* flex: 1; */
         }
-
         .calendar .container .bar div.button {
             position: absolute;
-            right: 0;
+            right: 5px;
             width: 68px;
             height: 30px;
             line-height: 30px;
@@ -125,7 +100,6 @@
             cursor: pointer;
             font-size: 13px;
         }
-
         .calendar .container .bar input,
         .calendar .container .bar select {
             border: 1px solid #D7D9E0;
@@ -134,45 +108,39 @@
             border-radius: 6px;
             line-height: 1;
             cursor: pointer;
-            position: relative;
             background: #FFFFFF;
             width: 80px;
+            font-size: 11px;
             margin-right: 6px;
             text-align: center;
         }
-
-        .calendar .container .bar select {
-            appearance: none;
-        }
-
         .calendar .container ul,
         .calendar .container ol {
             list-style: none;
-            width: 448px;
+            width: 100%; /* 占满全宽 */
+            padding: 0; /* 移除内边距 */
         }
-
         .calendar .container ul.head li {
             float: left;
-            width: 64px;
+            width: calc(100% / 7); /* 每个星期的宽度自适应 */
             height: 36px;
             font-size: 13px;
+            text-align: center; /* 头部居中对齐 */
         }
-
         .calendar .container ul.body ol li {
             float: left;
-            width: 64px;
+            width: calc(100% / 7 - 4px); /* 每个星期的宽度自适应 */
             position: relative;
             height: 60px;
             padding: 2px;
             cursor: pointer;
         }
-
         .calendar .container ul.body ol li div.inner {
             padding: 4px;
             border-radius: 6px;
             border: 2px solid transparent;
+            text-align: center; /* 内容居中 */
         }
-
         .calendar .container ul.body ol li div.inner b {
             display: block;
             font-weight: 400;
@@ -180,62 +148,55 @@
             font-size: 18px;
             color: #000;
         }
-
         .calendar .container ul.body ol li div.inner i {
             display: block;
             font-style: normal;
             color: #333;
             font-size: 12px;
         }
-
         .calendar .container ul.body ol li div.inner u {
             position: absolute;
             text-decoration: none;
-            left: 7px;
-            top: 7px;
+            left: 4px;
+            top: 4px;
             color: #626675;
-            font-size: 12px;
+            font-size: 10px;
             line-height: 12px;
         }
-
         .calendar .container ul.body ol li.other {
             filter: alpha(opacity=40);
             opacity: 0.4;
         }
-
         .calendar .container ul.body ol li:hover div.inner,
         .calendar .container ul.body ol li.selected div.inner {
             border: 2px solid #BDBFC8;
         }
-
         .calendar .container ul.body ol li.holiday div.inner {
             background: #f5f5f6;
         }
-
         .calendar .container ul.body ol li.holiday.rest div.inner {
             background: #FDE3E4;
         }
-
         .calendar .container ul.body ol li.rest div.inner b,
         .calendar .container ul.body ol li.rest div.inner u {
             color: #F73131;
         }
-
         .calendar .container ul.body ol li.today div.inner {
             border: 2px solid #4E6EF2 !important;
         }
-
         .calendar .side {
             background: #4E6EF2;
             width: 200px;
             color: #fff;
+            padding: 10px; /* 添加内边距 */
+            margin-top: 10px 0px;
+            text-align: left; /* 内容左对齐 */
+            transition: all 0.3s ease; /* 添加过渡效果 */
         }
-
         .calendar .side .ymd {
             line-height: 45px;
             font-size: 25px;
         }
-
         .calendar .side .day {
             position: relative;
             width: 80px;
@@ -246,27 +207,22 @@
             background: rgba(255, 255, 255, 0.5);
             border-radius: 12px;
         }
-
         .calendar .side .lunar {
             margin-top: 6px;
         }
-
         .calendar .side .lunar div {
             font-size: 13px;
             line-height: 21px;
         }
-
         .calendar .side .festival {
             position: relative;
             margin-top: 13px;
             padding-left: 22px;
             padding-right: 14px;
-            text-align: justify;
             color: #FFF;
             font-size: 12px;
             line-height: 16px;
         }
-
         .calendar .side .festival::before {
             content: '';
             position: absolute;
@@ -277,35 +233,29 @@
             background: #fff;
             border-radius: 50%;
         }
-
         .calendar .side .yiji {
             position: relative;
             margin-top: 12px;
             padding-top: 12px;
             background: rgba(255, 255, 255, 0.15);
-            height: 80%;
+            /* height: 80%; */
         }
-
         .calendar .side .yiji .yi {
             /* float: left;
             width: 50%; */
         }
-
         .calendar .side .yiji .yi div {
             font-size: 12px;
             line-height: 20px;
         }
-
         .calendar .side .yiji .ji {
             /* float: right;
             width: 50%; */
         }
-
         .calendar .side .yiji .ji div {
             font-size: 12px;
             line-height: 20px;
         }
-
         .calendar .side .yiji b {
             display: block;
             width: 30px;
@@ -317,48 +267,52 @@
             font-size: 24px;
             color: #fff;
         }
-
         .calendar .side .yiji span {
             margin: 0px 3px;
             white-space: nowrap;
         }
-
         div.source {
             margin-top: 30px;
             color: #909399;
             font-size: 13px;
         }
-
         div.source code {
             background: #F0F2F5;
             padding: 3px;
             border-radius: 3px;
         }
-
         div.source a {
             color: #409eff;
             text-decoration: underline;
         }
-
         .card #app .side {
             display: none;
         }
-
         .card #app .calendar .container .bar {
             display: none;
         }
-
         .card #app .calendar {
             height: 415px;
             border: none;
             box-shadow: none;
         }
-
         .card,
         .card #app {
             padding: 0px !important;
             margin: 0px !important;
             place-items: unset !important;
+        }
+
+        /* 媒体查询以调整布局 */
+        @media (max-width: 500px) {
+            .calendar {
+                flex-direction: column; /* 在小屏幕上垂直排列 */
+            }
+            .calendar .side {
+                width: calc(100% - 20px); /* 使侧边栏宽度占满 */
+                margin-top: 10px; /* 顶部间距 */
+                padding: 10px;
+            }
         }
     </style>
 </head>
