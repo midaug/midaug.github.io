@@ -1,0 +1,88 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>Tags - Tag - MidAug&#39;s  Blog</title>
+        <link>https://midaug.100180.xyz/tags/</link>
+        <description>Tags - Tag - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Wed, 04 Jan 2023 21:11:33 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/" rel="self" type="application/rss+xml" /><item>
+    <title>Css</title>
+    <link>https://midaug.100180.xyz/tags/css/</link>
+    <pubDate>Wed, 04 Jan 2023 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/css/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Git</title>
+    <link>https://midaug.100180.xyz/tags/git/</link>
+    <pubDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/git/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Nginx</title>
+    <link>https://midaug.100180.xyz/tags/nginx/</link>
+    <pubDate>Tue, 21 Dec 2021 18:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/nginx/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>修炼</title>
+    <link>https://midaug.100180.xyz/tags/%E4%BF%AE%E7%82%BC/</link>
+    <pubDate>Tue, 16 Nov 2021 10:33:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E4%BF%AE%E7%82%BC/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>RabbitMQ</title>
+    <link>https://midaug.100180.xyz/tags/rabbitmq/</link>
+    <pubDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/rabbitmq/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>消息中间件</title>
+    <link>https://midaug.100180.xyz/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
+    <pubDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>文件下载服务</title>
+    <link>https://midaug.100180.xyz/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</link>
+    <pubDate>Sat, 15 Jun 2019 00:00:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E6%96%87%E4%BB%B6%E4%B8%8B%E8%BD%BD%E6%9C%8D%E5%8A%A1/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Java</title>
+    <link>https://midaug.100180.xyz/tags/java/</link>
+    <pubDate>Mon, 29 Jan 2018 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/java/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Javascript</title>
+    <link>https://midaug.100180.xyz/tags/javascript/</link>
+    <pubDate>Mon, 29 Jan 2018 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/javascript/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Phantomjs</title>
+    <link>https://midaug.100180.xyz/tags/phantomjs/</link>
+    <pubDate>Mon, 29 Jan 2018 21:11:33 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/phantomjs/</guid>
+    <description><![CDATA[]]></description>
+</item>
+</channel>
+</rss>

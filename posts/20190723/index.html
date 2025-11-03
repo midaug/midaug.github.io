@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>ubuntu下RabbitMQ安装及集群配置 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/20190723/">
+  <meta property="og:site_name" content="MidAug&#39;s  Blog">
+  <meta property="og:title" content="ubuntu下RabbitMQ安装及集群配置">
+  <meta property="og:description" content="RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+  <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-07-23T00:00:00+00:00">
+    <meta property="article:modified_time" content="2019-07-23T00:00:00+00:00">
+    <meta property="article:tag" content="RabbitMQ">
+    <meta property="article:tag" content="消息中间件">
+    <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="ubuntu下RabbitMQ安装及集群配置">
+<meta name="twitter:description" content="RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按">
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://midaug.100180.xyz/posts/20190723/" /><link rel="prev" href="https://midaug.100180.xyz/posts/20190615/" /><link rel="next" href="https://midaug.100180.xyz/posts/2021070201/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "ubuntu下RabbitMQ安装及集群配置",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/midaug.100180.xyz\/posts\/20190723\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "RabbitMQ, 消息中间件","wordcount":  2511 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/20190723\/","datePublished": "2019-07-23T00:00:00+00:00","dateModified": "2019-07-23T00:00:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">ubuntu下RabbitMQ安装及集群配置</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>消息中间件</a>&nbsp;<a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>中间件</a>&nbsp;<a href="/categories/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>消息队列</a>&nbsp;<a href="/categories/rabbitmq/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>RabbitMQ</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2019-07-23">2019-07-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;2511 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;6 minutes&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#普通模式">普通模式</a></li>
+    <li><a href="#镜像模式">镜像模式</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#1配置节点hosts">1.配置节点hosts</a></li>
+    <li><a href="#2rabbitmq-server安装">2.rabbitmq-server安装</a></li>
+    <li><a href="#3在每个节点启用管理插件">3.在每个节点启用管理插件</a></li>
+    <li><a href="#4加入集群">4.加入集群</a></li>
+    <li><a href="#5创建rabbitmq用户">5.创建RabbitMQ用户</a></li>
+    <li><a href="#6命令行开启镜像策略">6.命令行开启镜像策略</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h1 id="rabbitmq简介">RabbitMQ简介</h1>
+<p>以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如果网络产生波动等原因使得商品服务扣库存延迟或者失败，会带来较差的用户体验，如果在高并发的场景下，这样的处理显然是不合适的，那怎么进行优化呢？这就需要消息队列登场了。</p>
+<p>消息队列提供一个异步通信机制，消息的发送者不必一直等待到消息被成功处理才返回，而是立即返回。消息中间件负责处理网络通信，如果网络连接不可用，消息被暂存于队列当中，当网络畅通的时候在将消息转发给相应的应用程序或者服务，当然前提是这些服务订阅了该队列。如果在商品服务和订单服务之间使用消息中间件，既可以提高并发量，又降低服务之间的耦合度。</p>
+<p>RabbitMQ就是这样一款我们苦苦追寻的消息队列。RabbitMQ是一个开源的消息代理的队列服务器，用来通过普通协议在完全不同的应用之间共享数据。</p>
+<p>RabbitMQ是使用Erlang语言来编写的，并且RabbitMQ是基于AMQP协议的。Erlang语言在数据交互方面性能优秀，有着和原生Socket一样的延迟，这也是RabbitMQ高性能的原因所在。可谓“人如其名”，RabbitMQ像兔子一样迅速。</p>
+<h1 id="rabbitmq集群模式">RabbitMQ集群模式</h1>
+<h2 id="普通模式">普通模式</h2>
+<p>默认模式，以两个节点（rabbit01、rabbit02）为例来进行说明。对于Queue来说，消息实体只存在于其中一个节点rabbit01（或者rabbit02），rabbit01和rabbit02两个节点仅有相同的元数据，即队列的结构。当消息进入rabbit01节点的Queue后，consumer从rabbit02节点消费时，RabbitMQ会临时在rabbit01、rabbit02间进行消息传输，把A中的消息实体取出并经过B发送给consumer。所以consumer应尽量连接每一个节点，从中取消息。即对于同一个逻辑队列，要在多个节点建立物理Queue。否则无论consumer连rabbit01或rabbit02，出口总在rabbit01，会产生瓶颈。当rabbit01节点故障后，rabbit02节点无法取到rabbit01节点中还未消费的消息实体。如果做了消息持久化，那么得等rabbit01节点恢复，然后才可被消费；如果没有持久化的话，就会产生消息丢失的现象。</p>
+<h2 id="镜像模式">镜像模式</h2>
+<p>把需要的队列做成镜像队列，存在与多个节点属于RabbitMQ的HA方案。该模式解决了普通模式中的问题，其实质和普通模式不同之处在于，消息实体会主动在镜像节点间同步，而不是在客户端取数据时临时拉取。该模式带来的副作用也很明显，除了降低系统性能外，如果镜像队列数量过多，加之大量的消息进入，集群内部的网络带宽将会被这种同步通讯大大消耗掉。所以在对可靠性要求较高的场合中适用。</p>
+<!-- more -->
+<h1 id="ubuntu下安装rabbitmq集群">ubuntu下安装RabbitMQ集群</h1>
+<h2 id="1配置节点hosts">1.配置节点hosts</h2>
+<p>先配置节点hosts，用于集群，再安装RabbitMQ， 不然安装后可能读不到配置的hosts。如果有自建DNS更佳。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">vim /etc/hosts <span class="c1">#在每个节点上编辑/etc/hosts文件写入以下内容</span>
+</span></span><span class="line"><span class="cl">192.168.10.101 node1
+</span></span><span class="line"><span class="cl">192.168.10.102 node2
+</span></span><span class="line"><span class="cl">192.168.10.103 node3
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="2rabbitmq-server安装">2.rabbitmq-server安装</h2>
+<p>以ubuntu为例，使用下面快速安装脚本</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/bin/sh
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">## 官方最新版安装脚本</span>
+</span></span><span class="line"><span class="cl"><span class="c1">## Install RabbitMQ signing key</span>
+</span></span><span class="line"><span class="cl">curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc <span class="p">|</span> sudo apt-key add -
+</span></span><span class="line"><span class="cl"><span class="c1">## Install apt HTTPS transport</span>
+</span></span><span class="line"><span class="cl">sudo apt-get install apt-transport-https
+</span></span><span class="line"><span class="cl"><span class="c1">## Add Bintray repositories that provision latest RabbitMQ and Erlang 21.x releases</span>
+</span></span><span class="line"><span class="cl">sudo tee /etc/apt/sources.list.d/bintray.rabbitmq.list <span class="s">&lt;&lt;EOF
+</span></span></span><span class="line"><span class="cl"><span class="s">deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang-21.x
+</span></span></span><span class="line"><span class="cl"><span class="s">deb https://dl.bintray.com/rabbitmq/debian bionic main
+</span></span></span><span class="line"><span class="cl"><span class="s">EOF</span>
+</span></span><span class="line"><span class="cl"><span class="c1">## Update package indices</span>
+</span></span><span class="line"><span class="cl">sudo apt-get update -y
+</span></span><span class="line"><span class="cl"><span class="c1">## Install rabbitmq-server and its dependencies</span>
+</span></span><span class="line"><span class="cl">sudo apt-get install rabbitmq-server -y --fix-missing
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="3在每个节点启用管理插件">3.在每个节点启用管理插件</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_management
+</span></span><span class="line"><span class="cl">sudo rabbitmq-plugins <span class="nb">enable</span> rabbitmq_tracing
+</span></span><span class="line"><span class="cl"><span class="c1">#如果服务已经在启动则先执行 rabbitmqctl stop_app</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#然后再执行rabbitmq-plugins enable</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#最后重新start：rabbitmqctl start_app</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="4加入集群">4.加入集群</h2>
+<p>因为RabbitMQ集群是基于erlang同步的，所以先配置使各个节点 中 .erlang.cookie文件一致。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1">#启动集群前先统一所有节点.erlang.cookie文件，注意文件权限</span>
+</span></span><span class="line"><span class="cl">scp /var/lib/rabbitmq/.erlang.cookie root@node2:/var/lib/rabbitmq/
+</span></span><span class="line"><span class="cl"><span class="c1">#systemctl start rabbitmq-server.service 启动所有节点</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#假定node1是主节点， 其他节点依次执行</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl stop_app
+</span></span><span class="line"><span class="cl">rabbitmqctl reset
+</span></span><span class="line"><span class="cl">rabbitmqctl join_cluster rabbit@node1 <span class="c1">#node1的名称与 rabbitmqctl cluster_status 中的信息一致</span>
+</span></span><span class="line"><span class="cl"><span class="c1">#rabbitmqctl join_cluster rabbit@node1 --ram #添加为内存节点，默认为磁盘</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl start_app
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>集群重启顺序（如果没有内存节点请忽略）
+集群重启的顺序是固定的，并且是相反的。 如下所述：</p>
+<ul>
+<li>启动顺序：磁盘节点 =&gt; 内存节点</li>
+<li>关闭顺序：内存节点 =&gt; 磁盘节点</li>
+</ul>
+<h2 id="5创建rabbitmq用户">5.创建RabbitMQ用户</h2>
+<p>设置用户命令, 建议创建好集群后再设置， 不然会被集群配置覆盖</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">rabbitmqctl add_user sunday sunday                        <span class="c1"># 创建账号</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_user_tags sunday administrator            <span class="c1"># 设置用户角色</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_permissions -p <span class="s2">&#34;/&#34;</span> sunday <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span> <span class="s2">&#34;.*&#34;</span>  <span class="c1"># 设置用户权限</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl list_users                                    <span class="c1"># 查看用户列表</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl change_password username password <span class="c1"># 修改用户密码</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">#其他命令</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl status          <span class="c1">#查看服务信息</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl cluster_status  <span class="c1">#查看集群状态</span>
+</span></span><span class="line"><span class="cl">   Cluster status of node rabbit@node1 ...
+</span></span><span class="line"><span class="cl">    <span class="o">[{</span>nodes,<span class="o">[{</span>disc,<span class="o">[</span>rabbit@node1,rabbit@node2,rabbit@node3<span class="o">]}]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>running_nodes,<span class="o">[</span>rabbit@node3,rabbit@node2,rabbit@node1<span class="o">]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>cluster_name,&lt;&lt;<span class="s2">&#34;rabbit@node1&#34;</span>&gt;&gt;<span class="o">}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>partitions,<span class="o">[]}</span>,
+</span></span><span class="line"><span class="cl">    <span class="o">{</span>alarms,<span class="o">[{</span>rabbit@node3,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node2,<span class="o">[]}</span>,<span class="o">{</span>rabbit@node1,<span class="o">[]}]}]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="6命令行开启镜像策略">6.命令行开启镜像策略</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1">#开启所有队列为镜像队列&#34;^&#34;匹配名称为所有， &#34;^ha.&#34;匹配名称为ha开头的</span>
+</span></span><span class="line"><span class="cl">rabbitmqctl set_policy ha-all <span class="s2">&#34;^&#34;</span> <span class="s1">&#39;{&#34;ha-mode&#34;:&#34;all&#34;}&#39;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">rabbitmqctl set_policy <span class="o">[</span>-p Vhost<span class="o">]</span> Name Pattern Definition <span class="o">[</span>Priority<span class="o">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">-p Vhost： 可选参数，针对指定vhost下的queue进行设置
+</span></span><span class="line"><span class="cl">Name: policy的名称
+</span></span><span class="line"><span class="cl">Pattern: queue的匹配模式<span class="o">(</span>正则表达式<span class="o">)</span>
+</span></span><span class="line"><span class="cl">Definition：镜像定义，包括三个部分ha-mode, ha-params, ha-sync-mode
+</span></span><span class="line"><span class="cl">        ha-mode:指明镜像队列的模式，有效值为 all/exactly/nodes
+</span></span><span class="line"><span class="cl">        all：表示在集群中所有的节点上进行镜像
+</span></span><span class="line"><span class="cl">        exactly：表示在指定个数的节点上进行镜像，节点的个数由ha-params指定
+</span></span><span class="line"><span class="cl">        nodes：表示在指定的节点上进行镜像，节点名称通过ha-params指定
+</span></span><span class="line"><span class="cl">        ha-params：ha-mode模式需要用到的参数
+</span></span><span class="line"><span class="cl">        ha-sync-mode：进行队列中消息的同步方式，有效值为automatic和manual
+</span></span><span class="line"><span class="cl">priority：可选参数，policy的优先级
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="docker-compose快速安装单节点">docker-compose快速安装单节点</h1>
+<p>这里使用的启用mqtt的镜像，无需mqtt也可以使用别的
+集群安装请参考 <a href="https://www.cnblogs.com/yloved/p/12868892.html" target="_blank" rel="noopener noreffer ">docker-compose安装rabbitmq集群(主从集群&mdash;》镜像集群)</a></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;3&#34;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">rabbitmq-mqtt</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l">rabbitmq-mqtt</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">environment</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_DEFAULT_PASS=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_DEFAULT_USER=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_MQTT_VHOST=/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_PASS=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_USER=admin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">RABBITMQ_DEFAULT_VHOST=/</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">cyrilix/rabbitmq-mqtt:latest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">./data:/var/lib/rabbitmq    </span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">25672</span><span class="p">:</span><span class="m">25672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">4369</span><span class="p">:</span><span class="m">4369</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">5671</span><span class="p">:</span><span class="m">5671</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">5672</span><span class="p">:</span><span class="m">5672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">8883</span><span class="p">:</span><span class="m">8883</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">15672</span><span class="p">:</span><span class="m">15672</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="m">1883</span><span class="p">:</span><span class="m">1883</span><span class="l">/tcp</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l">always</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div></div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2019-07-23</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://midaug.100180.xyz/posts/20190723/" data-title="ubuntu下RabbitMQ安装及集群配置" data-hashtags="RabbitMQ,消息中间件"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://midaug.100180.xyz/posts/20190723/" data-hashtag="RabbitMQ"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://midaug.100180.xyz/posts/20190723/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://midaug.100180.xyz/posts/20190723/" data-title="ubuntu下RabbitMQ安装及集群配置"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://midaug.100180.xyz/posts/20190723/" data-title="ubuntu下RabbitMQ安装及集群配置"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://midaug.100180.xyz/posts/20190723/" data-title="ubuntu下RabbitMQ安装及集群配置"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://midaug.100180.xyz/posts/20190723/" data-title="ubuntu下RabbitMQ安装及集群配置"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/rabbitmq/">RabbitMQ</a>,&nbsp;<a href="/tags/%E6%B6%88%E6%81%AF%E4%B8%AD%E9%97%B4%E4%BB%B6/">消息中间件</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/20190615/" class="prev" rel="prev" title="Nginx作为文件下载服务器"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Nginx作为文件下载服务器</a>
+            <a href="/posts/2021070201/" class="next" rel="next" title="Intel MacOs Big Sur 11.4系统Studio 3T破解">Intel MacOs Big Sur 11.4系统Studio 3T破解<i class="fas fa-angle-right fa-fw" aria-hidden="true"></i></a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2025</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
