@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>RabbitMQ on MidAug&#39;s  Blog</title>
+    <link>https://midaug.100180.xyz/tags/rabbitmq/</link>
+    <description>Recent content in RabbitMQ on MidAug&#39;s  Blog</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright>
+    <lastBuildDate>Tue, 23 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://midaug.100180.xyz/tags/rabbitmq/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ubuntu下RabbitMQ安装及集群配置</title>
+      <link>https://midaug.100180.xyz/posts/20190723/</link>
+      <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+      <guid>https://midaug.100180.xyz/posts/20190723/</guid>
+      <description>&lt;h1 id=&#34;rabbitmq简介&#34;&gt;RabbitMQ简介&lt;/h1&gt;&#xA;&lt;p&gt;以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按照传统的方式，下单过程要等到调用完毕之后才能返回下单成功，如果网络产生波动等原因使得商品服务扣库存延迟或者失败，会带来较差的用户体验，如果在高并发的场景下，这样的处理显然是不合适的，那怎么进行优化呢？这就需要消息队列登场了。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

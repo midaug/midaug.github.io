@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>文件下载</title>
+</head>
+<body>
+    <h1>下载 xping.py 文件</h1>
+    
+    <button onclick="directDownload()">直接下载</button>
+    <button onclick="openInNewTab()">新标签页打开</button>
+    <button onclick="tryMultipleMirrors()">尝试多个镜像</button>
+    
+    <script>
+        function directDownload() {
+            window.location.href = "https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py";
+        }
+        
+        function openInNewTab() {
+            window.open("https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py", "_blank");
+        }
+        
+        async function tryMultipleMirrors() {
+            const mirrors = [
+                "https://gitee.com/midaug/files/raw/master/python/xping.py",
+                "https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py",
+                "https://fastly.jsdelivr.net/gh/midaug/files/python/xping.py",
+                "https://gcore.jsdelivr.net/gh/midaug/files/python/xping.py"
+            ];
+            
+            for (const url of mirrors) {
+                try {
+                    // 测试连接
+                    const response = await fetch(url, { method: 'HEAD' });
+                    if (response.ok) {
+                        window.open(url, "_blank");
+                        return;
+                    }
+                } catch (error) {
+                    console.log(`镜像不可用: ${url}`);
+                }
+            }
+            alert('所有镜像都不可用，请检查网络设置或使用VPN');
+        }
+
+        tryMultipleMirrors();
+    </script>
+</body>
+</html>

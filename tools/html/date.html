@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calendar</title>
+    <script src="https://cdn.jsdelivr.net/gh/6tail/lunar-javascript/lunar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <style>
+       :root {
+            font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            font-weight: 400;
+            color-scheme: light;
+            /* color: #ffffffde; */
+            /* background-color: #242424; */
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-text-size-adjust: 100%;
+        }
+        a {
+            font-weight: 500;
+            color: #646cff;
+            text-decoration: inherit;
+        }
+        a:hover {
+            color: #535bf2;
+        }
+        body {
+            margin: 0;
+            /* display: flex; */
+            flex-direction: column; /* 使用列方向 */
+            align-items: center; /* 水平居中 */
+            /* min-width: 320px; */
+            /* min-height: 100vh; */
+        }
+        h1 {
+            font-size: 3.2em;
+            line-height: 1.1;
+        }
+        button {
+            border-radius: 8px;
+            border: 1px solid transparent;
+            padding: 0.6em 1.2em;
+            font-size: 1em;
+            font-weight: 500;
+            font-family: inherit;
+            background-color: #1a1a1a;
+            cursor: pointer;
+            transition: border-color 0.25s;
+        }
+        button:hover {
+            border-color: #646cff;
+        }
+        button:focus,
+        button:focus-visible {
+            outline: 4px auto -webkit-focus-ring-color;
+        }
+        #app {
+            max-width: 100%; /* 确保占满全宽 */
+            padding: 5px;
+            text-align: center;
+        }
+        .calendar {
+            box-shadow: 0 2px 5px #0000001a;
+            border-radius: 16px;
+            box-sizing: border-box;
+            border: 2px solid #4E6EF2;
+            display: flex;
+            height: auto; /* 高度自动 */
+            width: 100%; /* 占满全宽 */
+            overflow: hidden;
+        }
+        .calendar .container {
+            padding-top: 14px;
+            flex: 1; /* 使容器自适应宽度 */
+        }
+        .calendar .container .bar {
+            position: relative;
+            display: flex;
+            height: auto; /* 自动高度 */
+            padding: 0 5px;
+            margin-bottom: 24px;
+        }
+        .calendar .container .bar div {
+            /* flex: 1; */
+        }
+        .calendar .container .bar div.button {
+            position: absolute;
+            right: 5px;
+            width: 68px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            background: #F5F5F6;
+            border-radius: 6px;
+            color: #333;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .calendar .container .bar input,
+        .calendar .container .bar select {
+            border: 1px solid #D7D9E0;
+            box-sizing: border-box;
+            padding: 7px;
+            border-radius: 6px;
+            line-height: 1;
+            cursor: pointer;
+            background: #FFFFFF;
+            width: 80px;
+            height: 30px;
+            font-size: 11px;
+            margin-right: 6px;
+            text-align: center;
+        }
+        .calendar .container ul,
+        .calendar .container ol {
+            list-style: none;
+            width: 100%; /* 占满全宽 */
+            padding: 0; /* 移除内边距 */
+        }
+        .calendar .container ul.head li {
+            float: left;
+            width: calc(100% / 7); /* 每个星期的宽度自适应 */
+            height: 36px;
+            font-size: 13px;
+            text-align: center; /* 头部居中对齐 */
+        }
+        .calendar .container ul.body ol li {
+            float: left;
+            width: calc(100% / 7 - 4px); /* 每个星期的宽度自适应 */
+            position: relative;
+            height: 60px;
+            padding: 2px;
+            cursor: pointer;
+        }
+        .calendar .container ul.body ol li div.inner {
+            padding: 4px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            text-align: center; /* 内容居中 */
+        }
+        .calendar .container ul.body ol li div.inner b {
+            display: block;
+            font-weight: 400;
+            height: 22px;
+            font-size: 18px;
+            color: #000;
+        }
+        .calendar .container ul.body ol li div.inner i {
+            display: block;
+            font-style: normal;
+            color: #333;
+            font-size: 12px;
+        }
+        .calendar .container ul.body ol li div.inner u {
+            position: absolute;
+            text-decoration: none;
+            left: 4px;
+            top: 4px;
+            color: #626675;
+            font-size: 10px;
+            line-height: 12px;
+        }
+        .calendar .container ul.body ol li.other {
+            filter: alpha(opacity=40);
+            opacity: 0.4;
+        }
+        .calendar .container ul.body ol li:hover div.inner,
+        .calendar .container ul.body ol li.selected div.inner {
+            border: 2px solid #BDBFC8;
+        }
+        .calendar .container ul.body ol li.holiday div.inner {
+            background: #f5f5f6;
+        }
+        .calendar .container ul.body ol li.holiday.rest div.inner {
+            background: #FDE3E4;
+        }
+        .calendar .container ul.body ol li.rest div.inner b,
+        .calendar .container ul.body ol li.rest div.inner u {
+            color: #F73131;
+        }
+        .calendar .container ul.body ol li.today div.inner {
+            border: 2px solid #4E6EF2 !important;
+        }
+        .calendar .side {
+            background: #4E6EF2;
+            width: 200px;
+            color: #fff;
+            padding: 10px; /* 添加内边距 */
+            margin-top: 10px 0px;
+            text-align: left; /* 内容左对齐 */
+            transition: all 0.3s ease; /* 添加过渡效果 */
+        }
+        .calendar .side .ymd {
+            line-height: 45px;
+            font-size: 25px;
+        }
+        .calendar .side .day {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto;
+            line-height: 80px;
+            font-size: 52px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+        }
+        .calendar .side .lunar {
+            margin-top: 6px;
+        }
+        .calendar .side .lunar div {
+            font-size: 13px;
+            line-height: 21px;
+        }
+        .calendar .side .festival {
+            position: relative;
+            margin-top: 13px;
+            padding-left: 22px;
+            padding-right: 14px;
+            color: #FFF;
+            font-size: 12px;
+            line-height: 16px;
+        }
+        .calendar .side .festival::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 16px;
+            width: 3px;
+            height: 3px;
+            background: #fff;
+            border-radius: 50%;
+        }
+        .calendar .side .yiji {
+            position: relative;
+            margin-top: 12px;
+            padding-top: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            /* height: 80%; */
+        }
+        .calendar .side .yiji .yi {
+            /* float: left;
+            width: 50%; */
+        }
+        .calendar .side .yiji .yi div {
+            font-size: 12px;
+            line-height: 20px;
+        }
+        .calendar .side .yiji .ji {
+            /* float: right;
+            width: 50%; */
+        }
+        .calendar .side .yiji .ji div {
+            font-size: 12px;
+            line-height: 20px;
+        }
+        .calendar .side .yiji b {
+            display: block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            margin: 0 auto;
+            font-style: normal;
+            font-size: 24px;
+            color: #fff;
+        }
+        .calendar .side .yiji span {
+            margin: 0px 3px;
+            white-space: nowrap;
+        }
+        div.source {
+            margin-top: 30px;
+            color: #909399;
+            font-size: 13px;
+        }
+        div.source code {
+            background: #F0F2F5;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        div.source a {
+            color: #409eff;
+            text-decoration: underline;
+        }
+        .card #app .side {
+            display: none;
+        }
+        .card #app .calendar .container .bar {
+            display: none;
+        }
+        .card #app .calendar {
+            height: 415px;
+            border: none;
+            box-shadow: none;
+        }
+        .card,
+        .card #app {
+            padding: 0px !important;
+            margin: 0px !important;
+            place-items: unset !important;
+        }
+
+        /* 媒体查询以调整布局 */
+        @media (max-width: 500px) {
+            .calendar {
+                flex-direction: column; /* 在小屏幕上垂直排列 */
+            }
+            .calendar .side {
+                width: calc(100% - 20px); /* 使侧边栏宽度占满 */
+                margin-top: 10px; /* 顶部间距 */
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="calendar">
+            <div class="container">
+                <div class="bar">
+                    <div>
+                        <input id="yearInput" type="number" value="2025">
+                    </div>
+                    <div>
+                        <select id="monthSelect">
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="holidaySelect"> </select>
+                    </div>
+                    <div>
+                        <div class="button" id="backButton">返回今天</div>
+                    </div>
+                </div>
+                <ul class="head" id="weekHead">
+                    <li>一</li>
+                    <li>二</li>
+                    <li>三</li>
+                    <li>四</li>
+                    <li>五</li>
+                    <li>六</li>
+                    <li>日</li>
+                </ul>
+                <ul class="body" id="calendarBody"></ul>
+            </div>
+            <div class="side">
+                <div class="ymd" id="selectedYMD"></div>
+                <!-- <div class="day" id="selectedDay"></div> -->
+                <div class="lunar">
+                    <div id="lunarMonthDay"></div>
+                    <div id="yearGanZhi"></div>
+                    <div id="monthGanZhiDayGanZhi"></div>
+                </div>
+                <div id="festivalList"></div>
+                <div class="yiji">
+                    <div class="yi">
+                        <b>宜</b>
+                        <div id="yiList"></div>
+                    </div>
+                    <div class="ji">
+                        <b>忌</b>
+                        <div id="jiList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('type')) {
+                $("body").addClass(urlParams.get('type'));
+            }
+
+            const now = Solar.fromDate(new Date());
+            const state = {
+                year: now.getYear(),
+                month: now.getMonth(),
+                weekStart: 1,
+                holidayMonth: 0,
+                selected: {},
+                data: {
+                    heads: [],
+                    weeks: []
+                }
+            };
+            function buildDay(d) {
+                const ymd = d.toYmd()
+                const lunar = d.getLunar()
+                const day = {
+                    month: d.getMonth(),
+                    day: d.getDay(),
+                    lunarMonth: lunar.getMonthInChinese(),
+                    lunarDay: lunar.getDayInChinese(),
+                    yearGanZhi: lunar.getYearInGanZhi(),
+                    yearShengXiao: lunar.getYearShengXiao(),
+                    monthGanZhi: lunar.getMonthInGanZhi(),
+                    dayGanZhi: lunar.getDayInGanZhi(),
+                    ymd: ymd,
+                    isToday: ymd === now.toYmd(),
+                    isSelected: false,
+                    festivals: [],
+                    isHoliday: false,
+                    isRest: false,
+                    yi: [],
+                    ji: [],
+                    desc: ''
+                };
+                day.month = d.getMonth()
+                day.day = d.getDay()
+                day.lunarMonth = lunar.getMonthInChinese()
+                day.lunarDay = lunar.getDayInChinese()
+                day.yearGanZhi = lunar.getYearInGanZhi()
+                day.yearShengXiao = lunar.getYearShengXiao()
+                day.monthGanZhi = lunar.getMonthInGanZhi()
+                day.dayGanZhi = lunar.getDayInGanZhi()
+                day.ymd = ymd
+                day.isToday = ymd == now.toYmd()
+                day.isSelected = ymd == state.selected.ymd
+                if (day.isToday && state.selected.day === 0) {
+                    state.selected = day
+                }
+                let jr = [];
+                const solarFestivals = d.getFestivals()
+                solarFestivals.forEach(f => {
+                    day.festivals.push(f)
+                })
+                d.getOtherFestivals().forEach(f => {
+                    day.festivals.push(f)
+                })
+                lunar.getFestivals().forEach(f => {
+                    day.festivals.push(f)
+                    jr.push(f);
+                })
+                lunar.getOtherFestivals().forEach(f => {
+                    day.festivals.push(f)
+                })
+                let rest = false
+                if (d.getWeek() === 6 || d.getWeek() === 0) {
+                    rest = true
+                }
+                const holiday = HolidayUtil.getHoliday(ymd)
+                if (holiday) {
+                    rest = !holiday.isWork()
+                }
+                day.isHoliday = !!holiday
+                day.isRest = rest
+                day.yi = lunar.getDayYi()
+                day.ji = lunar.getDayJi()
+                let desc = lunar.getDayInChinese()
+                const jq = lunar.getJieQi();
+                if (jr && jr.length > 0) {
+                    desc = jr[0];
+                } else if (jq) {
+                    desc = jq
+                } else if (lunar.getDay() === 1) {
+                    desc = lunar.getMonthInChinese() + '月'
+                } else if (solarFestivals.length > 0) {
+                    const f = solarFestivals[0]
+                    if (f.length < 4) {
+                        desc = f
+                    }
+                }
+                day.desc = desc
+                return day
+            }
+
+            function render() {
+                const month = {
+                    heads: ['一', '二', '三', '四', '五', '六', '日'], // 星期头部
+                    weeks: [] // 存储周的数组
+                };
+                const solarWeeks = SolarMonth.fromYm(parseInt(state.year + '', 10), parseInt(state.month + '', 10)).getWeeks(state.weekStart)
+                let sWeeks = [];
+                solarWeeks.forEach(w => {
+                    sWeeks.push(w)
+                })
+                while (sWeeks.length < 6) {
+                    sWeeks.push(sWeeks[sWeeks.length - 1].next(1, false))
+                }
+                sWeeks.forEach(w => {
+                    const week = { days: [] }; // 每周的天数
+                    const heads = []; // 存储该周的头部信息
+                    w.getDays().forEach(d => {
+                        heads.push(d.getWeekInChinese()); // 获取该天的星期
+                        week.days.push(buildDay(d)); // 构建该天的对象并添加到周中
+                    });
+                    month.heads = heads;
+                    month.weeks.push(week);
+                });
+                state.data = month;
+                const holidays = [];
+                HolidayUtil.getHolidays(state.year).forEach(h => {
+                    const holiday = {
+                        name: h.getName(),
+                        month: parseInt(h.getTarget().substring(5, 7), 10)
+                    };
+                    const exists = holidays.some(a => a.name === holiday.name);
+                    if (!exists) {
+                        holidays.push(holiday);
+                    }
+                });
+                state.holidays = holidays;
+                updateHolidaySelect();
+                updateUI();
+                updateSelectedUI();
+            }
+
+            function updateHolidaySelect() {
+                const holidaySelect = $('#holidaySelect');
+                holidaySelect.empty(); // 清空现有选项
+                holidaySelect.append('<option value="0">假期安排</option>'); // 添加默认选项
+                state.holidays.forEach(h => {
+                    holidaySelect.append(`<option value="${h.month}">${h.name}</option>`); // 动态添加假期选项
+                });
+                holidaySelect.val(state.holidayMonth);
+            }
+
+            function updateUI() {
+                const calendarBody = $('#calendarBody');
+                calendarBody.empty();
+                state.data.weeks.forEach(week => {
+                    const weekEl = $('<li></li>');
+                    const ol = $('<ol></ol>');
+                    week.days.forEach(day => {
+                        // 创建日期单元
+                        const li = $('<li id="' + day.ymd + '"></li>');
+                        li.addClass(day.isToday ? 'today' : '')
+                            .addClass(day.isSelected ? 'selected' : '')
+                            .addClass(day.month !== state.month ? 'other' : '')
+                            .addClass(day.isRest ? 'rest' : '')
+                            .addClass(day.isHoliday ? 'holiday' : '');
+                        li.append(`
+                            <div class="inner">
+                                <b>${day.day}</b>
+                                <i>${day.desc}</i>
+                                ${day.isHoliday ? `<u>${day.isRest ? '休' : '班'}</u>` : ''}
+                            </div>
+                        `);
+                        li.click(() => {
+                            state.selected = day;
+                            $('#calendarBody li').removeClass('selected');
+                            $("#" + state.selected.ymd).addClass('selected');
+                            updateSelectedUI();
+                        });
+                        ol.append(li);
+                    });
+                    weekEl.append(ol);
+                    calendarBody.append(weekEl);
+                });
+            }
+            function updateSelectedUI() {
+                $('#yearInput').val(state.year);
+                $('#monthSelect').val(state.month);
+                $('#selectedYMD').text(state.selected.ymd);
+                // $('#selectedDay').text(state.selected.day);
+                $('#lunarMonthDay').text(`${state.selected.lunarMonth}月 ${state.selected.lunarDay}`);
+                $('#yearGanZhi').text(`${state.selected.yearGanZhi}年 ${state.selected.yearShengXiao}`);
+                $('#monthGanZhiDayGanZhi').text(`${state.selected.monthGanZhi}月 ${state.selected.dayGanZhi}日`);
+                $('#festivalList').empty();
+                state.selected.festivals.forEach(f => {
+                    $('#festivalList').append(`<div class="festival">${f}</div>`);
+                });
+                $('#yiList').empty();
+                state.selected.yi.forEach(f => {
+                    $('#yiList').append(`<span>${f}</span>`);
+                });
+                $('#jiList').empty();
+                state.selected.ji.forEach(f => {
+                    $('#jiList').append(`<span>${f}</span>`);
+                });
+            }
+            $('#backButton').click(() => {
+                const today = Solar.fromDate(new Date());
+                state.year = today.getYear();
+                state.month = today.getMonth();
+                state.holidayMonth = 0;
+                render();
+            });
+            $('#yearInput').on('change', function () {
+                state.year = parseInt($(this).val());
+                render();
+            });
+            $('#monthSelect').on('change', function () {
+                state.month = parseInt($(this).val());
+                render();
+            });
+            $('#holidaySelect').on('change', function () {
+                state.holidayMonth = parseInt($(this).val());
+                if (state.holidayMonth == 0) {
+                    $('#backButton').click();
+                    return;
+                } else {
+                    $('#monthSelect').val(state.holidayMonth);
+                    $('#monthSelect').change();
+                }
+            });
+            state.selected = buildDay(now);
+            render(); // 初次渲染
+        });
+    </script>
+</body>
+</html>
