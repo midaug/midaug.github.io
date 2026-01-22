@@ -5,7 +5,7 @@
     <title>文件下载</title>
 </head>
 <body>
-    <h1>下载 xping.py 文件</h1>
+    <h1>下载 xping.sh 文件</h1>
     
     <button onclick="directDownload()">直接下载</button>
     <button onclick="openInNewTab()">新标签页打开</button>
@@ -13,19 +13,19 @@
     
     <script>
         function directDownload() {
-            window.location.href = "https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py";
+            window.location.href = "https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh";
         }
         
         function openInNewTab() {
-            window.open("https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py", "_blank");
+            window.open("https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh", "_blank");
         }
         
         async function tryMultipleMirrors() {
             const mirrors = [
-                "https://gitee.com/midaug/files/raw/master/python/xping.py",
-                "https://cdn.jsdelivr.net/gh/midaug/files/python/xping.py",
-                "https://fastly.jsdelivr.net/gh/midaug/files/python/xping.py",
-                "https://gcore.jsdelivr.net/gh/midaug/files/python/xping.py"
+                "https://gitee.com/midaug/files/raw/master/shell/xping.sh",
+                "https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh",
+                "https://fastly.jsdelivr.net/gh/midaug/files/shell/xping.sh",
+                "https://gcore.jsdelivr.net/gh/midaug/files/shell/xping.sh"
             ];
             
             for (const url of mirrors) {
