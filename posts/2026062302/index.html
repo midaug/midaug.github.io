@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>AI大模型Prompt调优实战指南 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/2026062302/">
+  <meta property="og:site_name" content="MidAug&#39;s  Blog">
+  <meta property="og:title" content="AI大模型Prompt调优实战指南">
+  <meta property="og:description" content="前言 随着大语言模型（LLM）的普及，如何编写高质量的 Prompt 成为提升模型输出质量的关键。好的 Prompt 就像好的需求文档，能让 AI 准确理解你的意图并产出符合预">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+  <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-06-23T20:52:00+00:00">
+    <meta property="article:modified_time" content="2026-06-23T20:52:00+00:00">
+    <meta property="article:tag" content="AI">
+    <meta property="article:tag" content="Prompt">
+    <meta property="article:tag" content="LLM">
+    <meta property="article:tag" content="提示词工程">
+    <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="AI大模型Prompt调优实战指南">
+<meta name="twitter:description" content="前言 随着大语言模型（LLM）的普及，如何编写高质量的 Prompt 成为提升模型输出质量的关键。好的 Prompt 就像好的需求文档，能让 AI 准确理解你的意图并产出符合预">
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://midaug.100180.xyz/posts/2026062302/" /><link rel="prev" href="https://midaug.100180.xyz/posts/2026062301/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript><script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "AI大模型Prompt调优实战指南",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/midaug.100180.xyz\/posts\/2026062302\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "AI, Prompt, LLM, 提示词工程","wordcount":  4650 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/2026062302\/","datePublished": "2026-06-23T20:52:00+00:00","dateModified": "2026-06-23T20:52:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">AI大模型Prompt调优实战指南</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/ai/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>AI</a>&nbsp;<a href="/categories/%E5%A4%A7%E6%A8%A1%E5%9E%8B/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>大模型</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-06-23">2026-06-23</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;4650 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;10 minutes&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#前言">前言</a></li>
+    <li><a href="#核心调优策略">核心调优策略</a>
+      <ul>
+        <li><a href="#策略一编写清晰具体的指令">策略一：编写清晰、具体的指令</a>
+          <ul>
+            <li><a href="#1-定义-system-prompt">1. 定义 System Prompt</a></li>
+            <li><a href="#2-提供具体的细节要求">2. 提供具体的细节要求</a></li>
+            <li><a href="#3-角色扮演">3. 角色扮演</a></li>
+            <li><a href="#4-使用分隔符">4. 使用分隔符</a></li>
+            <li><a href="#5-少样本学习few-shot-learning">5. 少样本学习（Few-shot Learning）</a></li>
+            <li><a href="#6-指定输出约束">6. 指定输出约束</a></li>
+          </ul>
+        </li>
+        <li><a href="#策略二将复杂任务分解为简单子任务">策略二：将复杂任务分解为简单子任务</a>
+          <ul>
+            <li><a href="#意图理解与实体提取">意图理解与实体提取</a></li>
+            <li><a href="#多步骤任务拆解">多步骤任务拆解</a></li>
+            <li><a href="#上下文总结">上下文总结</a></li>
+          </ul>
+        </li>
+        <li><a href="#策略三给予模型思考时间">策略三：给予模型思考时间</a></li>
+        <li><a href="#策略四使用外部工具增强模型能力">策略四：使用外部工具增强模型能力</a>
+          <ul>
+            <li><a href="#function-call">Function Call</a></li>
+            <li><a href="#知识库检索rag">知识库检索（RAG）</a></li>
+          </ul>
+        </li>
+        <li><a href="#策略五通过推理输出提升准确度">策略五：通过推理输出提升准确度</a>
+          <ul>
+            <li><a href="#示例偏好分类场景">示例：偏好分类场景</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#常用-prompt-框架">常用 Prompt 框架</a>
+      <ul>
+        <li><a href="#race-框架openai-推荐">RACE 框架（OpenAI 推荐）</a></li>
+        <li><a href="#co-star-框架新加坡-govtech-获奖">CO-STAR 框架（新加坡 GovTech 获奖）</a></li>
+        <li><a href="#crispe-框架">CRISPE 框架</a></li>
+        <li><a href="#如何选择框架">如何选择框架？</a></li>
+      </ul>
+    </li>
+    <li><a href="#获奖级-prompt-示例">获奖级 Prompt 示例</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="前言">前言</h2>
+<blockquote>
+<p>随着大语言模型（LLM）的普及，如何编写高质量的 Prompt 成为提升模型输出质量的关键。好的 Prompt 就像好的需求文档，能让 AI 准确理解你的意图并产出符合预期的结果。本文结合实际项目经验，系统总结 Prompt 调优的策略、技巧和框架，帮助你快速掌握与大模型高效沟通的方法。</p>
+</blockquote>
+<h2 id="核心调优策略">核心调优策略</h2>
+<p>Prompt 调优可以从<strong>简单到复杂</strong>分为五个层次，建议按需递进使用：</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>策略</th>
+<th>适用场景</th>
+<th>难度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基础</td>
+<td>编写清晰的指令</td>
+<td>所有场景</td>
+<td>⭐</td>
+</tr>
+<tr>
+<td>进阶</td>
+<td>任务分解</td>
+<td>复杂多步骤任务</td>
+<td>⭐⭐</td>
+</tr>
+<tr>
+<td>进阶</td>
+<td>给予思考时间</td>
+<td>逻辑推理、分析决策</td>
+<td>⭐⭐</td>
+</tr>
+<tr>
+<td>高级</td>
+<td>外部工具增强</td>
+<td>需要实时数据、专业领域知识</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td>高级</td>
+<td>额外推理输出</td>
+<td>需要高准确度的结构化输出</td>
+<td>⭐⭐⭐</td>
+</tr>
+</tbody>
+</table>
+<h3 id="策略一编写清晰具体的指令">策略一：编写清晰、具体的指令</h3>
+<blockquote>
+<p><strong>适用场景</strong>：所有 Prompt 编写场景，是最基础也最重要的策略。</p>
+</blockquote>
+<p>清晰的指令是高质量输出的基础。以下是几种常用方法：</p>
+<h4 id="1-定义-system-prompt">1. 定义 System Prompt</h4>
+<p>System Prompt 用于设定 AI 助手的行为模式，包括角色设定、语言风格、任务模式和行为约束。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">你是一位资深Python工程师，擅长代码审查和优化。
+</span></span><span class="line"><span class="cl">请用专业的技术语言，指出代码中的潜在问题并给出优化建议。
+</span></span><span class="line"><span class="cl">对于每个问题，需要说明：问题描述、影响范围、优化方案。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="2-提供具体的细节要求">2. 提供具体的细节要求</h4>
+<p>在 Prompt 中添加背景信息和细节要求，让模型更准确地理解上下文：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">背景：我正在开发一个高并发的电商订单系统
+</span></span><span class="line"><span class="cl">需求：设计一个分布式锁方案
+</span></span><span class="line"><span class="cl">要求：
+</span></span><span class="line"><span class="cl">1. 支持高并发场景（QPS &gt; 10000）
+</span></span><span class="line"><span class="cl">2. 具备自动续期机制
+</span></span><span class="line"><span class="cl">3. 支持主从切换时的一致性保证
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="3-角色扮演">3. 角色扮演</h4>
+<p>赋予 AI 特定角色身份，可以更准确地模仿该角色的行为和对话方式：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">你是一位拥有10年经验的产品经理，正在评审一个新功能的需求文档。
+</span></span><span class="line"><span class="cl">请从用户体验、技术可行性、商业价值三个维度进行评估。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="4-使用分隔符">4. 使用分隔符</h4>
+<p>使用分隔符可以清晰地区分指令、上下文和输入数据，避免模型混淆：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">--- 指令 ---
+</span></span><span class="line"><span class="cl">请对以下代码进行Code Review
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- 代码 ---
+</span></span><span class="line"><span class="cl">def add(a, b):
+</span></span><span class="line"><span class="cl">    return a + b
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- 要求 ---
+</span></span><span class="line"><span class="cl">1. 检查代码规范性
+</span></span><span class="line"><span class="cl">2. 指出潜在问题
+</span></span><span class="line"><span class="cl">3. 给出改进建议
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="5-少样本学习few-shot-learning">5. 少样本学习（Few-shot Learning）</h4>
+<p>提供示例引导模型模仿特定的输出格式和风格：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">示例1：
+</span></span><span class="line"><span class="cl">输入：用户说&#34;我想订一张明天去北京的机票&#34;
+</span></span><span class="line"><span class="cl">输出：{&#34;intent&#34;: &#34;book_flight&#34;, &#34;destination&#34;: &#34;北京&#34;, &#34;date&#34;: &#34;tomorrow&#34;}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">示例2：
+</span></span><span class="line"><span class="cl">输入：用户说&#34;帮我查一下上海今天的天气&#34;
+</span></span><span class="line"><span class="cl">输出：{&#34;intent&#34;: &#34;query_weather&#34;, &#34;city&#34;: &#34;上海&#34;, &#34;date&#34;: &#34;today&#34;}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">现在请处理：
+</span></span><span class="line"><span class="cl">输入：用户说&#34;预订后天去杭州的高铁&#34;
+</span></span><span class="line"><span class="cl">输出：
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="6-指定输出约束">6. 指定输出约束</h4>
+<p>虽然让模型精确生成特定字数较难，但可以通过约束进行控制：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请用100字以内总结这篇文章的核心观点
+</span></span><span class="line"><span class="cl">请生成3-5个要点，每个要点不超过30字
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="策略二将复杂任务分解为简单子任务">策略二：将复杂任务分解为简单子任务</h3>
+<blockquote>
+<p><strong>适用场景</strong>：当任务涉及多个步骤、多种能力，或输出需要对接下游系统时。</p>
+</blockquote>
+<p>大模型在处理复杂任务时容易出现&quot;幻觉&quot;或遗漏，将任务拆解可以显著提升准确性。</p>
+<h4 id="意图理解与实体提取">意图理解与实体提取</h4>
+<p>当模型输出需要直接对接后端接口时，必须确保格式可解析：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请从用户输入中提取意图和实体，严格按照以下JSON格式输出：
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  &#34;intent&#34;: &#34;意图标识&#34;,
+</span></span><span class="line"><span class="cl">  &#34;entities&#34;: [
+</span></span><span class="line"><span class="cl">    {&#34;type&#34;: &#34;实体类型&#34;, &#34;value&#34;: &#34;实体值&#34;}
+</span></span><span class="line"><span class="cl">  ]
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">用户输入：帮我预订明天晚上7点的海底捞火锅，4个人
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="多步骤任务拆解">多步骤任务拆解</h4>
+<p>将一个复杂任务拆分为多个独立的子任务，逐步完成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请按以下步骤完成竞品分析报告：
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">步骤1：列出3个主要竞品及其核心功能
+</span></span><span class="line"><span class="cl">步骤2：对比各竞品的定价策略
+</span></span><span class="line"><span class="cl">步骤3：分析各竞品的目标用户群体
+</span></span><span class="line"><span class="cl">步骤4：总结各竞品的优劣势
+</span></span><span class="line"><span class="cl">步骤5：给出我方产品的差异化建议
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">每步完成后输出&#34;✓ 步骤X完成&#34;，全部完成后输出完整报告。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="上下文总结">上下文总结</h4>
+<p>在长对话中，定期总结可以保持对话焦点、减少冗余：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请总结之前对话中的关键信息，包括：
+</span></span><span class="line"><span class="cl">1. 用户的核心需求
+</span></span><span class="line"><span class="cl">2. 已确认的信息
+</span></span><span class="line"><span class="cl">3. 待澄清的问题
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="策略三给予模型思考时间">策略三：给予模型思考时间</h3>
+<blockquote>
+<p><strong>适用场景</strong>：逻辑推理、数学计算、方案评估等需要深度思考的场景。</p>
+</blockquote>
+<p>在模型给出最终结论前，引导其进行自我探索和推理，即<strong>思维链（Chain of Thought）</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请分析并评估以下Python代码的质量和功能。
+</span></span><span class="line"><span class="cl">在生成最终回答之前，请：
+</span></span><span class="line"><span class="cl">1. 先编写一份推荐的示例代码
+</span></span><span class="line"><span class="cl">2. 然后从代码结构、可读性、功能完整性三个维度进行评分（1-10分）
+</span></span><span class="line"><span class="cl">3. 最后给出详细的改进建议
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">待评估代码：
+</span></span><span class="line"><span class="cl">def calc(lst):
+</span></span><span class="line"><span class="cl">    return sum(lst)/len(lst)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>关键技巧</strong>：在 Prompt 中加入&quot;请先思考&quot;、&ldquo;请展示推理过程&quot;等语句，可以显著提升推理类任务的准确率。</p>
+<h3 id="策略四使用外部工具增强模型能力">策略四：使用外部工具增强模型能力</h3>
+<blockquote>
+<p><strong>适用场景</strong>：需要实时数据、专业领域知识、或执行特定操作的场景。</p>
+</blockquote>
+<h4 id="function-call">Function Call</h4>
+<p>通过定义工具函数，让模型在需要时调用外部能力：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;tools&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;function&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">      <span class="nt">&#34;function&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;search_product&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;description&#34;</span><span class="p">:</span> <span class="s2">&#34;根据关键词搜索商品&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="nt">&#34;parameters&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;object&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">          <span class="nt">&#34;properties&#34;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nt">&#34;keyword&#34;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;string&#34;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="nt">&#34;category&#34;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&#34;type&#34;</span><span class="p">:</span> <span class="s2">&#34;string&#34;</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">          <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">      <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">  <span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="知识库检索rag">知识库检索（RAG）</h4>
+<p>将领域知识注入 Prompt，提升回答的准确性和专业性：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">基于以下知识库内容回答用户问题：
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- 知识库 ---
+</span></span><span class="line"><span class="cl">产品A：支持7天无理由退货，质保期1年
+</span></span><span class="line"><span class="cl">产品B：支持15天无理由退货，质保期2年
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- 用户问题 ---
+</span></span><span class="line"><span class="cl">产品A的退货政策是什么？
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="策略五通过推理输出提升准确度">策略五：通过推理输出提升准确度</h3>
+<blockquote>
+<p><strong>适用场景</strong>：需要高准确度的结构化输出，如分类、判断、提取等任务。</p>
+</blockquote>
+<p>核心思路是：<strong>让模型先解释原因，再给出结论</strong>。这样可以减少错误判断。</p>
+<h4 id="示例偏好分类场景">示例：偏好分类场景</h4>
+<p>在处理用户偏好时，要求模型先输出判断理由，再输出分类结果：</p>
+<p><strong>Prompt 设计</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">请分析用户的输入，判断是否包含可提取的偏好信息。
+</span></span><span class="line"><span class="cl">要求：
+</span></span><span class="line"><span class="cl">1. 先输出判断理由（reason字段）
+</span></span><span class="line"><span class="cl">2. 再输出分类结果
+</span></span><span class="line"><span class="cl">3. 仅提取正面或中性偏好，不支持&#34;不喜欢&#34;类否定表达
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">输出格式：
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  &#34;reason&#34;: &#34;判断理由&#34;,
+</span></span><span class="line"><span class="cl">  &#34;category&#34;: &#34;分类标识&#34;,
+</span></span><span class="line"><span class="cl">  &#34;category_name&#34;: &#34;分类名称&#34;,
+</span></span><span class="line"><span class="cl">  &#34;category_content&#34;: [...]
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>测试用例</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>用户输入</th>
+<th>期望输出要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&ldquo;我喜欢吃辣和甜的东西&rdquo;</td>
+<td>reason: 用户明确提到喜欢 → category: food_preference</td>
+</tr>
+<tr>
+<td>&ldquo;我不喜欢吃牛排&rdquo;</td>
+<td>reason: 属于负面偏好，不提取 → category: 空</td>
+</tr>
+<tr>
+<td>&ldquo;记住我喜欢去姥姥家&rdquo;</td>
+<td>reason: 用户明确提到喜欢 → category: map_preference</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>调优要点</strong>：通过 <code>reason</code> 字段强制模型&quot;先想后答&rdquo;，可以显著降低误判率。</p>
+</blockquote>
+<h2 id="常用-prompt-框架">常用 Prompt 框架</h2>
+<p>掌握了基础策略后，可以使用框架来组织更复杂的 Prompt。以下是三个主流框架的对比：</p>
+<table>
+<thead>
+<tr>
+<th>框架</th>
+<th>组件数</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RACE</strong></td>
+<td>4</td>
+<td>简洁高效</td>
+<td>快速任务、简单问答</td>
+</tr>
+<tr>
+<td><strong>CO-STAR</strong></td>
+<td>6</td>
+<td>结构完整</td>
+<td>复杂任务、多平台输出</td>
+</tr>
+<tr>
+<td><strong>CRISPE</strong></td>
+<td>6</td>
+<td>增加人格和示例</td>
+<td>需要特定风格的输出</td>
+</tr>
+</tbody>
+</table>
+<h3 id="race-框架openai-推荐">RACE 框架（OpenAI 推荐）</h3>
+<p>RACE 是最简洁的框架，适合快速构建 Prompt：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>含义</th>
+<th>填写要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>R</strong>ole</td>
+<td>角色</td>
+<td>赋予 AI 专业身份</td>
+</tr>
+<tr>
+<td><strong>A</strong>ction</td>
+<td>行动</td>
+<td>明确要执行的任务</td>
+</tr>
+<tr>
+<td><strong>C</strong>ontext</td>
+<td>上下文</td>
+<td>任务背景、相关信息</td>
+</tr>
+<tr>
+<td><strong>E</strong>xpectation</td>
+<td>期望</td>
+<td>输出质量与格式要求</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实战示例</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Role: 资深Python工程师
+</span></span><span class="line"><span class="cl">Action: 优化以下代码，提升执行效率并修复潜在bug
+</span></span><span class="line"><span class="cl">Context: 代码用于处理百万级用户数据
+</span></span><span class="line"><span class="cl">Expectation: 输出优化后代码+详细优化说明，标注关键改进点
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="co-star-框架新加坡-govtech-获奖">CO-STAR 框架（新加坡 GovTech 获奖）</h3>
+<p>CO-STAR 结构完整、适用性广，特别适合需要精细化控制的场景：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>含义</th>
+<th>填写要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>C</strong>ontext</td>
+<td>上下文</td>
+<td>任务背景、相关信息、AI 身份设定</td>
+</tr>
+<tr>
+<td><strong>O</strong>bjective</td>
+<td>目标</td>
+<td>明确最终要达成的结果，用&quot;完成/生成/分析&quot;等动词</td>
+</tr>
+<tr>
+<td><strong>S</strong>tyle</td>
+<td>风格</td>
+<td>内容呈现形式（如学术论文、营销文案、技术文档）</td>
+</tr>
+<tr>
+<td><strong>T</strong>one</td>
+<td>语气</td>
+<td>表达情感色彩（正式/亲切/专业/幽默）</td>
+</tr>
+<tr>
+<td><strong>A</strong>udience</td>
+<td>受众</td>
+<td>内容面向的人群（专家/新手/客户/学生）</td>
+</tr>
+<tr>
+<td><strong>R</strong>esponse Format</td>
+<td>响应格式</td>
+<td>输出结构（表格/列表/段落/JSON）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实战示例</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl"># Context: 我是一家初创电商公司的运营，正在策划双11促销活动
+</span></span><span class="line"><span class="cl"># Objective: 生成3套不同主题的促销方案，包含活动流程、预算分配和预期效果
+</span></span><span class="line"><span class="cl"># Style: 专业商业计划书风格，数据支撑充分
+</span></span><span class="line"><span class="cl"># Tone: 积极进取，兼具可行性与创新性
+</span></span><span class="line"><span class="cl"># Audience: 公司管理层和投资伙伴
+</span></span><span class="line"><span class="cl"># Response Format: 每套方案分3部分（主题/执行/效果），附预算表和KPI指标
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="crispe-框架">CRISPE 框架</h3>
+<p>CRISPE 在 CO-STAR 基础上增加了 <strong>Persona</strong>（人格特质）和 <strong>Example</strong>（参考示例），进一步提升输出精准度：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>含义</th>
+<th>填写要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>C</strong>ontext</td>
+<td>上下文</td>
+<td>任务背景、相关信息、AI 身份设定</td>
+</tr>
+<tr>
+<td><strong>R</strong>ole</td>
+<td>角色</td>
+<td>赋予 AI 专业身份</td>
+</tr>
+<tr>
+<td><strong>I</strong>ntention</td>
+<td>意图</td>
+<td>动词短语明确任务及达到的效果</td>
+</tr>
+<tr>
+<td><strong>S</strong>tyle</td>
+<td>风格</td>
+<td>内容呈现形式</td>
+</tr>
+<tr>
+<td><strong>P</strong>ersona</td>
+<td>人格</td>
+<td>定义角色的性格特点（严谨务实/活泼易懂/专业权威）</td>
+</tr>
+<tr>
+<td><strong>E</strong>xample</td>
+<td>示例</td>
+<td>提供 1-2 个简短示例（Few-shot）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实战示例</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">【C - Context】
+</span></span><span class="line"><span class="cl">某咖啡店推出新品「冰萃椰香拿铁」，主打0糖0脂，面向18-30岁年轻消费者，用于小红书发布。
+</span></span><span class="line"><span class="cl">【R - Role】
+</span></span><span class="line"><span class="cl">资深小红书美食文案博主，擅长短句种草。
+</span></span><span class="line"><span class="cl">【I - Intention】
+</span></span><span class="line"><span class="cl">生成3条15字以内的宣传短文案，突出&#34;0糖0脂+椰香&#34;卖点。
+</span></span><span class="line"><span class="cl">【S - Style】
+</span></span><span class="line"><span class="cl">短句口号式，带1个表情符号。
+</span></span><span class="line"><span class="cl">【P - Persona】
+</span></span><span class="line"><span class="cl">活泼清新，贴近年轻人用语习惯。
+</span></span><span class="line"><span class="cl">【E - Example】
+</span></span><span class="line"><span class="cl">示例：冰萃椰香✨0糖0脂超清爽
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="如何选择框架">如何选择框架？</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">简单任务（翻译、摘要、问答）
+</span></span><span class="line"><span class="cl">    → 使用 RACE
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">需要精细控制输出风格和内容
+</span></span><span class="line"><span class="cl">    → 使用 CO-STAR
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">需要 AI 模仿特定人格/风格
+</span></span><span class="line"><span class="cl">    → 使用 CRISPE
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">逻辑推理、数学计算
+</span></span><span class="line"><span class="cl">    → 单独使用思维链（CoT）
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="获奖级-prompt-示例">获奖级 Prompt 示例</h2>
+<p>以下是一个结构完整、可复用的 System Prompt + CO-STAR 组合示例，展示了如何构建一个生产级的 Prompt：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">--- SYSTEM PROMPT START ---
+</span></span><span class="line"><span class="cl">你是资深政治竞选传播专家，拥有15年国际竞选经验，专注年轻选民（21-35岁）沟通策略。
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">必须遵守以下护栏规则：
+</span></span><span class="line"><span class="cl">1. 严格遵循CO-STAR框架生成内容，禁止遗漏任何组件
+</span></span><span class="line"><span class="cl">2. 语言必须符合新加坡政治规范，不使用负面攻击、极端表述
+</span></span><span class="line"><span class="cl">3. 每个平台文案风格必须差异化，适配平台用户行为习惯
+</span></span><span class="line"><span class="cl">4. 所有文案必须包含3个核心议题：住房、就业、数字服务
+</span></span><span class="line"><span class="cl">5. 完成后进行自我评估，确保符合所有要求
+</span></span><span class="line"><span class="cl">--- SYSTEM PROMPT END ---
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- CO-STAR PROMPT START ---
+</span></span><span class="line"><span class="cl">【C】Context: 新加坡某政党候选人参加2024年社区议会选举，目标选民为21-35岁年轻群体
+</span></span><span class="line"><span class="cl">【O】Objective: 为TikTok、LinkedIn、Instagram 3个平台生成竞选活动文案，每个平台3条，每条不超过150字
+</span></span><span class="line"><span class="cl">【S】Style: 
+</span></span><span class="line"><span class="cl">- TikTok: 活泼、短视频脚本风格，含表情符号和话题标签
+</span></span><span class="line"><span class="cl">- LinkedIn: 专业、政策解读风格，数据支撑充分
+</span></span><span class="line"><span class="cl">- Instagram: 视觉化、图文结合风格，强调情感共鸣
+</span></span><span class="line"><span class="cl">【T】Tone: TikTok（活力四射）、LinkedIn（专业务实）、Instagram（温暖亲切）
+</span></span><span class="line"><span class="cl">【A】Audience: 21-35岁新加坡年轻选民，包括大学生、职场新人、自由职业者
+</span></span><span class="line"><span class="cl">【R】Response Format: 分3个平台，每个平台下分3条文案，每条配2个话题标签+1个发布建议
+</span></span><span class="line"><span class="cl">--- CO-STAR PROMPT END ---
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">--- 自我评估标准 ---
+</span></span><span class="line"><span class="cl">1. 是否覆盖3个核心议题（住房/就业/数字服务）
+</span></span><span class="line"><span class="cl">2. 是否符合各平台风格与语气要求
+</span></span><span class="line"><span class="cl">3. 是否控制在150字以内
+</span></span><span class="line"><span class="cl">4. 是否符合新加坡政治规范
+</span></span><span class="line"><span class="cl">5. 是否有吸引力和传播性
+</span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p><strong>要点解析</strong>：</p>
+<ul>
+<li>使用 <code>--- XXX START/END ---</code> 分隔符清晰划分不同部分</li>
+<li>System Prompt 中定义了明确的&quot;护栏规则&quot;，防止模型越界</li>
+<li>自我评估标准让模型在输出后进行自检，提升质量</li>
+</ul>
+</blockquote>
+<h2 id="总结">总结</h2>
+<p>Prompt 调优是一个不断迭代的过程，核心要点如下：</p>
+<table>
+<thead>
+<tr>
+<th>要点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>明确目标</strong></td>
+<td>清楚知道你想要什么样的输出</td>
+</tr>
+<tr>
+<td><strong>结构化表达</strong></td>
+<td>使用框架组织 Prompt，确保信息完整</td>
+</tr>
+<tr>
+<td><strong>提供上下文</strong></td>
+<td>给予足够的背景信息和约束条件</td>
+</tr>
+<tr>
+<td><strong>善用示例</strong></td>
+<td>Few-shot 学习能显著提升输出质量</td>
+</tr>
+<tr>
+<td><strong>引导思考</strong></td>
+<td>让模型展示推理过程，获得更可靠的结论</td>
+</tr>
+<tr>
+<td><strong>持续优化</strong></td>
+<td>根据输出结果不断调整和改进 Prompt</td>
+</tr>
+</tbody>
+</table>
+<p><strong>快速上手建议</strong>：</p>
+<ol>
+<li>从 <strong>RACE 框架</strong>开始，快速构建基础 Prompt</li>
+<li>效果不理想时，升级到 <strong>CO-STAR</strong> 或 <strong>CRISPE</strong> 框架</li>
+<li>涉及逻辑推理时，加入<strong>思维链</strong>引导模型逐步思考</li>
+<li>对接下游系统时，使用<strong>分隔符 + JSON 格式</strong>确保输出可解析</li>
+<li>持续收集 bad case，针对性优化 Prompt</li>
+</ol>
+<p>参考链接：</p>
+<ol>
+<li><a href="https://platform.openai.com/docs/guides/prompt-engineering" target="_blank" rel="noopener noreffer ">OpenAI Prompt Engineering Guide</a></li>
+<li><a href="https://www.promptingguide.ai/zh" target="_blank" rel="noopener noreffer ">Prompt Engineering 最佳实践</a></li>
+</ol>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2026-06-23</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://midaug.100180.xyz/posts/2026062302/" data-title="AI大模型Prompt调优实战指南" data-hashtags="AI,Prompt,LLM,提示词工程"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://midaug.100180.xyz/posts/2026062302/" data-hashtag="AI"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://midaug.100180.xyz/posts/2026062302/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://midaug.100180.xyz/posts/2026062302/" data-title="AI大模型Prompt调优实战指南"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://midaug.100180.xyz/posts/2026062302/" data-title="AI大模型Prompt调优实战指南"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://midaug.100180.xyz/posts/2026062302/" data-title="AI大模型Prompt调优实战指南"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://midaug.100180.xyz/posts/2026062302/" data-title="AI大模型Prompt调优实战指南"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/ai/">AI</a>,&nbsp;<a href="/tags/prompt/">Prompt</a>,&nbsp;<a href="/tags/llm/">LLM</a>,&nbsp;<a href="/tags/%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%B7%A5%E7%A8%8B/">提示词工程</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/2026062301/" class="prev" rel="prev" title="SSH Tunnel 端口转发详解"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>SSH Tunnel 端口转发详解</a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2026</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>

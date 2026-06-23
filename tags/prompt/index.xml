@@ -1,0 +1,16 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>Prompt - Tag - MidAug&#39;s  Blog</title>
+        <link>https://midaug.100180.xyz/tags/prompt/</link>
+        <description>Prompt - Tag - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/prompt/" rel="self" type="application/rss+xml" /><item>
+    <title>AI大模型Prompt调优实战指南</title>
+    <link>https://midaug.100180.xyz/posts/2026062302/</link>
+    <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/posts/2026062302/</guid>
+    <description><![CDATA[前言 随着大语言模型（LLM）的普及，如何编写高质量的 Prompt 成为提升模型输出质量的关键。好的 Prompt 就像好的需求文档，能让 AI 准确理解你的意图并产出符合预]]></description>
+</item>
+</channel>
+</rss>
