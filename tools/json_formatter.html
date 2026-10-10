@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JSON 格式化工具</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --bg2: #151b23;
+    --bg3: #1b222c;
+    --line: #263140;
+    --fg: #d7e0ea;
+    --dim: #7d8b9c;
+    --key: #7cc7ff;
+    --str: #9ee493;
+    --num: #f7b955;
+    --bool: #c99bff;
+    --null: #8895a6;
+    --accent: #2b8fb2;
+    --row: 24px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font: 13px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, "PingFang SC", monospace;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; color: #fff; margin-right: 4px; }
+  .brand span { color: var(--accent); }
+  button, select {
+    background: var(--bg3); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit;
+  }
+  button:hover, select:hover { border-color: var(--accent); background: #222c38; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04222c; font-weight: 700; }
+  button.primary:hover { background: #37a3c9; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .sep { width: 1px; height: 22px; background: var(--line); }
+  /* 顶栏可选控件：不换行，空间不足时整体隐藏 */
+  .stat { color: var(--dim); font-size: 12px; white-space: nowrap; flex: none; }
+
+  /* 性能统计：贴在结果区标题栏行尾，单行，空间不足时省略号截断 */
+  .stat.perf {
+    margin-left: auto; padding-left: 12px;
+    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* 窄屏时顶栏不换行，优先隐藏次要控件 */
+  @media (max-width: 1180px) {
+    .hide-md { display: none; }
+  }
+  @media (max-width: 900px) {
+    .hide-sm { display: none; }
+  }
+
+  /* ===== 主体 ===== */
+  main { flex: 1; display: flex; min-height: 0; }
+  /* 左右 3 : 7 */
+  .pane { flex: 3 1 0%; min-width: 0; display: flex; flex-direction: column; position: relative; }
+  .pane.right { flex: 7 1 0%; }
+  .pane.left  { border-right: 1px solid var(--line); }
+  .pane-head {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: var(--bg2); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--dim);
+    flex: none; overflow: hidden;
+  }
+  .pane-head b, .pane-head #outInfo { flex: none; white-space: nowrap; }
+
+  textarea {
+    flex: 1; width: 100%; resize: none; border: 0; outline: 0; padding: 10px 12px;
+    background: var(--bg); color: var(--fg); font: inherit; tab-size: 4; white-space: pre;
+  }
+  textarea.wrap { white-space: pre-wrap; word-break: break-all; }
+
+  /* ===== 虚拟列表 ===== */
+  #viewport { flex: 1; overflow: auto; position: relative; contain: strict; }
+
+  /* 构建进度条：分片渲染大树时给出可见反馈 */
+  #buildBar {
+    height: 2px; flex: none; background: #1a222c; overflow: hidden;
+    opacity: 0; transition: opacity .2s;
+  }
+  #buildBar.on { opacity: 1; }
+  #buildBar i {
+    display: block; height: 100%; width: 0%;
+    background: linear-gradient(90deg, #2b8fb2, #7cc7ff);
+    transition: width .1s linear;
+  }
+  /* 无法预估总量时（如增量展开深层子树）用不定进度动画 */
+  #buildBar.indet i { width: 32%; transition: none; animation: barSlide 1s linear infinite; }
+  @keyframes barSlide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(320%); }
+  }
+  #sizer { position: relative; width: 100%; }
+  /* 行本身用 max-content 撑开，#sizer 的宽度由 JS 按最宽行设置，从而产生横向滚动 */
+  #rows { position: absolute; top: 0; left: 0; width: max-content; min-width: 100%; will-change: transform; }
+  .row {
+    height: var(--row); display: flex; align-items: center; white-space: pre;
+    padding-right: 12px; cursor: default; user-select: none;
+    width: max-content; min-width: 100%; background: var(--bg);
+  }
+  .row:hover { background: #1a222c; }
+  .row.sel { background: #1d3a4a; }
+  /* 行号列固定在最左；缩进区绘制虚线层级引导线 */
+  .ln {
+    width: 52px; flex: none; text-align: right; padding-right: 14px; color: #4d5b6b;
+    user-select: none; position: sticky; left: 0; background: inherit; z-index: 1;
+  }
+  .ind {
+    flex: none;
+    background-image: linear-gradient(90deg, #2c3a49 1px, transparent 1px);
+    background-size: 20px 4px;
+    background-repeat: repeat-x;
+    background-position: 10px 0;
+  }
+  .tw { width: 15px; flex: none; text-align: center; color: #7d8b9c; cursor: pointer;
+    user-select: none; font-size: 11px; }
+  .tw:hover { color: #fff; }
+  .k { color: #c3d3e4; }
+  .p { color: #8fa0b3; margin-right: 8px; }
+  .s { color: #98d98c; }
+  .n { color: #f7b955; }
+  .num { color: #7cc7ff; }
+  .b { color: #c99bff; }
+  .nl { color: #8895a6; font-style: italic; }
+  .c { color: #9fb2c6; }
+  .cm { color: #6f7d8d; }
+
+  /* 折叠提示：// 4 items */
+  .hint { color: #6b7887; font-size: 11px; margin-left: 10px; font-style: italic;
+    user-select: none; }
+  .hint.none { display: none; }
+
+  /* 由 JSON 字符串提升上来的节点 */
+  .v.promoted { color: #d2a3ff; }
+
+  /* 行内操作按钮：hover 时显示，横向滚动时吸附在右侧 */
+  .acts { margin-left: auto; visibility: hidden; flex: none;
+    position: sticky; right: 14px; background: inherit; }
+  .row:hover .acts, .row.sel .acts { visibility: visible; }
+  .acts button {
+    font-size: 11px; padding: 1px 8px; margin-left: 6px;
+    background: #243040; border-color: #2f4055; color: #b8c6d6;
+  }
+  .acts button:hover { background: var(--accent); color: #04222c; border-color: var(--accent); }
+  .acts button:disabled { opacity: .35; cursor: not-allowed; }
+  .acts.off { visibility: hidden !important; }
+
+  /* ===== 状态 / 提示 ===== */
+  #empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--dim); text-align: center; pointer-events: none; line-height: 1.9;
+  }
+  #status {
+    padding: 5px 12px; border-top: 1px solid var(--line); background: var(--bg2);
+    color: var(--dim); font-size: 12px; display: flex; align-items: center; gap: 10px; min-height: 28px;
+  }
+  #path { color: var(--str); word-break: break-all; }
+  #status .err { color: #ff7b72; }
+  .toast {
+    position: fixed; bottom: 46px; left: 50%; transform: translateX(-50%);
+    background: #0e2b36; border: 1px solid var(--accent); color: #bfe8f7;
+    padding: 7px 16px; border-radius: 20px; opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">JSON<span>Formatter</span></div>
+    <button class="primary" id="btnFormat">格式化</button>
+    <button id="btnSample">示例</button>
+    <button id="btnClear">清空</button>
+    <button id="btnUpload" class="hide-sm">导入文件</button>
+    <input type="file" id="file" accept=".json,.txt,application/json" hidden />
+    <span class="sep"></span>
+    <button id="btnExpand">全部展开</button>
+    <button id="btnCollapse">全部折叠</button>
+    <button id="btnCopyAll">复制全部</button>
+    <button id="btnCopyPath" class="hide-md">复制路径</button>
+    <span class="sep hide-md"></span>
+    <label class="stat optional hide-sm">缩进
+      <select id="indent">
+        <option value="2">2 空格</option>
+        <option value="4" selected>4 空格</option>
+        <option value="3">3 空格</option>
+        <option value="tab">Tab</option>
+      </select>
+    </label>
+    <label class="stat optional hide-sm"><input type="checkbox" id="sortKeys" /> 排序键</label>
+    <label class="stat optional hide-sm" title="把内容本身是 JSON 的字符串字段也解析成嵌套结构"><input type="checkbox" id="nested" /> 嵌套解析</label>
+    <label class="stat optional hide-md"><input type="checkbox" id="wrap" checked /> 自动换行</label>
+  </header>
+
+  <main>
+    <section class="pane left">
+      <div class="pane-head">
+        <b>输入</b>
+        <span id="inInfo">粘贴 JSON 文本，或导入文件</span>
+        <button style="margin-left:auto" id="btnCompact">压缩显示</button>
+      </div>
+      <textarea id="input" spellcheck="false" class="wrap"
+        placeholder='在这里粘贴 JSON，例如：{"name":"pelican","legs":[1,2,3]}'></textarea>
+    </section>
+
+    <section class="pane right">
+      <div class="pane-head">
+        <b>结果</b>
+        <span id="outInfo">—</span>
+        <span class="stat perf" id="stat">就绪</span>
+      </div>
+      <div id="buildBar"><i></i></div>
+      <div id="viewport">
+        <div id="empty">解析结果会显示在这里<br />点击任意字段可查看 / 复制 JSONPath</div>
+        <div id="sizer"><div id="rows"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="status">
+    <span id="statusText">等待输入…</span>
+    <span id="path"></span>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const input = $("input"), viewport = $("viewport"), sizer = $("sizer"), rows = $("rows");
+  const statusText = $("statusText"), pathBox = $("path"), stat = $("stat");
+  const ROW_H = 24, OVERSCAN = 14;
+  const CHUNK_MS = 7;
+  const INDENT_STEP = 20;
+  const ID_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+  /* ============================================================
+     数据模型
+     - 句柄（handle）惰性创建并缓存在父节点 _kids 上，身份稳定
+     - 展开状态：显式设置优先，否则回落到全局默认 allOpen
+     - 路径惰性计算：只算被点开的那一个
+     ============================================================ */
+  let data = null, root = null;
+  let flat = [];        // 可见行：句柄数组（容器会出现两次：头 + 尾）
+  let role = [];        // 与 flat 对齐：0=值行 1=容器头行 2=容器尾行
+  let stack = null, building = false;
+  let selected = null, hovered = null;
+  let allOpen = true, overrides = 0, anchor = null, maxRowWidth = 0;
+  let nestedMs = 0, nestedCount = 0;
+
+  const countCache = new WeakMap();
+  const isObj = v => v !== null && typeof v === "object";
+
+  function childCount(v) {
+    if (!isObj(v)) return 0;
+    let c = countCache.get(v);
+    if (c !== undefined) return c;
+    if (Array.isArray(v)) c = v.length;
+    else { c = 0; for (const k in v) c++; }
+    countCache.set(v, c);
+    return c;
+  }
+
+  function totalNodes(v) {
+    if (!isObj(v)) return 1;
+    let total = 1;
+    const st = [v];
+    while (st.length) {
+      const x = st.pop();
+      total += childCount(x);
+      for (const k in x) { const c = x[k]; if (isObj(c)) st.push(c); }
+    }
+    return total;
+  }
+
+  // 全部展开时的总行数 = 值数量 + 非空容器数量（每个容器多一行右括号）
+  function totalLines(v) {
+    if (!isObj(v)) return 1;
+    let lines = 1, containers = 0;
+    const st = [v];
+    while (st.length) {
+      const x = st.pop();
+      const c = childCount(x);
+      lines += c;
+      if (c > 0) containers++;
+      for (const k in x) { const y = x[k]; if (isObj(y)) st.push(y); }
+    }
+    return lines + containers;
+  }
+
+  function makeRoot(v) {
+    return { raw: v, key: null, parent: null, idx: -1, isIdx: false, depth: 0,
+             _kids: null, _keys: null, _count: 0, open: true, user: null, _p: undefined };
+  }
+
+  function childHandle(h, i) {
+    const arr = h._kids;
+    let c = arr[i];
+    if (c) return c;
+    const isArr = Array.isArray(h.raw);
+    const key = isArr ? i : h._keys[i];
+    c = { raw: h.raw[key], key, parent: h, idx: i, isIdx: isArr, depth: h.depth + 1,
+          _kids: null, _keys: null, _count: 0, open: false, user: null, _p: undefined };
+    arr[i] = c;
+    return c;
+  }
+
+  function ensureKeys(h) {
+    if (h._kids) return;
+    const isArr = Array.isArray(h.raw);
+    const ks = isArr ? null : Object.keys(h.raw);
+    h._keys = ks;
+    h._count = isArr ? h.raw.length : ks.length;
+    h._kids = new Array(h._count);
+  }
+
+  function effOpen(h) { return h.user !== null ? h.user : allOpen; }
+
+  /* ============================================================
+     嵌套解析：把「内容本身是 JSON」的字符串字段也展开成结构
+     - 用 WeakMap 记住每个被提升的对象原本的字符串，复制时可还原
+     - 迭代遍历，避免深嵌套爆栈
+     ============================================================ */
+  const originStr = new WeakMap();   // 被提升的对象 -> 原始字符串
+
+  const looksJson = s => {
+    const t = s.trim();
+    return t.length > 1 && (t[0] === "{" || t[0] === "[");
+  };
+
+  function promote(value, depth, budget) {
+    if (!isObj(value)) return 0;
+    let hit = 0;
+    const st = [{ v: value, d: depth }];
+    while (st.length) {
+      const cur = st.pop();
+      const v = cur.v;
+      if (Array.isArray(v)) {
+        for (let i = 0; i < v.length; i++) {
+          const x = v[i];
+          if (typeof x === "string" && looksJson(x) && budget.n > 0) {
+            let p;
+            try { p = JSON.parse(x); } catch (e) { p = undefined; }
+            if (isObj(p)) {
+              originStr.set(p, x);
+              v[i] = p;
+              budget.n--;
+              hit++;
+              if (cur.d < 20) st.push({ v: p, d: cur.d + 1 });
+              continue;
+            }
+          } else if (isObj(x)) {
+            if (cur.d < 20) st.push({ v: x, d: cur.d + 1 });
+          }
+        }
+      } else {
+        for (const k of Object.keys(v)) {
+          const x = v[k];
+          if (typeof x === "string" && looksJson(x) && budget.n > 0) {
+            let p;
+            try { p = JSON.parse(x); } catch (e) { p = undefined; }
+            if (isObj(p)) {
+              originStr.set(p, x);
+              v[k] = p;
+              budget.n--;
+              hit++;
+              if (cur.d < 20) st.push({ v: p, d: cur.d + 1 });
+              continue;
+            }
+          } else if (isObj(x)) {
+            if (cur.d < 20) st.push({ v: x, d: cur.d + 1 });
+          }
+        }
+      }
+    }
+    return hit;
+  }
+
+  function pathOf(h) {
+    if (h._p !== undefined) return h._p;
+    const chain = [];
+    let n = h;
+    while (n && n._p === undefined) { chain.push(n); n = n.parent; }
+    let base = n ? n._p : "$";
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const c = chain[i];
+      if (!c.parent) { base = "$"; continue; }
+      base = c.isIdx ? `${base}[${c.key}]`
+        : ID_RE.test(c.key) ? `${base}.${c.key}`
+        : `${base}[${JSON.stringify(c.key)}]`;
+    }
+    h._p = base;
+    return base;
+  }
+
+  /* ============================================================
+     分片构建 JSON 文本视图（每帧最多 7ms）
+     ============================================================ */
+  function push(n, r) { flat.push(n); role.push(r); }
+
+  function startBuild(keepScroll) {
+    anchor = (keepScroll && flat.length)
+      ? flat[Math.min(Math.floor(viewport.scrollTop / ROW_H), flat.length - 1)]
+      : null;
+
+    flat = []; role = [];
+    maxRowWidth = 0;
+    building = false;
+    stack = null;
+
+    if (root) {
+      root.open = effOpen(root);
+      if (root.open && childCount(root.raw)) {
+        ensureKeys(root);
+        push(root, 1);                       // 根的 "{" 行
+        stack = [{ h: root, i: 0 }];
+        building = true;
+      } else {
+        push(root, 0);                       // 空根直接显示成 {}
+      }
+    }
+    barTarget = overrides ? 0 : (allOpen ? totalLines(data) : 1);
+    setBar(building ? 0 : 1);
+
+    sizer.style.height = (flat.length * ROW_H) + "px";
+    render();
+    if (building) pump();
+    else restoreAnchor();
+  }
+
+  function pump() {
+    if (!stack) return;                       // 构建已被新操作取消
+    const t0 = performance.now();
+    while (stack.length && performance.now() - t0 < CHUNK_MS) {
+      const fr = stack[stack.length - 1];
+      const h = fr.h;
+      if (fr.i >= h._count || !h.open) {
+        if (h.open) push(h, 2);               // 右括号行
+        stack.pop();
+        continue;
+      }
+      const c = childHandle(h, fr.i);
+      fr.i++;
+      c.open = effOpen(c);
+      if (isObj(c.raw) && c.open && childCount(c.raw)) {
+        ensureKeys(c);
+        push(c, 1);
+        stack.push({ h: c, i: 0 });
+      } else {
+        push(c, 0);
+      }
+    }
+    const done = stack.length === 0;
+    building = !done;
+    if (done) setBar(1); else setBar(barTarget ? flat.length / barTarget : 0);
+    sizer.style.height = (flat.length * ROW_H) + "px";
+    render();
+    if (done) restoreAnchor();
+    else requestAnimationFrame(pump);
+  }
+
+  function restoreAnchor() {
+    if (!anchor) { viewport.scrollTop = 0; return; }
+    let n = anchor, idx = -1;
+    while (n) { idx = flat.indexOf(n); if (idx >= 0) break; n = n.parent; }
+    viewport.scrollTop = idx < 0 ? 0 : idx * ROW_H;
+    anchor = null;
+  }
+
+  /* 构建进度条 */
+  const buildBar = $("buildBar"), barFill = buildBar.firstElementChild;
+  let barTarget = 0;
+  function setBar(p) {
+    const pending = p < 1;
+    buildBar.classList.toggle("on", pending);
+    buildBar.classList.toggle("indet", pending && !barTarget);
+    barFill.style.width = (pending && !barTarget) ? "" : Math.min(100, Math.round(p * 100)) + "%";
+  }
+
+  function eachCreated(fn) {
+    const st = [root];
+    while (st.length) {
+      const h = st.pop();
+      const kids = h._kids;
+      fn(h);
+      if (kids) for (let i = 0; i < kids.length; i++) { const c = kids[i]; if (c) st.push(c); }
+    }
+  }
+
+  /* ============================================================
+     虚拟滚动渲染
+     ============================================================ */
+  const pool = [];
+  function getRow(i) {
+    if (pool[i]) return pool[i];
+    const d = document.createElement("div");
+    d.className = "row";
+    d.innerHTML = '<span class="ln"></span><span class="ind"></span><span class="tw"></span>'
+                + '<span class="k"></span><span class="p"></span><span class="v"></span>'
+                + '<span class="cm"></span><span class="hint"></span>'
+                + '<span class="acts">'
+                + '<button data-a="copy">复制</button><button data-a="path">路径</button>'
+                + '<button data-a="dl">下载</button><button data-a="del">删除</button></span>';
+    d._ln = d.children[0]; d._ind = d.children[1]; d._tw = d.children[2];
+    d._k = d.children[3];  d._p = d.children[4];  d._v = d.children[5];
+    d._cm = d.children[6]; d._hint = d.children[7]; d._acts = d.children[8];
+    d._tw.onclick = e => { e.stopPropagation(); if (d._n) toggle(d._n); };
+    d._acts.onclick = e => {
+      const b = e.target.closest("button");
+      if (!b || !d._n) return;
+      e.stopPropagation();
+      const a = b.dataset.a;
+      if (a === "copy") copyValue(d._n);
+      else if (a === "path") copyPath(d._n);
+      else if (a === "dl") download(d._n);
+      else deleteNode(d._n);
+    };
+    d.onclick = () => { if (d._n) select(d._n); };
+    d.ondblclick = () => { if (d._n && isObj(d._n.raw)) toggle(d._n); };
+    d.onmouseenter = () => { hovered = d._n; };
+    pool[i] = d;
+    rows.appendChild(d);
+    return d;
+  }
+
+  function render() {
+    const total = flat.length;
+    $("empty").style.display = total ? "none" : "flex";
+    const vh = viewport.clientHeight || 1;
+    const first = Math.max(0, Math.floor(viewport.scrollTop / ROW_H) - OVERSCAN);
+    const last = Math.min(total, Math.ceil((viewport.scrollTop + vh) / ROW_H) + OVERSCAN);
+    const need = Math.max(0, last - first);
+
+    for (let i = 0; i < need; i++) getRow(i);
+    for (let i = need; i < pool.length; i++) pool[i].style.display = "none";
+    for (let i = 0; i < need; i++) pool[i].style.display = "";
+
+    for (let i = 0; i < need; i++) {
+      const idx = first + i;
+      paint(pool[i], flat[idx], role[idx], idx + 1);
+    }
+
+    let maxW = 0;
+    for (let i = 0; i < need; i++) { const w = pool[i].offsetWidth; if (w > maxW) maxW = w; }
+    rows.style.transform = `translateY(${first * ROW_H}px)`;
+    maxRowWidth = Math.max(maxRowWidth, maxW);
+    sizer.style.width = Math.max(viewport.clientWidth, maxRowWidth + 24) + "px";
+
+    $("outInfo").textContent = !total ? "—"
+      : building ? `${total.toLocaleString()} 行 · 构建中…`
+      : `${total.toLocaleString()} 行 / ${totalLines(data).toLocaleString()} 行 · ${totalNodes(data).toLocaleString()} 节点`;
+  }
+
+  // 键和值都走 textContent 赋值，没有 HTML 注入风险，无需 HTML 转义
+
+  // 只有「值行」和「右括号行」带逗号；开括号行后面不能有逗号
+  // 空容器不显示 // N items 提示
+  function isEmpty(n) { return childCount(n.raw) === 0; }
+
+  function commaOf(n, r) {
+    if (r === 1) return "";
+    const p = n.parent;
+    if (!p) return "";
+    return n.idx >= childCount(p.raw) - 1 ? "" : ",";
+  }
+
+  function paint(el, n, r, lineNo) {
+    el._n = n;
+    el.classList.toggle("sel", n === selected);
+    el._ln.textContent = lineNo;
+
+    const isC = isObj(n.raw);
+    const isTail = r === 2;
+
+    // 缩进：深度 n 的行缩进 n 层，容器的右括号行与其头部行自然对齐
+    el._ind.style.width = (n.depth * INDENT_STEP) + "px";
+
+    el._tw.textContent = (!isTail && isC) ? (n.open ? "▾" : "▸") : "";
+
+    // 键名：数组元素没有键；容器尾行只显示右括号，不重复键名
+    if (n === root || n.isIdx || isTail) {
+      el._k.textContent = ""; el._p.textContent = "";
+    } else {
+      el._k.textContent = JSON.stringify(String(n.key));
+      el._p.textContent = ":";
+    }
+    el._p.style.display = (n === root || n.isIdx || isTail) ? "none" : "inline";
+
+    // 值 / 括号：行类型决定显示什么
+    //   role 2 = 右括号行，role 1 = 开括号行，role 0 = 值行（标量或折叠/空的容器）
+    const v = el._v;
+    if (r === 2) {
+      v.className = "v c";
+      v.textContent = Array.isArray(n.raw) ? "]" : "}";
+      v.title = "";
+    } else if (r === 1) {
+      const org = originStr.get(n.raw);
+      v.className = "v c" + (org !== undefined ? " promoted" : "");
+      v.textContent = Array.isArray(n.raw) ? "[" : "{";
+      v.title = org !== undefined ? "原本是一个 JSON 字符串，已解析为嵌套结构" : "";
+    } else if (isC) {
+      // 折叠 / 空容器：{} 或 []，并在后面标注元素个数
+      const c2 = childCount(n.raw);
+      const org = originStr.get(n.raw);
+      v.className = "v c" + (org !== undefined ? " promoted" : "");
+      v.textContent = Array.isArray(n.raw) ? "[]" : "{}";
+      v.title = org !== undefined
+        ? "原本是一个 JSON 字符串，已解析为嵌套结构"
+        : (c2 ? c2 + " 项（点击 ▸ 展开）" : "");
+    } else if (n.raw === null) {
+      v.className = "v nl"; v.textContent = "null"; v.title = "";
+    } else if (typeof n.raw === "string") {
+      v.className = "v s";
+      v.textContent = JSON.stringify(n.raw);   // 用 JSON 转义，不能用 HTML 转义
+      v.title = "";
+    } else if (typeof n.raw === "number") {
+      v.className = "v num"; v.textContent = String(n.raw); v.title = "";
+    } else {
+      v.className = "v b"; v.textContent = String(n.raw); v.title = "";
+    }
+    el._cm.textContent = commaOf(n, r);
+
+    // 折叠提示：// N items；被提升的节点额外标注「原为字符串」
+    const org = isC ? originStr.get(n.raw) : undefined;
+    let hint = "";
+    if (r === 0 && isC && !isEmpty(n)) hint = "// " + childCount(n.raw).toLocaleString() + " items";
+    // 「原为 JSON 字符串」只标在容器头/值行，尾括号行不重复标注
+    if (org !== undefined && r !== 2) hint = (hint ? hint + "  " : "") + "// 原为 JSON 字符串";
+    el._hint.textContent = hint;
+    el._hint.className = hint ? "hint" : "hint none";
+
+    el._acts.classList.toggle("off", isTail);       // 右括号行不提供操作
+    el._acts.children[3].disabled = n === root;     // 根节点不可删除
+  }
+
+  viewport.addEventListener("scroll", () => requestAnimationFrame(render), { passive: true });
+  viewport.addEventListener("mouseleave", () => { hovered = null; });
+  window.addEventListener("resize", render);
+
+  function select(n) {
+    selected = n;
+    hovered = n;
+    pathBox.textContent = pathOf(n);
+    statusText.textContent = isObj(n.raw)
+      ? (Array.isArray(n.raw) ? "array" : "object") + " · " + childCount(n.raw) + " 项"
+      : (n.raw === null ? "null" : typeof n.raw);
+    statusText.className = "";
+    render();
+  }
+
+  function toggle(n) {
+    if (!isObj(n.raw)) return;
+    n.user = !n.open;
+    overrides++;
+    startBuild(true);
+  }
+
+  /* ============================================================
+     复制 / 下载 / 删除
+     ============================================================ */
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+
+  function writeClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return new Promise((res, rej) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy") ? res() : rej(); } catch (e) { rej(e); } finally { ta.remove(); }
+    });
+  }
+
+  function copyValue(n) {
+    const org = isObj(n.raw) ? originStr.get(n.raw) : undefined;
+    const text = org !== undefined ? org
+      : isObj(n.raw) ? stringify(n.raw, $("sortKeys").checked)
+      : JSON.stringify(n.raw);
+    writeClipboard(text).then(() => toast(org !== undefined ? "已复制原始字符串" : "已复制节点值"))
+      .catch(() => toast("复制失败"));
+  }
+  function copyPath(n) {
+    writeClipboard(pathOf(n)).then(() => toast("已复制路径 " + pathOf(n))).catch(() => toast("复制失败"));
+  }
+  function download(n) {
+    const text = isObj(n.raw) ? stringify(n.raw, false) : JSON.stringify(n.raw);
+    const blob = new Blob([text], { type: "application/json" });
+    const a = document.createElement("a");
+    const name = (n === root || n.isIdx) ? "json" : String(n.key).replace(/[^\w.-]/g, "_");
+    a.href = URL.createObjectURL(blob);
+    a.download = name + ".json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast("已下载 " + a.download);
+  }
+  function deleteNode(n) {
+    const p = n.parent;
+    if (!p) return toast("根节点不可删除");
+    const name = n.isIdx ? `[${n.idx}]` : n.key;
+    if (!confirm(`确定删除 ${pathOf(n)} ？`)) return;
+    if (Array.isArray(p.raw)) p.raw.splice(n.idx, 1);
+    else delete p.raw[n.key];
+    countCache.delete(p.raw);          // 数量已变，失效缓存
+    p._keys = null; p._kids = null; p._count = 0;
+    overrides++;
+    startBuild(true);
+    toast("已删除 " + name);
+  }
+
+  /* ============================================================
+     解析 / 序列化
+     ============================================================ */
+  function indentStr() {
+    const v = $("indent").value;
+    return v === "tab" ? "\t" : " ".repeat(+v);
+  }
+
+  function stringify(value, sortKeys) {
+    return JSON.stringify(value, function (k, v) {
+      if (sortKeys && v && typeof v === "object" && !Array.isArray(v)) {
+        const o = {};
+        for (const key of Object.keys(v).sort()) o[key] = v[key];
+        return o;
+      }
+      return v;
+    }, indentStr());
+  }
+
+  function bytes(str) {
+    let n = 0;
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      if (c < 0x80) n += 1;
+      else if (c < 0x800) n += 2;
+      else if (c >= 0xD800 && c <= 0xDBFF) { n += 4; i++; }
+      else n += 3;
+    }
+    return n;
+  }
+  const fmtBytes = n => n < 1024 ? n + " B"
+    : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB"
+    : (n / 1048576).toFixed(2) + " MB";
+  const fmtMs = ms => (ms < 10 ? ms.toFixed(1) : Math.round(ms)) + "ms";
+
+  function setStatus(msg, isErr) { statusText.textContent = msg; statusText.className = isErr ? "err" : ""; }
+
+  function resetView(msg) {
+    data = null; root = null; selected = null; hovered = null;
+    startBuild(false);
+    pathBox.textContent = "";
+    setStatus(msg);
+    stat.textContent = stat.title = "就绪";
+    $("inInfo").textContent = "粘贴 JSON 文本，或导入文件";
+  }
+
+  function parseAndRender() {
+    const txt = input.value;
+    if (!txt.trim()) return resetView("等待输入…");
+
+    const t0 = performance.now();
+    let parsed;
+    try { parsed = JSON.parse(txt); }
+    catch (e) {
+      data = null; root = null; startBuild(false);
+      setStatus("解析失败：" + e.message, true);
+      stat.textContent = stat.title = "解析失败";
+      return;
+    }
+    const tParse = performance.now() - t0;
+
+    data = parsed;
+    // 嵌套解析：把内嵌 JSON 字符串提升为真实结构
+    let promoted = 0;
+    if ($("nested").checked) {
+      const tN = performance.now();
+      promoted = promote(data, 0, { n: 20000 });
+      nestedMs = performance.now() - tN;
+      nestedCount = promoted;
+    } else { nestedMs = 0; nestedCount = 0; }
+
+    root = makeRoot(data);
+    allOpen = true;
+    overrides = 0;
+    startBuild(false);
+    const tBuild = performance.now() - t0 - tParse;
+
+    select(root);
+    const size = bytes(txt);
+    $("inInfo").textContent = `${fmtBytes(size)} · ${txt.length.toLocaleString()} 字符`;
+    // 节点数已在 outInfo 里显示，这里只留耗时，避免重复
+    stat.textContent = `解析 ${fmtMs(tParse)} · 建树 ${fmtMs(tBuild)}`
+      + (nestedCount ? ` · 嵌套 ${nestedCount.toLocaleString()} 处 ${fmtMs(nestedMs)}` : "");
+    stat.title = stat.textContent;      // 被省略号截断时可悬停看全量
+    setStatus(building ? "解析成功，正在渲染…"
+      : nestedCount ? `解析成功 · 已展开 ${nestedCount.toLocaleString()} 处内嵌 JSON`
+      : "解析成功");
+  }
+
+  /* ============ 按钮 ============ */
+  $("btnFormat").onclick = () => {
+    const txt = input.value;
+    if (!txt.trim()) return toast("输入为空");
+    const t0 = performance.now();
+    let parsed, out;
+    try { parsed = JSON.parse(txt); }
+    catch (e) { setStatus("解析失败：" + e.message, true); return toast("解析失败"); }
+    try { out = stringify(parsed, $("sortKeys").checked); }
+    catch (e) { setStatus("序列化失败：" + e.message, true); return toast("序列化失败"); }
+    input.value = out;
+    parseAndRender();
+    setStatus(`格式化完成 · ${fmtMs(performance.now() - t0)} · 输出 ${fmtBytes(bytes(out))}`);
+  };
+
+  $("btnCompact").onclick = () => {
+    const txt = input.value;
+    if (!txt.trim()) return toast("输入为空");
+    try {
+      const out = JSON.stringify(JSON.parse(txt));
+      input.value = out;
+      $("inInfo").textContent = `${fmtBytes(bytes(out))} · ${out.length.toLocaleString()} 字符`;
+      setStatus(`已压缩显示 · 输出 ${fmtBytes(bytes(out))}`);
+    } catch (e) { setStatus("解析失败：" + e.message, true); toast("解析失败"); }
+  };
+
+  $("btnSample").onclick = () => { input.value = stringify(sample(), false); parseAndRender(); };
+  $("btnClear").onclick = () => { input.value = ""; resetView("等待输入…"); };
+
+  $("btnUpload").onclick = () => $("file").click();
+  $("file").onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => { input.value = fr.result; parseAndRender(); toast("已导入 " + f.name); };
+    fr.readAsText(f);
+    e.target.value = "";
+  };
+
+  $("btnExpand").onclick = () => {
+    if (!root) return;
+    allOpen = true; overrides = 0;
+    eachCreated(h => { h.user = null; });
+    startBuild(true);
+  };
+
+  $("btnCollapse").onclick = () => {
+    if (!root) return;
+    allOpen = false; overrides = 0;
+    eachCreated(h => {
+      h.user = null;
+      if (h !== root) { h._kids = null; h._keys = null; h._count = 0; }
+    });
+    startBuild(true);
+  };
+
+  $("btnCopyAll").onclick = () => {
+    if (!root) return;
+    writeClipboard(stringify(root.raw, $("sortKeys").checked))
+      .then(() => toast("已复制全部内容")).catch(() => toast("复制失败"));
+  };
+  $("btnCopyPath").onclick = () => { if (selected) copyPath(selected); };
+
+  $("wrap").onchange = e => input.classList.toggle("wrap", e.target.checked);
+  $("indent").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
+  $("sortKeys").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
+  $("nested").onchange = () => { if (input.value.trim()) parseAndRender(); };
+
+  let idle;
+  input.addEventListener("input", () => {
+    clearTimeout(idle);
+    setStatus("输入中…");
+    idle = setTimeout(parseAndRender, 400);
+  });
+  input.addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("btnFormat").click(); }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const pad = indentStr(), s = input.selectionStart, t = input.selectionEnd;
+      input.value = input.value.slice(0, s) + pad + input.value.slice(t);
+      input.selectionStart = input.selectionEnd = s + pad.length;
+    }
+  });
+
+  function sample() {
+    return {
+      name: "pelican", age: 3, cute: true, nickname: null,
+      tags: ["bird", "骑", "单车", "bike"],
+      stats: { speed: 12.5, stamina: 88, height: 1.4 },
+      friends: [{ name: "toucan", score: 91 }, { name: "flamingo", score: 76 }],
+      config: { theme: "dark", nested: { deep: { deeper: 42 } } }
+    };
+  }
+
+  parseAndRender();
+})();
+</script>
+</body>
+</html>
