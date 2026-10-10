@@ -258,7 +258,7 @@
   let flat = [];        // 可见行：句柄数组（容器会出现两次：头 + 尾）
   let role = [];        // 与 flat 对齐：0=值行 1=容器头行 2=容器尾行
   let stack = null, building = false;
-  let selected = null, hovered = null;
+  let selected = null;
   let allOpen = true, overrides = 0, anchor = null, maxRowWidth = 0;
   let nestedMs = 0, nestedCount = 0;
 
@@ -269,10 +269,15 @@
     if (!isObj(v)) return 0;
     let c = countCache.get(v);
     if (c !== undefined) return c;
-    if (Array.isArray(v)) c = v.length;
-    else { c = 0; for (const k in v) c++; }
+    c = Array.isArray(v) ? v.length : Object.keys(v).length;
     countCache.set(v, c);
     return c;
+  }
+
+  // 遍历直接子值（数组用索引，对象用自有可枚举键，避免 for...in 带入继承属性）
+  function eachChild(v, fn) {
+    if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) fn(v[i]); }
+    else { const ks = Object.keys(v); for (let i = 0; i < ks.length; i++) fn(v[ks[i]]); }
   }
 
   function totalNodes(v) {
@@ -282,7 +287,7 @@
     while (st.length) {
       const x = st.pop();
       total += childCount(x);
-      for (const k in x) { const c = x[k]; if (isObj(c)) st.push(c); }
+      eachChild(x, c => { if (isObj(c)) st.push(c); });
     }
     return total;
   }
@@ -297,9 +302,18 @@
       const c = childCount(x);
       lines += c;
       if (c > 0) containers++;
-      for (const k in x) { const y = x[k]; if (isObj(y)) st.push(y); }
+      eachChild(x, y => { if (isObj(y)) st.push(y); });
     }
     return lines + containers;
+  }
+
+  // 行数/节点数只依赖 data，构建完成后缓存，避免每次滚动都全量遍历
+  let metricsValid = false, metricLines = 0, metricNodes = 0;
+  function refreshMetrics() {
+    if (metricsValid) return;
+    metricLines = totalLines(data);
+    metricNodes = totalNodes(data);
+    metricsValid = true;
   }
 
   function makeRoot(v) {
@@ -375,7 +389,9 @@
             try { p = JSON.parse(x); } catch (e) { p = undefined; }
             if (isObj(p)) {
               originStr.set(p, x);
-              v[k] = p;
+              // __proto__ 用 defineProperty 写，避免触发原型 setter
+              if (k === "__proto__") Object.defineProperty(v, k, { value: p, enumerable: true, writable: true, configurable: true });
+              else v[k] = p;
               budget.n--;
               hit++;
               if (cur.d < 20) st.push({ v: p, d: cur.d + 1 });
@@ -433,7 +449,9 @@
         push(root, 0);                       // 空根直接显示成 {}
       }
     }
-    barTarget = overrides ? 0 : (allOpen ? totalLines(data) : 1);
+    if (overrides) barTarget = 0;
+    else if (allOpen) { refreshMetrics(); barTarget = metricLines; }
+    else barTarget = 1;
     setBar(building ? 0 : 1);
 
     sizer.style.height = (flat.length * ROW_H) + "px";
@@ -531,7 +549,6 @@
     };
     d.onclick = () => { if (d._n) select(d._n); };
     d.ondblclick = () => { if (d._n && isObj(d._n.raw)) toggle(d._n); };
-    d.onmouseenter = () => { hovered = d._n; };
     pool[i] = d;
     rows.appendChild(d);
     return d;
@@ -560,9 +577,13 @@
     maxRowWidth = Math.max(maxRowWidth, maxW);
     sizer.style.width = Math.max(viewport.clientWidth, maxRowWidth + 24) + "px";
 
-    $("outInfo").textContent = !total ? "—"
-      : building ? `${total.toLocaleString()} 行 · 构建中…`
-      : `${total.toLocaleString()} 行 / ${totalLines(data).toLocaleString()} 行 · ${totalNodes(data).toLocaleString()} 节点`;
+    if (!total) $("outInfo").textContent = "—";
+    else if (building) $("outInfo").textContent = `${total.toLocaleString()} 行 · 构建中…`;
+    else {
+      refreshMetrics();
+      $("outInfo").textContent =
+        `${total.toLocaleString()} 行 / ${metricLines.toLocaleString()} 行 · ${metricNodes.toLocaleString()} 节点`;
+    }
   }
 
   // 键和值都走 textContent 赋值，没有 HTML 注入风险，无需 HTML 转义
@@ -589,7 +610,7 @@
     // 缩进：深度 n 的行缩进 n 层，容器的右括号行与其头部行自然对齐
     el._ind.style.width = (n.depth * INDENT_STEP) + "px";
 
-    el._tw.textContent = (!isTail && isC) ? (n.open ? "▾" : "▸") : "";
+    el._tw.textContent = (!isTail && isC && !isEmpty(n)) ? (n.open ? "▾" : "▸") : "";
 
     // 键名：数组元素没有键；容器尾行只显示右括号，不重复键名
     if (n === root || n.isIdx || isTail) {
@@ -647,13 +668,19 @@
     el._acts.children[3].disabled = n === root;     // 根节点不可删除
   }
 
-  viewport.addEventListener("scroll", () => requestAnimationFrame(render), { passive: true });
-  viewport.addEventListener("mouseleave", () => { hovered = null; });
-  window.addEventListener("resize", render);
+  let scrollRaf = 0;
+  viewport.addEventListener("scroll", () => {
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; render(); });
+  }, { passive: true });
+  let resizeRaf = 0;
+  window.addEventListener("resize", () => {
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => { resizeRaf = 0; render(); });
+  });
 
   function select(n) {
     selected = n;
-    hovered = n;
     pathBox.textContent = pathOf(n);
     statusText.textContent = isObj(n.raw)
       ? (Array.isArray(n.raw) ? "array" : "object") + " · " + childCount(n.raw) + " 项"
@@ -663,7 +690,7 @@
   }
 
   function toggle(n) {
-    if (!isObj(n.raw)) return;
+    if (!isObj(n.raw) || childCount(n.raw) === 0) return;   // 空容器无需展开/折叠
     n.user = !n.open;
     overrides++;
     startBuild(true);
@@ -693,9 +720,12 @@
 
   function copyValue(n) {
     const org = isObj(n.raw) ? originStr.get(n.raw) : undefined;
-    const text = org !== undefined ? org
-      : isObj(n.raw) ? stringify(n.raw, $("sortKeys").checked)
-      : JSON.stringify(n.raw);
+    let text;
+    try {
+      text = org !== undefined ? org
+        : isObj(n.raw) ? stringify(n.raw, $("sortKeys").checked, true)
+        : JSON.stringify(n.raw);
+    } catch (e) { return toast("复制失败：" + e.message); }
     writeClipboard(text).then(() => toast(org !== undefined ? "已复制原始字符串" : "已复制节点值"))
       .catch(() => toast("复制失败"));
   }
@@ -703,7 +733,9 @@
     writeClipboard(pathOf(n)).then(() => toast("已复制路径 " + pathOf(n))).catch(() => toast("复制失败"));
   }
   function download(n) {
-    const text = isObj(n.raw) ? stringify(n.raw, false) : JSON.stringify(n.raw);
+    let text;
+    try { text = isObj(n.raw) ? stringify(n.raw, false, true) : JSON.stringify(n.raw); }
+    catch (e) { return toast("下载失败：" + e.message); }
     const blob = new Blob([text], { type: "application/json" });
     const a = document.createElement("a");
     const name = (n === root || n.isIdx) ? "json" : String(n.key).replace(/[^\w.-]/g, "_");
@@ -713,6 +745,11 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     toast("已下载 " + a.download);
   }
+  function isDescendantOf(node, anc) {
+    for (let x = node; x; x = x.parent) if (x === anc) return true;
+    return false;
+  }
+
   function deleteNode(n) {
     const p = n.parent;
     if (!p) return toast("根节点不可删除");
@@ -722,6 +759,12 @@
     else delete p.raw[n.key];
     countCache.delete(p.raw);          // 数量已变，失效缓存
     p._keys = null; p._kids = null; p._count = 0;
+    metricsValid = false;              // 节点数已变
+    // p 的所有子句柄已失效，若选中项在其下则清除选中态，避免高亮/路径残留
+    if (selected && selected !== p && isDescendantOf(selected, p)) {
+      selected = null;
+      pathBox.textContent = "";
+    }
     overrides++;
     startBuild(true);
     toast("已删除 " + name);
@@ -735,11 +778,20 @@
     return v === "tab" ? "\t" : " ".repeat(+v);
   }
 
-  function stringify(value, sortKeys) {
+  // keepOriginal=true 时，把「嵌套解析」提升出来的对象还原成它原本的字符串
+  function stringify(value, sortKeys, keepOriginal) {
     return JSON.stringify(value, function (k, v) {
+      if (keepOriginal && originStr.has(v)) return originStr.get(v);
       if (sortKeys && v && typeof v === "object" && !Array.isArray(v)) {
         const o = {};
-        for (const key of Object.keys(v).sort()) o[key] = v[key];
+        for (const key of Object.keys(v).sort()) {
+          // __proto__ 用 defineProperty 写，避免触发原型 setter 导致丢键/污染
+          if (key === "__proto__") {
+            Object.defineProperty(o, key, { value: v[key], enumerable: true, writable: true, configurable: true });
+          } else {
+            o[key] = v[key];
+          }
+        }
         return o;
       }
       return v;
@@ -752,8 +804,11 @@
       const c = str.charCodeAt(i);
       if (c < 0x80) n += 1;
       else if (c < 0x800) n += 2;
-      else if (c >= 0xD800 && c <= 0xDBFF) { n += 4; i++; }
-      else n += 3;
+      else if (c >= 0xD800 && c <= 0xDBFF) {
+        const d = str.charCodeAt(i + 1);
+        if (d >= 0xDC00 && d <= 0xDFFF) { n += 4; i++; }  // 合法代理对
+        else n += 3;                                      // 孤立高代理项
+      } else n += 3;
     }
     return n;
   }
@@ -765,7 +820,8 @@
   function setStatus(msg, isErr) { statusText.textContent = msg; statusText.className = isErr ? "err" : ""; }
 
   function resetView(msg) {
-    data = null; root = null; selected = null; hovered = null;
+    data = null; root = null; selected = null;
+    metricsValid = false;
     startBuild(false);
     pathBox.textContent = "";
     setStatus(msg);
@@ -781,7 +837,7 @@
     let parsed;
     try { parsed = JSON.parse(txt); }
     catch (e) {
-      data = null; root = null; startBuild(false);
+      data = null; root = null; metricsValid = false; startBuild(false);
       setStatus("解析失败：" + e.message, true);
       stat.textContent = stat.title = "解析失败";
       return;
@@ -789,6 +845,7 @@
     const tParse = performance.now() - t0;
 
     data = parsed;
+    metricsValid = false;
     // 嵌套解析：把内嵌 JSON 字符串提升为真实结构
     let promoted = 0;
     if ($("nested").checked) {
@@ -834,12 +891,12 @@
   $("btnCompact").onclick = () => {
     const txt = input.value;
     if (!txt.trim()) return toast("输入为空");
-    try {
-      const out = JSON.stringify(JSON.parse(txt));
-      input.value = out;
-      $("inInfo").textContent = `${fmtBytes(bytes(out))} · ${out.length.toLocaleString()} 字符`;
-      setStatus(`已压缩显示 · 输出 ${fmtBytes(bytes(out))}`);
-    } catch (e) { setStatus("解析失败：" + e.message, true); toast("解析失败"); }
+    let out;
+    try { out = JSON.stringify(JSON.parse(txt)); }
+    catch (e) { setStatus("解析失败：" + e.message, true); return toast("解析失败"); }
+    input.value = out;
+    parseAndRender();                 // 同步刷新结果面板，避免与输入框不一致
+    setStatus(`已压缩显示 · 输出 ${fmtBytes(bytes(out))}`);
   };
 
   $("btnSample").onclick = () => { input.value = stringify(sample(), false); parseAndRender(); };
@@ -848,11 +905,13 @@
   $("btnUpload").onclick = () => $("file").click();
   $("file").onchange = e => {
     const f = e.target.files[0];
-    if (!f) return;
-    const fr = new FileReader();
-    fr.onload = () => { input.value = fr.result; parseAndRender(); toast("已导入 " + f.name); };
-    fr.readAsText(f);
     e.target.value = "";
+    if (!f) return;
+    if (f.size > 20 * 1024 * 1024) return toast("文件过大（> 20MB），已取消");
+    const fr = new FileReader();
+    fr.onload = () => { input.value = String(fr.result); parseAndRender(); toast("已导入 " + f.name); };
+    fr.onerror = () => toast("读取文件失败");
+    fr.readAsText(f);
   };
 
   $("btnExpand").onclick = () => {
@@ -874,8 +933,10 @@
 
   $("btnCopyAll").onclick = () => {
     if (!root) return;
-    writeClipboard(stringify(root.raw, $("sortKeys").checked))
-      .then(() => toast("已复制全部内容")).catch(() => toast("复制失败"));
+    let text;
+    try { text = stringify(root.raw, $("sortKeys").checked, true); }
+    catch (e) { return toast("复制失败：" + e.message); }
+    writeClipboard(text).then(() => toast("已复制全部内容")).catch(() => toast("复制失败"));
   };
   $("btnCopyPath").onclick = () => { if (selected) copyPath(selected); };
 
@@ -885,20 +946,58 @@
   $("nested").onchange = () => { if (input.value.trim()) parseAndRender(); };
 
   let idle;
-  input.addEventListener("input", () => {
+  function scheduleParse() {
     clearTimeout(idle);
     setStatus("输入中…");
     idle = setTimeout(parseAndRender, 400);
-  });
+  }
+  input.addEventListener("input", scheduleParse);
   input.addEventListener("keydown", e => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("btnFormat").click(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); $("btnFormat").click(); return; }
     if (e.key === "Tab") {
       e.preventDefault();
-      const pad = indentStr(), s = input.selectionStart, t = input.selectionEnd;
-      input.value = input.value.slice(0, s) + pad + input.value.slice(t);
-      input.selectionStart = input.selectionEnd = s + pad.length;
+      indentSelection(e.shiftKey);
+      scheduleParse();          // 程序化赋值不触发 input 事件，需手动触发刷新
     }
   });
+
+  // Tab 缩进 / Shift+Tab 反缩进：有选区时按行处理，无选区时在光标处插入/删除一级缩进
+  function indentSelection(outdent) {
+    const val = input.value, pad = indentStr();
+    const s = input.selectionStart, t = input.selectionEnd;
+
+    if (s === t) {
+      if (!outdent) {
+        input.value = val.slice(0, s) + pad + val.slice(s);
+        input.selectionStart = input.selectionEnd = s + pad.length;
+      } else {
+        // 反缩进当前行行首的缩进，与光标在行内的位置无关
+        const lineStart = val.lastIndexOf("\n", s - 1) + 1;
+        const m = val.slice(lineStart).match(/^[ \t]+/);
+        if (!m) return;
+        const cut = Math.min(m[0].length, pad.length);
+        input.value = val.slice(0, lineStart) + val.slice(lineStart + cut);
+        input.selectionStart = input.selectionEnd = Math.max(lineStart, s - cut);
+      }
+      return;
+    }
+
+    const start = val.lastIndexOf("\n", s - 1) + 1;
+    let end = val.indexOf("\n", t);
+    if (end === -1) end = val.length;
+    if (t > s && val[t - 1] === "\n") end = t - 1;   // 选区止于行首时不改动该行
+
+    const out = val.slice(start, end).split("\n").map(ln => {
+      if (!outdent) return pad + ln;
+      if (ln.startsWith(pad)) return ln.slice(pad.length);
+      const m = ln.match(/^[ \t]+/);
+      return m ? ln.slice(Math.min(m[0].length, pad.length)) : ln;
+    }).join("\n");
+
+    input.value = val.slice(0, start) + out + val.slice(end);
+    input.selectionStart = start;
+    input.selectionEnd = start + out.length;
+  }
 
   function sample() {
     return {
