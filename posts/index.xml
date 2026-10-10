@@ -10,7 +10,7 @@
     <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/posts/2026101001/</guid>
-    <description><![CDATA[起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少]]></description>
+    <description><![CDATA[一、前言 公司发的电脑，Docker Desktop 我一直没装。不是装不上，是不想碰授权这条线。 Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围是个人使用、教育、非商业开源，以]]></description>
 </item>
 <item>
     <title>AI大模型Prompt调优实战指南</title>

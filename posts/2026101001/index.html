@@ -7,7 +7,7 @@
         <title>Mac 上不装 Docker Desktop，用 Colima 跑 Docker - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/2026101001/">
   <meta property="og:site_name" content="MidAug&#39;s  Blog">
   <meta property="og:title" content="Mac 上不装 Docker Desktop，用 Colima 跑 Docker">
-  <meta property="og:description" content="起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少">
+  <meta property="og:description" content="一、前言 公司发的电脑，Docker Desktop 我一直没装。不是装不上，是不想碰授权这条线。 Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围是个人使用、教育、非商业开源，以">
   <meta property="og:locale" content="en">
   <meta property="og:type" content="article">
   <meta property="article:section" content="posts">
@@ -22,7 +22,7 @@
     <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="Mac 上不装 Docker Desktop，用 Colima 跑 Docker">
-<meta name="twitter:description" content="起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少">
+<meta name="twitter:description" content="一、前言 公司发的电脑，Docker Desktop 我一直没装。不是装不上，是不想碰授权这条线。 Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围是个人使用、教育、非商业开源，以">
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -44,7 +44,7 @@
                             "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
                             "width":  3200 ,
                             "height":  2048 
-                        }],"genre": "posts","keywords": "Docker, Colima, Docker Compose, 容器, macOS, 虚拟化, Homebrew","wordcount":  3823 ,
+                        }],"genre": "posts","keywords": "Docker, Colima, Docker Compose, 容器, macOS, 虚拟化, Homebrew","wordcount":  4983 ,
         "url": "https:\/\/midaug.100180.xyz\/posts\/2026101001\/","datePublished": "2026-10-10T22:10:00+08:00","dateModified": "2026-10-10T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
@@ -132,8 +132,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Mac 上不装 Docker Desktop，用 Colima 跑 Docker</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/docker/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>Docker</a>&nbsp;<a href="/categories/%E5%AE%B9%E5%99%A8/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>容器</a>&nbsp;<a href="/categories/macos/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>MacOS</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;3823 words&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;8 minutes&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;4983 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;10 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>Contents</span>
@@ -141,46 +141,77 @@
                 </div>
                 <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
   <ul>
-    <li><a href="#起因">起因</a></li>
-    <li><a href="#选型几个方案摆一起看">选型：几个方案摆一起看</a></li>
-    <li><a href="#colima-是什么">Colima 是什么</a></li>
-    <li><a href="#安装">安装</a></li>
-    <li><a href="#创建虚拟机这条命令就是全部">创建虚拟机：这条命令就是全部</a></li>
-    <li><a href="#docker-compose-用不了怎么办">docker compose 用不了，怎么办</a>
+    <li><a href="#一前言">一、前言</a></li>
+    <li><a href="#二方案选型">二、方案选型</a>
       <ul>
-        <li><a href="#最省事直接用-docker-compose">最省事：直接用 docker-compose</a></li>
-        <li><a href="#如果确实要用带空格的-docker-compose">如果确实要用带空格的 docker compose</a></li>
+        <li><a href="#1-docker-desktop">1. Docker Desktop</a></li>
+        <li><a href="#2-orbstack">2. OrbStack</a></li>
+        <li><a href="#3-rancher-desktop">3. Rancher Desktop</a></li>
+        <li><a href="#4-podman">4. Podman</a></li>
+        <li><a href="#5-colima">5. Colima</a></li>
       </ul>
     </li>
-    <li><a href="#跑起来长什么样">跑起来长什么样</a></li>
-    <li><a href="#日常用法">日常用法</a>
+    <li><a href="#三colima-简介">三、Colima 简介</a></li>
+    <li><a href="#四安装">四、安装</a>
       <ul>
-        <li><a href="#起停和状态">起停和状态</a></li>
-        <li><a href="#改资源">改资源</a></li>
-        <li><a href="#挂载目录">挂载目录</a></li>
-        <li><a href="#端口和网络">端口和网络</a></li>
-        <li><a href="#多套环境用-profile">多套环境用 profile</a></li>
-        <li><a href="#换-containerd--nerdctl">换 containerd + nerdctl</a></li>
-        <li><a href="#顺手起个-k3s">顺手起个 k3s</a></li>
-        <li><a href="#进虚拟机">进虚拟机</a></li>
+        <li><a href="#1-安装命令行工具">1. 安装命令行工具</a></li>
+        <li><a href="#2-创建虚拟机">2. 创建虚拟机</a></li>
+        <li><a href="#3-资源参数">3. 资源参数</a></li>
+        <li><a href="#4-编辑配置">4. 编辑配置</a></li>
+        <li><a href="#5-验证">5. 验证</a></li>
       </ul>
     </li>
-    <li><a href="#踩坑记录">踩坑记录</a></li>
-    <li><a href="#卸载">卸载</a></li>
-    <li><a href="#最后">最后</a></li>
+    <li><a href="#五compose-命令">五、Compose 命令</a>
+      <ul>
+        <li><a href="#1-直接用-docker-compose">1. 直接用 docker-compose</a></li>
+        <li><a href="#2-注册为-cli-插件">2. 注册为 CLI 插件</a></li>
+      </ul>
+    </li>
+    <li><a href="#六私有镜像仓库">六、私有镜像仓库</a>
+      <ul>
+        <li><a href="#1-http-明文仓库">1. HTTP 明文仓库</a></li>
+        <li><a href="#2-自签证书的-https-仓库">2. 自签证书的 HTTPS 仓库</a></li>
+        <li><a href="#3-注意事项">3. 注意事项</a></li>
+      </ul>
+    </li>
+    <li><a href="#七日常操作">七、日常操作</a>
+      <ul>
+        <li><a href="#1-起停与状态">1. 起停与状态</a></li>
+        <li><a href="#2-调整资源">2. 调整资源</a></li>
+        <li><a href="#3-挂载目录">3. 挂载目录</a></li>
+        <li><a href="#4-端口与网络">4. 端口与网络</a></li>
+        <li><a href="#5-多套环境隔离">5. 多套环境隔离</a></li>
+        <li><a href="#6-切换-containerd-运行时">6. 切换 containerd 运行时</a></li>
+        <li><a href="#7-启用-k3s">7. 启用 k3s</a></li>
+        <li><a href="#8-进入虚拟机">8. 进入虚拟机</a></li>
+        <li><a href="#9-彻底删除">9. 彻底删除</a></li>
+      </ul>
+    </li>
+    <li><a href="#八常见问题">八、常见问题</a>
+      <ul>
+        <li><a href="#1-docker-compose-提示-unknown-command">1. docker compose 提示 unknown command</a></li>
+        <li><a href="#2-cannot-connect-to-the-docker-daemon">2. Cannot connect to the Docker daemon</a></li>
+        <li><a href="#3-启动时报虚拟化相关错误">3. 启动时报虚拟化相关错误</a></li>
+        <li><a href="#4-挂载的文件在容器里不更新">4. 挂载的文件在容器里不更新</a></li>
+      </ul>
+    </li>
+    <li><a href="#九卸载">九、卸载</a></li>
+    <li><a href="#十小结">十、小结</a></li>
   </ul>
 </nav></div>
-            </div><div class="content" id="content"><h2 id="起因">起因</h2>
-<p>公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少于 250 人<strong>且</strong>年营收低于 1000 万美元的小型企业；公司规模过了这条线，商业使用就得买订阅，政府单位同理。走采购流程麻烦，而且它本来就是个本地开发工具，不值得。</p>
-<p>机器内存也只有 16 GiB，Docker Desktop 那套常驻 GUI 加后台进程的开销，实话说有点浪费。</p>
+            </div><div class="content" id="content"><h2 id="一前言">一、前言</h2>
+<p>公司发的电脑，Docker Desktop 我一直没装。不是装不上，是不想碰授权这条线。</p>
+<p>Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围是个人使用、教育、非商业开源，以及员工少于 250 人<strong>且</strong>年营收低于 1000 万美元的小型企业。麻烦的地方在于：这是台公司设备，我虽然只是自己用（跑跑自己的项目、学点东西），但&quot;个人使用&quot;和&quot;公司使用&quot;在办公电脑上本来就是个模糊地带。真按公司使用算，大企业就得买订阅、走采购流程，为这点事不值当。</p>
+<p>机器内存也不宽裕（16 GiB），Docker Desktop 那套常驻 GUI 加后台进程的开销也不小。</p>
 <p>所以需求很明确：</p>
 <ol>
-<li><strong>免费</strong>，且公司商业使用也不违规</li>
+<li><strong>授权干净</strong>，个人在公司电脑上用不涉及任何授权问题</li>
 <li><strong>资源占用小</strong>，16 GiB 的机器得留够内存给 IDE 和浏览器</li>
 <li><strong>性能要好</strong>，构建和文件挂载不能拖后腿</li>
-<li><strong>原生兼容 <code>docker</code> 和 <code>docker compose</code> 命令</strong>，不想改脚本、改 CI</li>
+<li><strong>原生兼容 <code>docker</code> 和 <code>docker compose</code> 命令</strong>，不想改脚本、改习惯</li>
 </ol>
-<h2 id="选型几个方案摆一起看">选型：几个方案摆一起看</h2>
+<h2 id="二方案选型">二、方案选型</h2>
+<p>几个候选方案放一起对比：</p>
 <table>
 <thead>
 <tr>
@@ -194,17 +225,17 @@
 <tbody>
 <tr>
 <td>Docker Desktop</td>
-<td>大企业商业使用需付费</td>
+<td>个人免费，公司设备上归属模糊</td>
 <td>是</td>
 <td>重（GUI + 常驻进程）</td>
-<td>授权不合规，排除</td>
+<td>有合规风险，排除</td>
 </tr>
 <tr>
 <td>OrbStack</td>
-<td><strong>公司/商业使用需按人购买</strong></td>
+<td><strong>商业/公司使用需按人购买</strong></td>
 <td>是</td>
 <td>很轻</td>
-<td>性能最好，但要钱，排除</td>
+<td>同上，性能最好但有合规风险</td>
 </tr>
 <tr>
 <td>Rancher Desktop</td>
@@ -229,13 +260,17 @@
 </tr>
 </tbody>
 </table>
-<p>逐个说下排除理由。</p>
-<p><strong>Docker Desktop</strong> 是默认答案，兼容性最好，但在公司场景直接卡在授权上。</p>
-<p><strong>OrbStack</strong> 是这几个里性能最强的，启动快、占用低，但它同样不是免费的。官方授权页写得很清楚：freelancer、商业或非营利实体、政府实体，或者与 OrbStack 相关的工作年收入超过 1 万美元，都必须按用户购买授权；装完只有 30 天 Pro 试用，试用结束降级为&quot;个人使用&quot;。所以公司电脑上它和 Docker Desktop 是同一个问题。</p>
-<p><strong>Rancher Desktop</strong> 是 SUSE 开源的（Apache-2.0），免费，功能也全，内置 k3s，运行时能在 moby（dockerd）和 containerd 之间切。代价是它是个 Electron 桌面应用，GUI 和常驻开销比纯 CLI 方案大，对 16 GiB 的机器不算友好。</p>
-<p><strong>Podman</strong> 完全免费，无守护进程、rootless，安全性也好。问题是它的命令叫 <code>podman</code> 而不是 <code>docker</code>，compose 也是 <code>podman compose</code>，背后还要另装 provider。虽然可以配 alias 或 socket 兼容层，但&quot;原生兼容&quot;这条就打了折——团队脚本、CI、文档里全是 <code>docker xxx</code>，我不想在这上面花精力。</p>
-<p><strong>Colima</strong> 正好卡在这几条需求的交集上：MIT 协议，公司用也不违规；纯 CLI，没有 GUI 常驻进程；而且它不是&quot;模拟&quot; docker——它就是在虚拟机里跑了一个真的 dockerd，把 socket 暴露给宿主机，所以 <code>docker</code> 和 <code>docker compose</code> 完全原生，一个命令都不用改。</p>
-<h2 id="colima-是什么">Colima 是什么</h2>
+<h3 id="1-docker-desktop">1. Docker Desktop</h3>
+<p>默认答案，兼容性最好。授权上它其实给个人开了免费口子，但装在办公设备上归属说不清，没必要冒这个风险。</p>
+<h3 id="2-orbstack">2. OrbStack</h3>
+<p>这几个里性能最强的，启动快、占用低，但它同样不是免费的。官方授权页写得很清楚：freelancer、商业或非营利实体、政府实体，或者与 OrbStack 相关的工作年收入超过 1 万美元，都必须按用户购买授权；装完只有 30 天 Pro 试用，试用结束降级为&quot;个人使用&quot;。所以在公司设备上它和 Docker Desktop 是同一个问题。</p>
+<h3 id="3-rancher-desktop">3. Rancher Desktop</h3>
+<p>SUSE 开源的（Apache-2.0），免费，功能也全，内置 k3s，运行时能在 moby（dockerd）和 containerd 之间切。代价是它是个 Electron 桌面应用，GUI 和常驻开销比纯 CLI 方案大，对 16 GiB 的机器不算友好。</p>
+<h3 id="4-podman">4. Podman</h3>
+<p>完全免费，无守护进程、rootless，安全性也好。问题是它的命令叫 <code>podman</code> 而不是 <code>docker</code>，compose 也是 <code>podman compose</code>，背后还要另装 provider。虽然可以配 alias 或 socket 兼容层，但终究做不到原生兼容——平时看到的教程、文档、脚本里全是 <code>docker xxx</code>，我不想在这上面花精力。</p>
+<h3 id="5-colima">5. Colima</h3>
+<p>刚好满足这几条需求：MIT 协议，个人怎么用都不涉及授权问题；纯 CLI，没有 GUI 常驻进程；而且它不是&quot;模拟&quot; docker——它就是在虚拟机里跑了一个真的 dockerd，把 socket 暴露给宿主机，所以 <code>docker</code> 和 <code>docker compose</code> 完全原生，一个命令都不用改。</p>
+<h2 id="三colima-简介">三、Colima 简介</h2>
 <p>Colima 是 <strong>Co</strong>ntainers on <strong>Li</strong>ma 的缩写。它在 macOS 上借 Lima 起一个轻量 Linux 虚拟机，虚拟机里跑 dockerd，再把 Docker socket 暴露给宿主机的 <code>docker</code> 命令。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -248,7 +283,8 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>除了 Docker，运行时还能选 containerd（配 nerdctl）或 incus，顺手也能起一套 k3s。</p>
-<h2 id="安装">安装</h2>
+<h2 id="四安装">四、安装</h2>
+<h3 id="1-安装命令行工具">1. 安装命令行工具</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -260,11 +296,11 @@
 </div><p>四个包各管一摊：</p>
 <ul>
 <li><code>colima</code>：管理器，依赖 <code>lima</code></li>
-<li><code>docker</code>：<strong>只装 CLI，不带 daemon</strong>——这正是关键</li>
+<li><code>docker</code>：<strong>只装 CLI，不带 daemon</strong>，这正是关键</li>
 <li><code>docker-compose</code>：Compose v2</li>
 <li><code>docker-buildx</code>：构建插件，<code>brew install docker</code> 不会带上它，得单独装</li>
 </ul>
-<h2 id="创建虚拟机这条命令就是全部">创建虚拟机：这条命令就是全部</h2>
+<h3 id="2-创建虚拟机">2. 创建虚拟机</h3>
 <p>我创建时只用了这一条：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -274,7 +310,7 @@
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --cpu <span class="m">4</span> --memory <span class="m">8</span> --disk <span class="m">60</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>跑完之后，Colima 会把<strong>解析后的完整配置</strong>写进 <code>~/.colima/default/colima.yaml</code>。我这份是：</p>
+</div><p>跑完之后，Colima 会把解析后的完整配置写进 <code>~/.colima/default/colima.yaml</code>。我这份是：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -330,7 +366,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l">shared</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">interface</span><span class="p">:</span><span class="w"> </span><span class="l">en0</span><span class="w">
-</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">gatewayAddress</span><span class="p">:</span><span class="w"> </span><span class="m">192.168.5.2</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">gatewayAddress</span><span class="p">:</span><span class="w"> </span><span class="m">192.168.5.2</span><span class="w">   </span><span class="c"># Colima 默认值，虚拟机内部网段的网关</span><span class="w">
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><p>跟默认值对比，真正被我改掉的只有三项：</p>
@@ -361,12 +397,6 @@
 </tbody>
 </table>
 <p>其余全是默认值。<code>vmType: vz</code>（Apple 的虚拟化框架）、<code>mountType: virtiofs</code>（最快的挂载驱动）、<code>binfmt: true</code>（能直接跑 amd64 镜像）在 Apple Silicon + macOS 13 以上本来就是默认，所以命令行里不用写。</p>
-<p><strong>参数怎么给，几点经验：</strong></p>
-<ul>
-<li><strong>CPU</strong>：默认 2 核偏少，给 4 核，编译和并行跑容器都从容。</li>
-<li><strong>内存</strong>：默认 2 GiB 基本不够用，跑两个容器就开始吃紧。<strong>但别照抄 8 GiB</strong>——16 GiB 的机器分走一半后宿主机只剩 8 GiB，IDE 一开就紧张，建议给 4~6 GiB，把内存留给宿主机。</li>
-<li><strong>磁盘</strong>：默认 100 GiB，我设了 60。<strong>磁盘只能调大不能调小</strong>，官方注释写得很直白（<code>value can only be increased after virtual machine has been created</code>），所以一开始宁可给宽一点。</li>
-</ul>
 <p>有个细节要提醒：我这份配置里 <code>disk</code> 写的是 60，但进虚拟机看实际设备是 100 GiB：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -391,7 +421,14 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>因为磁盘只支持扩容、不支持缩容——<code>--disk</code> 如果是在虚拟机建好之后才补上的，它不会真的把盘改小。所以磁盘大小最好创建时一次定好，或者干脆别省，直接用默认的 100。</p>
-<p><strong>有些配置没法用命令行参数表达</strong>，比如 dockerd 的 daemon 配置、provision 脚本。这种情况用：</p>
+<h3 id="3-资源参数">3. 资源参数</h3>
+<ul>
+<li><strong>CPU</strong>：默认 2 核偏少，给 4 核，编译和并行跑容器都从容。</li>
+<li><strong>内存</strong>：默认 2 GiB 基本不够用，跑两个容器就开始吃紧，我给了 8 GiB。16 GiB 的机器这么分走一半后，宿主机还剩 8 GiB，同时开 IDE 和浏览器会有点紧；如果觉得吃力，退回 6 GiB 也够跑一般项目。</li>
+<li><strong>磁盘</strong>：默认 100 GiB，我设了 60。磁盘<strong>只能调大不能调小</strong>，官方注释写得很明确（<code>value can only be increased after virtual machine has been created</code>），所以一开始宁可给宽一点。</li>
+</ul>
+<h3 id="4-编辑配置">4. 编辑配置</h3>
+<p>有些配置没法用命令行参数表达，比如 dockerd 的 daemon 配置、provision 脚本。这种情况用：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -401,102 +438,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>它会打开 yaml，改完保存再启动。也可以直接编辑 <code>~/.colima/default/colima.yaml</code>，下次 start 生效。</p>
-<h2 id="docker-compose-用不了怎么办">docker compose 用不了，怎么办</h2>
-<p>装完 <code>docker run</code> 是好的，但 <code>docker compose</code>（带空格那个）会直接报错：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">$ docker compose version
-</span></span><span class="line"><span class="cl">docker: unknown command: docker compose
-</span></span><span class="line"><span class="cl">Run &#39;docker --help&#39; for more information
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>原因是 brew 装的 <code>docker-compose</code> 是 Docker CLI 的<strong>插件</strong>，它被放在 Homebrew 自己的插件目录里（<code>$(brew --prefix)/lib/docker/cli-plugins</code>），而 Docker CLI 默认不会去那里找。</p>
-<h3 id="最省事直接用-docker-compose">最省事：直接用 docker-compose</h3>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker-compose version
-</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>就是命令名多了个连字符，别的没差别。我比对过两者的 md5——brew 在插件目录里放的那个 <code>docker-compose</code>，本身就是指向 <code>bin/docker-compose</code> 的软链，<strong>同一个二进制、同一个版本</strong>：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/bin/docker-compose
-</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
-</span></span><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/lib/docker/cli-plugins/docker-compose
-</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>所以它不是&quot;旧版 Compose v1&quot;，就是正牌的 Compose v2：</p>
-<ul>
-<li>功能完全一致，<code>up</code> / <code>down</code> / <code>build</code> / <code>logs</code> 一个不少</li>
-<li>配置文件也完全通用，<code>docker-compose.yaml</code>、<code>docker-compose.yml</code>、<code>compose.yaml</code>、<code>compose.yml</code> 都能识别，内容格式一模一样</li>
-<li>现有脚本只要把 <code>docker compose xxx</code> 改成 <code>docker-compose xxx</code> 就能跑</li>
-</ul>
-<p>不配任何东西就能用，我一开始就是这么用的。</p>
-<h3 id="如果确实要用带空格的-docker-compose">如果确实要用带空格的 docker compose</h3>
-<p>团队里都在敲 <code>docker compose</code>、或者不想改脚本的话，把它注册成插件就行。两种方式我都实测过，都能生效。</p>
-<p><strong>方式一</strong>，告诉 Docker CLI 去 Homebrew 的插件目录找（Homebrew 官方推荐）：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span><span class="lnt">3
-</span><span class="lnt">4
-</span><span class="lnt">5
-</span><span class="lnt">6
-</span><span class="lnt">7
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
-</span></span><span class="line"><span class="cl">	<span class="nt">&#34;auths&#34;</span><span class="p">:</span> <span class="p">{},</span>
-</span></span><span class="line"><span class="cl">	<span class="nt">&#34;currentContext&#34;</span><span class="p">:</span> <span class="s2">&#34;colima&#34;</span><span class="p">,</span>
-</span></span><span class="line"><span class="cl">	<span class="nt">&#34;cliPluginsExtraDirs&#34;</span><span class="p">:</span> <span class="p">[</span>
-</span></span><span class="line"><span class="cl">		<span class="s2">&#34;/opt/homebrew/lib/docker/cli-plugins&#34;</span>
-</span></span><span class="line"><span class="cl">	<span class="p">]</span>
-</span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>注意是往已有的 <code>~/.docker/config.json</code> 里<strong>加</strong>一个字段，别整个覆盖。Apple Silicon 的 brew 前缀是 <code>/opt/homebrew</code>，Intel 机器是 <code>/usr/local</code>，用 <code>brew --prefix</code> 确认一下。</p>
-<p><strong>方式二</strong>，软链到用户级插件目录：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mkdir -p ~/.docker/cli-plugins
-</span></span><span class="line"><span class="cl">ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>改完验证：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span><span class="lnt">2
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker compose version
-</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p>这一步不是必须的——不做也能用 <code>docker-compose</code> 正常干活，功能没有任何差别。我平时就是直接用 <code>docker-compose</code>。</p>
-<h2 id="跑起来长什么样">跑起来长什么样</h2>
+<h3 id="5-验证">5. 验证</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -567,8 +509,230 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>客户端 29.8.0、服务端 29.5.2，版本不完全一致是正常的。</p>
-<h2 id="日常用法">日常用法</h2>
-<h3 id="起停和状态">起停和状态</h3>
+<h2 id="五compose-命令">五、Compose 命令</h2>
+<p>装完 <code>docker run</code> 是好的，但 <code>docker compose</code>（带空格那个）会直接报错：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">$ docker compose version
+</span></span><span class="line"><span class="cl">docker: unknown command: docker compose
+</span></span><span class="line"><span class="cl">Run &#39;docker --help&#39; for more information
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>原因是 brew 装的 <code>docker-compose</code> 是 Docker CLI 的插件，它被放在 Homebrew 自己的插件目录里（<code>$(brew --prefix)/lib/docker/cli-plugins</code>），而 Docker CLI 默认不会去那里找。</p>
+<h3 id="1-直接用-docker-compose">1. 直接用 docker-compose</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker-compose version
+</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>就是命令名多了个连字符，别的没差别。我比对过两者的 md5——brew 在插件目录里放的那个 <code>docker-compose</code>，本身就是指向 <code>bin/docker-compose</code> 的软链，同一个二进制、同一个版本：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/bin/docker-compose
+</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
+</span></span><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/lib/docker/cli-plugins/docker-compose
+</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以它不是&quot;旧版 Compose v1&quot;，就是正牌的 Compose v2：</p>
+<ul>
+<li>功能完全一致，<code>up</code> / <code>down</code> / <code>build</code> / <code>logs</code> 一个不少</li>
+<li>配置文件也完全通用，<code>docker-compose.yaml</code>、<code>docker-compose.yml</code>、<code>compose.yaml</code>、<code>compose.yml</code> 都能识别，内容格式一模一样</li>
+<li>现有脚本只要把 <code>docker compose xxx</code> 改成 <code>docker-compose xxx</code> 就能跑</li>
+</ul>
+<p>不配任何东西就能用，我一开始就是这么用的。</p>
+<h3 id="2-注册为-cli-插件">2. 注册为 CLI 插件</h3>
+<p>如果你更习惯带空格的写法，或者手上的脚本、文档里都是 <code>docker compose</code>，把它注册成插件就行。两种方式我都实测过，都能生效。</p>
+<p>方式一是告诉 Docker CLI 去 Homebrew 的插件目录找（Homebrew 官方推荐）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;auths&#34;</span><span class="p">:</span> <span class="p">{},</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;currentContext&#34;</span><span class="p">:</span> <span class="s2">&#34;colima&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;cliPluginsExtraDirs&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">		<span class="s2">&#34;/opt/homebrew/lib/docker/cli-plugins&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意是往已有的 <code>~/.docker/config.json</code> 里<strong>加</strong>一个字段，别整个覆盖。Apple Silicon 的 brew 前缀是 <code>/opt/homebrew</code>，Intel 机器是 <code>/usr/local</code>，用 <code>brew --prefix</code> 确认一下。</p>
+<p>方式二是软链到用户级插件目录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mkdir -p ~/.docker/cli-plugins
+</span></span><span class="line"><span class="cl">ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>改完验证：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker compose version
+</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这一步不是必须的。不做也能用 <code>docker-compose</code> 正常干活，功能没有任何差别，我平时就是直接用 <code>docker-compose</code>。</p>
+<h2 id="六私有镜像仓库">六、私有镜像仓库</h2>
+<p>公司内网一般都有自建的 registry。这里分两种情况，都要改 <code>colima.yaml</code>——Colima 没有对应的命令行参数。</p>
+<p>有个前提要先知道：<code>colima.yaml</code> 里的 <code>docker</code> 段会<strong>原样映射成虚拟机内的 <code>/etc/docker/daemon.json</code></strong>，所以 dockerd 层面的配置都写在这儿。</p>
+<h3 id="1-http-明文仓库">1. HTTP 明文仓库</h3>
+<p>内网私服图省事只开了 HTTP，docker 默认会拒绝（它要求 HTTPS），得显式声明这是&quot;不安全仓库&quot;。</p>
+<p>编辑 <code>~/.colima/default/colima.yaml</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">docker</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">insecure-registries</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span>- <span class="l">registry.example.com:5000</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>写 <code>域名:端口</code> 或 <code>IP:端口</code>，<strong>端口不能省</strong>。<code>colima.yaml</code> 自带的注释里给的也是同样的示例。</p>
+<p>改完重启生效：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima restart
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>验证有两种方式：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker info <span class="p">|</span> grep -A3 <span class="s2">&#34;Insecure Registries&#34;</span>
+</span></span><span class="line"><span class="cl"> Insecure Registries:
+</span></span><span class="line"><span class="cl">  registry.example.com:5000
+</span></span><span class="line"><span class="cl">  127.0.0.0/8
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 或者直接看虚拟机里的实际配置</span>
+</span></span><span class="line"><span class="cl">$ colima ssh -- sudo cat /etc/docker/daemon.json
+</span></span><span class="line"><span class="cl"><span class="o">{</span>
+</span></span><span class="line"><span class="cl">  <span class="s2">&#34;insecure-registries&#34;</span>: <span class="o">[</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;registry.example.com:5000&#34;</span>
+</span></span><span class="line"><span class="cl">  <span class="o">]</span>
+</span></span><span class="line"><span class="cl"><span class="o">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>之后拉取和登录就正常了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker pull registry.example.com:5000/library/nginx:alpine
+</span></span><span class="line"><span class="cl">docker login registry.example.com:5000
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="2-自签证书的-https-仓库">2. 自签证书的 HTTPS 仓库</h3>
+<p>如果私服上了 TLS，但证书是自签的，<code>docker pull</code> 会报：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">x509: certificate signed by unknown authority
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这种情况不要拿 <code>insecure-registries</code> 绕过去，那等于放弃证书校验。正确做法是把 CA 装进虚拟机。</p>
+<p>按 Docker 官方文档，Linux 上的 dockerd 会从 <code>/etc/docker/certs.d/&lt;仓库地址&gt;/</code> 读自定义 CA：目录名就是仓库的 <code>host:port</code>，里面的 <code>*.crt</code> 会被当作根证书。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">/etc/docker/certs.d/
+</span></span><span class="line"><span class="cl">└── registry.example.com:5000
+</span></span><span class="line"><span class="cl">    └── ca.crt          # 签发该仓库证书的根 CA（PEM）
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>后缀要留意：<code>.crt</code> 才会被当成 CA 根证书，写成 <code>.cert</code> 会被误判为客户端证书然后报错。</p>
+<p>虚拟机里的文件改了不持久，重建就没了，所以用 <code>provision</code> 脚本——它在每次启动时执行，因此要写成幂等的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">provision</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l">system</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="p">|</span><span class="sd">
+</span></span></span><span class="line"><span class="cl"><span class="sd">      set -e
+</span></span></span><span class="line"><span class="cl"><span class="sd">      mkdir -p /etc/docker/certs.d/registry.example.com:5000
+</span></span></span><span class="line"><span class="cl"><span class="sd">      cp /Users/&lt;你的用户名&gt;/certs/ca.crt \
+</span></span></span><span class="line"><span class="cl"><span class="sd">         /etc/docker/certs.d/registry.example.com:5000/ca.crt</span><span class="w">      
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>$HOME</code> 默认已经挂进虚拟机了，把 <code>ca.crt</code> 放在宿主机家目录（比如 <code>~/certs/ca.crt</code>），脚本里引用挂载后的路径即可。改完 <code>colima restart</code>。</p>
+<blockquote>
+<p>顺带一提：Docker Desktop 的文档明确要求不要在虚拟机里配 <code>/etc/docker/certs.d</code>，而要用宿主机的 <code>~/.docker/certs.d</code>。Colima 不一样——它虚拟机里跑的是标准 Linux dockerd，所以 <code>/etc/docker/certs.d/</code> 才是正确位置。</p>
+</blockquote>
+<h3 id="3-注意事项">3. 注意事项</h3>
+<ul>
+<li><code>insecure-registries</code> 只是让 docker 跳过 TLS 校验，<strong>不等于免认证</strong>，该 <code>docker login</code> 还是要登录。</li>
+<li>登录凭据存在<strong>宿主机</strong>的 <code>~/.docker/config.json</code> 里，不在虚拟机内。</li>
+<li>如果是公司统一的内部 CA（而不是单台自签），用 provision 把 CA 装进去，比逐个加 insecure 干净得多。</li>
+<li>换成 containerd 运行时（<code>--runtime containerd</code>）时配置方式不同，要写 containerd 的 <code>hosts.toml</code>，这里不展开。</li>
+</ul>
+<h2 id="七日常操作">七、日常操作</h2>
+<h3 id="1-起停与状态">1. 起停与状态</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -585,17 +749,7 @@
 </span></span><span class="line"><span class="cl">colima list        <span class="c1"># 别名 ls</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>彻底删掉重来：</p>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt">1
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima delete --data --force
-</span></span></code></pre></td></tr></table>
-</div>
-</div><p><code>--data</code> 连镜像和容器一起清，<code>--force</code> 跳过确认。这两个一起用之前心里要有数，删了就真没了。</p>
-<h3 id="改资源">改资源</h3>
+</div><h3 id="2-调整资源">2. 调整资源</h3>
 <p>只能先停再改：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -608,7 +762,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>CPU 和内存随便调，磁盘只能往上加。</p>
-<h3 id="挂载目录">挂载目录</h3>
+<h3 id="3-挂载目录">3. 挂载目录</h3>
 <p>默认会把 <code>$HOME</code> 和 <code>/tmp/colima</code> 挂进去，容器里能直接访问你的代码目录。要额外挂别的：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -618,8 +772,8 @@
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --mount ~/work:w     <span class="c1"># :w 表示可写</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>我平时用默认的就够。</p>
-<h3 id="端口和网络">端口和网络</h3>
+</div><p>我平时用默认的挂载就够。</p>
+<h3 id="4-端口与网络">4. 端口与网络</h3>
 <p>容器映射到宿主机的端口默认就能访问，不用额外配。要让虚拟机在局域网里有独立 IP：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -638,7 +792,7 @@
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --dns 223.5.5.5 --dns 1.1.1.1
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="多套环境用-profile">多套环境用 profile</h3>
+</div><h3 id="5-多套环境隔离">5. 多套环境隔离</h3>
 <p>想同时跑两套互不干扰的环境，用 profile：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -655,7 +809,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>每个 profile 是独立的虚拟机和 socket。</p>
-<h3 id="换-containerd--nerdctl">换 containerd + nerdctl</h3>
+<h3 id="6-切换-containerd-运行时">6. 切换 containerd 运行时</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -668,7 +822,7 @@
 </span></span><span class="line"><span class="cl">nerdctl run hello-world
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h3 id="顺手起个-k3s">顺手起个 k3s</h3>
+</div><h3 id="7-启用-k3s">7. 启用 k3s</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -682,7 +836,7 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>管理命令：<code>colima kubernetes start|stop|reset|delete</code>。</p>
-<h3 id="进虚拟机">进虚拟机</h3>
+<h3 id="8-进入虚拟机">8. 进入虚拟机</h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -693,9 +847,22 @@
 </span></span><span class="line"><span class="cl">colima ssh -- htop     <span class="c1"># 直接执行命令</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="踩坑记录">踩坑记录</h2>
-<p><strong>docker compose 用不了</strong> —— 前面说过。直接用 <code>docker-compose</code> 就行，两者是同一个二进制；想用带空格的，按上面注册插件。</p>
-<p><strong>Cannot connect to the Docker daemon</strong> —— 十有八九是虚拟机没起来，或者 context 跑偏：</p>
+</div><h3 id="9-彻底删除">9. 彻底删除</h3>
+<p><code>--data</code> 连镜像和容器一起清，<code>--force</code> 跳过确认：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima delete --data --force
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>两个参数一起用要谨慎，删掉就恢复不了。</p>
+<h2 id="八常见问题">八、常见问题</h2>
+<h3 id="1-docker-compose-提示-unknown-command">1. docker compose 提示 unknown command</h3>
+<p>直接用 <code>docker-compose</code> 就行，两者是同一个二进制；想用带空格的写法，按上面注册插件。</p>
+<h3 id="2-cannot-connect-to-the-docker-daemon">2. Cannot connect to the Docker daemon</h3>
+<p>多半是虚拟机没起来，或者 context 跑偏：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -706,7 +873,8 @@
 </span></span><span class="line"><span class="cl">docker context use colima
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p><strong>起不来，报虚拟化相关的错</strong> —— 换个 VM 类型试试：</p>
+</div><h3 id="3-启动时报虚拟化相关错误">3. 启动时报虚拟化相关错误</h3>
+<p>换个 VM 类型试试：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -717,7 +885,8 @@
 </span></span><span class="line"><span class="cl">colima start --vm-type qemu    <span class="c1"># 兼容性更好，慢一些</span>
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p><strong>挂载的文件改了容器里不更新</strong> —— 开一下 inotify：</p>
+</div><h3 id="4-挂载的文件在容器里不更新">4. 挂载的文件在容器里不更新</h3>
+<p>开一下 inotify：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -726,7 +895,7 @@
 <pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --mount-inotify
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="卸载">卸载</h2>
+</div><h2 id="九卸载">九、卸载</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -739,9 +908,9 @@
 </span></span><span class="line"><span class="cl">brew uninstall colima docker docker-compose docker-buildx
 </span></span></code></pre></td></tr></table>
 </div>
-</div><h2 id="最后">最后</h2>
-<p>换成 Colima 之后，<code>docker</code> 命令照旧，compose 用 <code>docker-compose</code>（或者按上面的方式注册一下，让 <code>docker compose</code> 也能用），公司合规问题没了，机器上也少了一个常驻的 GUI 应用。</p>
-<p>16 GiB 的机器上，把内存参数往下调一点、CPU 给 4 核，日常开发完全够用。团队用的话，把 <code>colima.yaml</code> 一起提交，新同事 clone 下来 <code>colima start --edit</code> 就能对齐环境，省得口头描述配置。</p>
+</div><h2 id="十小结">十、小结</h2>
+<p>换成 Colima 之后，<code>docker</code> 命令照旧，compose 用 <code>docker-compose</code>（或者按上面的方式注册一下，让 <code>docker compose</code> 也能用），授权上的顾虑没了，机器上也少了一个常驻的 GUI 应用。</p>
+<p>纯 CLI、没有 GUI、配置就是一份 YAML。16 GiB 的机器给 8 GiB 内存、4 核 CPU，自己跑跑容器完全够用。</p>
 </div><div class="post-footer" id="post-footer">
     <div class="post-info">
         <div class="post-info-line">
