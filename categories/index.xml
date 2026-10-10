@@ -4,7 +4,31 @@
         <link>https://midaug.100180.xyz/categories/</link>
         <description>Categories - Category - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/categories/" rel="self" type="application/rss+xml" /><item>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/categories/" rel="self" type="application/rss+xml" /><item>
+    <title>Docker</title>
+    <link>https://midaug.100180.xyz/categories/docker/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/categories/docker/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>MacOS</title>
+    <link>https://midaug.100180.xyz/categories/macos/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/categories/macos/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>容器</title>
+    <link>https://midaug.100180.xyz/categories/%E5%AE%B9%E5%99%A8/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/categories/%E5%AE%B9%E5%99%A8/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
     <title>AI</title>
     <link>https://midaug.100180.xyz/categories/ai/</link>
     <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
@@ -58,30 +82,6 @@
     <pubDate>Tue, 21 Dec 2021 18:11:33 &#43;0000</pubDate>
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/categories/nginx/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>博文收藏</title>
-    <link>https://midaug.100180.xyz/categories/%E5%8D%9A%E6%96%87%E6%94%B6%E8%97%8F/</link>
-    <pubDate>Tue, 16 Nov 2021 10:33:33 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/categories/%E5%8D%9A%E6%96%87%E6%94%B6%E8%97%8F/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>RabbitMQ</title>
-    <link>https://midaug.100180.xyz/categories/rabbitmq/</link>
-    <pubDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/categories/rabbitmq/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>中间件</title>
-    <link>https://midaug.100180.xyz/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/</link>
-    <pubDate>Tue, 23 Jul 2019 00:00:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/</guid>
     <description><![CDATA[]]></description>
 </item>
 </channel>

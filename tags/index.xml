@@ -4,7 +4,63 @@
         <link>https://midaug.100180.xyz/tags/</link>
         <description>Tags - Tag - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/" rel="self" type="application/rss+xml" /><item>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/" rel="self" type="application/rss+xml" /><item>
+    <title>Colima</title>
+    <link>https://midaug.100180.xyz/tags/colima/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/colima/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Docker</title>
+    <link>https://midaug.100180.xyz/tags/docker/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/docker/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Docker Compose</title>
+    <link>https://midaug.100180.xyz/tags/docker-compose/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/docker-compose/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Homebrew</title>
+    <link>https://midaug.100180.xyz/tags/homebrew/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/homebrew/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>MacOS</title>
+    <link>https://midaug.100180.xyz/tags/macos/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/macos/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>容器</title>
+    <link>https://midaug.100180.xyz/tags/%E5%AE%B9%E5%99%A8/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E5%AE%B9%E5%99%A8/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>虚拟化</title>
+    <link>https://midaug.100180.xyz/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
     <title>AI</title>
     <link>https://midaug.100180.xyz/tags/ai/</link>
     <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
@@ -26,62 +82,6 @@
     <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/tags/prompt/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>提示词工程</title>
-    <link>https://midaug.100180.xyz/tags/%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%B7%A5%E7%A8%8B/</link>
-    <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%B7%A5%E7%A8%8B/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>SSH</title>
-    <link>https://midaug.100180.xyz/tags/ssh/</link>
-    <pubDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/ssh/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Tunnel</title>
-    <link>https://midaug.100180.xyz/tags/tunnel/</link>
-    <pubDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/tunnel/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>端口转发</title>
-    <link>https://midaug.100180.xyz/tags/%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91/</link>
-    <pubDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>网络</title>
-    <link>https://midaug.100180.xyz/tags/%E7%BD%91%E7%BB%9C/</link>
-    <pubDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/%E7%BD%91%E7%BB%9C/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Css</title>
-    <link>https://midaug.100180.xyz/tags/css/</link>
-    <pubDate>Wed, 04 Jan 2023 21:11:33 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/css/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Git</title>
-    <link>https://midaug.100180.xyz/tags/git/</link>
-    <pubDate>Tue, 30 Aug 2022 21:11:33 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/git/</guid>
     <description><![CDATA[]]></description>
 </item>
 </channel>

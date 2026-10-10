@@ -1,0 +1,16 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>Docker - Tag - MidAug&#39;s  Blog</title>
+        <link>https://midaug.100180.xyz/tags/docker/</link>
+        <description>Docker - Tag - MidAug&#39;s  Blog</description>
+        <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/docker/" rel="self" type="application/rss+xml" /><item>
+    <title>Mac 上不装 Docker Desktop，用 Colima 跑 Docker</title>
+    <link>https://midaug.100180.xyz/posts/2026101001/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/posts/2026101001/</guid>
+    <description><![CDATA[起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少]]></description>
+</item>
+</channel>
+</rss>

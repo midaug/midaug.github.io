@@ -4,9 +4,17 @@
         <link>https://midaug.100180.xyz/</link>
         <description>MidAug blog java docker hugo</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</lastBuildDate>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</lastBuildDate>
             <atom:link href="https://midaug.100180.xyz/index.xml" rel="self" type="application/rss+xml" />
         <item>
+    <title>Mac 上不装 Docker Desktop，用 Colima 跑 Docker</title>
+    <link>https://midaug.100180.xyz/posts/2026101001/</link>
+    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/posts/2026101001/</guid>
+    <description><![CDATA[起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少]]></description>
+</item>
+<item>
     <title>AI大模型Prompt调优实战指南</title>
     <link>https://midaug.100180.xyz/posts/2026062302/</link>
     <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
@@ -77,14 +85,6 @@
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/posts/20190723/</guid>
     <description><![CDATA[RabbitMQ简介 以熟悉的电商场景为例，如果商品服务和订单服务是两个不同的微服务，在下单的过程中订单服务需要调用商品服务进行扣库存操作。按]]></description>
-</item>
-<item>
-    <title>Nginx作为文件下载服务器</title>
-    <link>https://midaug.100180.xyz/posts/20190615/</link>
-    <pubDate>Sat, 15 Jun 2019 00:00:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/posts/20190615/</guid>
-    <description><![CDATA[Nginx conf 配置 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 server { listen 80; server_name 10.43.0.0; #charset koi8-r; #access_log /var/log/nginx/log/host.access.log main; location / { root /usr/share/nginx/html; index index.html index.htm; } #error_page 404 /404.html; # redirect server error pages to the]]></description>
 </item>
 </channel>
 </rss>

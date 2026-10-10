@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>Mac 上不装 Docker Desktop，用 Colima 跑 Docker - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/2026101001/">
+  <meta property="og:site_name" content="MidAug&#39;s  Blog">
+  <meta property="og:title" content="Mac 上不装 Docker Desktop，用 Colima 跑 Docker">
+  <meta property="og:description" content="起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+  <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-10-10T22:10:00+08:00">
+    <meta property="article:modified_time" content="2026-10-10T22:10:00+08:00">
+    <meta property="article:tag" content="Docker">
+    <meta property="article:tag" content="Colima">
+    <meta property="article:tag" content="Docker Compose">
+    <meta property="article:tag" content="容器">
+    <meta property="article:tag" content="MacOS">
+    <meta property="article:tag" content="虚拟化">
+    <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="Mac 上不装 Docker Desktop，用 Colima 跑 Docker">
+<meta name="twitter:description" content="起因 公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少">
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://midaug.100180.xyz/posts/2026101001/" /><link rel="prev" href="https://midaug.100180.xyz/posts/2026062302/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript>
+    <link rel="stylesheet" href="/css/custom.css">
+<script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Mac 上不装 Docker Desktop，用 Colima 跑 Docker",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/midaug.100180.xyz\/posts\/2026101001\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "Docker, Colima, Docker Compose, 容器, macOS, 虚拟化, Homebrew","wordcount":  3823 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/2026101001\/","datePublished": "2026-10-10T22:10:00+08:00","dateModified": "2026-10-10T22:10:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Mac 上不装 Docker Desktop，用 Colima 跑 Docker</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/docker/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>Docker</a>&nbsp;<a href="/categories/%E5%AE%B9%E5%99%A8/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>容器</a>&nbsp;<a href="/categories/macos/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>MacOS</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;3823 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;8 minutes&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#起因">起因</a></li>
+    <li><a href="#选型几个方案摆一起看">选型：几个方案摆一起看</a></li>
+    <li><a href="#colima-是什么">Colima 是什么</a></li>
+    <li><a href="#安装">安装</a></li>
+    <li><a href="#创建虚拟机这条命令就是全部">创建虚拟机：这条命令就是全部</a></li>
+    <li><a href="#docker-compose-用不了怎么办">docker compose 用不了，怎么办</a>
+      <ul>
+        <li><a href="#最省事直接用-docker-compose">最省事：直接用 docker-compose</a></li>
+        <li><a href="#如果确实要用带空格的-docker-compose">如果确实要用带空格的 docker compose</a></li>
+      </ul>
+    </li>
+    <li><a href="#跑起来长什么样">跑起来长什么样</a></li>
+    <li><a href="#日常用法">日常用法</a>
+      <ul>
+        <li><a href="#起停和状态">起停和状态</a></li>
+        <li><a href="#改资源">改资源</a></li>
+        <li><a href="#挂载目录">挂载目录</a></li>
+        <li><a href="#端口和网络">端口和网络</a></li>
+        <li><a href="#多套环境用-profile">多套环境用 profile</a></li>
+        <li><a href="#换-containerd--nerdctl">换 containerd + nerdctl</a></li>
+        <li><a href="#顺手起个-k3s">顺手起个 k3s</a></li>
+        <li><a href="#进虚拟机">进虚拟机</a></li>
+      </ul>
+    </li>
+    <li><a href="#踩坑记录">踩坑记录</a></li>
+    <li><a href="#卸载">卸载</a></li>
+    <li><a href="#最后">最后</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="起因">起因</h2>
+<p>公司电脑，Docker Desktop 用不了——不是装不上，是不合规。Docker Desktop 走 Docker Subscription Service Agreement 授权，免费范围只有个人使用、教育、非商业开源，以及员工少于 250 人<strong>且</strong>年营收低于 1000 万美元的小型企业；公司规模过了这条线，商业使用就得买订阅，政府单位同理。走采购流程麻烦，而且它本来就是个本地开发工具，不值得。</p>
+<p>机器内存也只有 16 GiB，Docker Desktop 那套常驻 GUI 加后台进程的开销，实话说有点浪费。</p>
+<p>所以需求很明确：</p>
+<ol>
+<li><strong>免费</strong>，且公司商业使用也不违规</li>
+<li><strong>资源占用小</strong>，16 GiB 的机器得留够内存给 IDE 和浏览器</li>
+<li><strong>性能要好</strong>，构建和文件挂载不能拖后腿</li>
+<li><strong>原生兼容 <code>docker</code> 和 <code>docker compose</code> 命令</strong>，不想改脚本、改 CI</li>
+</ol>
+<h2 id="选型几个方案摆一起看">选型：几个方案摆一起看</h2>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>授权</th>
+<th>原生 docker/compose</th>
+<th>资源占用</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker Desktop</td>
+<td>大企业商业使用需付费</td>
+<td>是</td>
+<td>重（GUI + 常驻进程）</td>
+<td>授权不合规，排除</td>
+</tr>
+<tr>
+<td>OrbStack</td>
+<td><strong>公司/商业使用需按人购买</strong></td>
+<td>是</td>
+<td>很轻</td>
+<td>性能最好，但要钱，排除</td>
+</tr>
+<tr>
+<td>Rancher Desktop</td>
+<td>Apache-2.0，免费</td>
+<td>可切到 moby（dockerd）</td>
+<td>中（Electron GUI）</td>
+<td>可用，GUI 偏重</td>
+</tr>
+<tr>
+<td>Podman</td>
+<td>Apache-2.0，免费</td>
+<td>否，命令是 <code>podman</code> / <code>podman compose</code></td>
+<td>轻</td>
+<td>免费但兼容性打折</td>
+</tr>
+<tr>
+<td><strong>Colima</strong></td>
+<td><strong>MIT，完全免费</strong></td>
+<td><strong>是（跑的就是 dockerd）</strong></td>
+<td><strong>轻（纯 CLI）</strong></td>
+<td><strong>选它</strong></td>
+</tr>
+</tbody>
+</table>
+<p>逐个说下排除理由。</p>
+<p><strong>Docker Desktop</strong> 是默认答案，兼容性最好，但在公司场景直接卡在授权上。</p>
+<p><strong>OrbStack</strong> 是这几个里性能最强的，启动快、占用低，但它同样不是免费的。官方授权页写得很清楚：freelancer、商业或非营利实体、政府实体，或者与 OrbStack 相关的工作年收入超过 1 万美元，都必须按用户购买授权；装完只有 30 天 Pro 试用，试用结束降级为&quot;个人使用&quot;。所以公司电脑上它和 Docker Desktop 是同一个问题。</p>
+<p><strong>Rancher Desktop</strong> 是 SUSE 开源的（Apache-2.0），免费，功能也全，内置 k3s，运行时能在 moby（dockerd）和 containerd 之间切。代价是它是个 Electron 桌面应用，GUI 和常驻开销比纯 CLI 方案大，对 16 GiB 的机器不算友好。</p>
+<p><strong>Podman</strong> 完全免费，无守护进程、rootless，安全性也好。问题是它的命令叫 <code>podman</code> 而不是 <code>docker</code>，compose 也是 <code>podman compose</code>，背后还要另装 provider。虽然可以配 alias 或 socket 兼容层，但&quot;原生兼容&quot;这条就打了折——团队脚本、CI、文档里全是 <code>docker xxx</code>，我不想在这上面花精力。</p>
+<p><strong>Colima</strong> 正好卡在这几条需求的交集上：MIT 协议，公司用也不违规；纯 CLI，没有 GUI 常驻进程；而且它不是&quot;模拟&quot; docker——它就是在虚拟机里跑了一个真的 dockerd，把 socket 暴露给宿主机，所以 <code>docker</code> 和 <code>docker compose</code> 完全原生，一个命令都不用改。</p>
+<h2 id="colima-是什么">Colima 是什么</h2>
+<p>Colima 是 <strong>Co</strong>ntainers on <strong>Li</strong>ma 的缩写。它在 macOS 上借 Lima 起一个轻量 Linux 虚拟机，虚拟机里跑 dockerd，再把 Docker socket 暴露给宿主机的 <code>docker</code> 命令。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">macOS 主机                          Colima 虚拟机
+</span></span><span class="line"><span class="cl">docker CLI / docker compose ─socket─▶ dockerd / 容器 / 镜像
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>除了 Docker，运行时还能选 containerd（配 nerdctl）或 incus，顺手也能起一套 k3s。</p>
+<h2 id="安装">安装</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">brew install colima docker docker-compose docker-buildx
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>四个包各管一摊：</p>
+<ul>
+<li><code>colima</code>：管理器，依赖 <code>lima</code></li>
+<li><code>docker</code>：<strong>只装 CLI，不带 daemon</strong>——这正是关键</li>
+<li><code>docker-compose</code>：Compose v2</li>
+<li><code>docker-buildx</code>：构建插件，<code>brew install docker</code> 不会带上它，得单独装</li>
+</ul>
+<h2 id="创建虚拟机这条命令就是全部">创建虚拟机：这条命令就是全部</h2>
+<p>我创建时只用了这一条：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --cpu <span class="m">4</span> --memory <span class="m">8</span> --disk <span class="m">60</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>跑完之后，Colima 会把<strong>解析后的完整配置</strong>写进 <code>~/.colima/default/colima.yaml</code>。我这份是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="m">4</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="m">8</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">disk</span><span class="p">:</span><span class="w"> </span><span class="m">60</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">arch</span><span class="p">:</span><span class="w"> </span><span class="l">aarch64</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l">docker</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">hostname</span><span class="p">:</span><span class="w"> </span><span class="l">colima</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">vmType</span><span class="p">:</span><span class="w"> </span><span class="l">vz</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">mountType</span><span class="p">:</span><span class="w"> </span><span class="l">virtiofs</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">portForwarder</span><span class="p">:</span><span class="w"> </span><span class="l">ssh</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">rosetta</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">binfmt</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">nestedVirtualization</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">mountInotify</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">autoActivate</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">rootDisk</span><span class="p">:</span><span class="w"> </span><span class="m">20</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">sshConfig</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">sshPort</span><span class="p">:</span><span class="w"> </span><span class="m">0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">mounts</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">provision</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">kubernetes</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="nt">network</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l">shared</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">interface</span><span class="p">:</span><span class="w"> </span><span class="l">en0</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">gatewayAddress</span><span class="p">:</span><span class="w"> </span><span class="m">192.168.5.2</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>跟默认值对比，真正被我改掉的只有三项：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>默认</th>
+<th>我设的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cpu</td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>2</td>
+<td>8</td>
+</tr>
+<tr>
+<td>disk</td>
+<td>100</td>
+<td>60</td>
+</tr>
+</tbody>
+</table>
+<p>其余全是默认值。<code>vmType: vz</code>（Apple 的虚拟化框架）、<code>mountType: virtiofs</code>（最快的挂载驱动）、<code>binfmt: true</code>（能直接跑 amd64 镜像）在 Apple Silicon + macOS 13 以上本来就是默认，所以命令行里不用写。</p>
+<p><strong>参数怎么给，几点经验：</strong></p>
+<ul>
+<li><strong>CPU</strong>：默认 2 核偏少，给 4 核，编译和并行跑容器都从容。</li>
+<li><strong>内存</strong>：默认 2 GiB 基本不够用，跑两个容器就开始吃紧。<strong>但别照抄 8 GiB</strong>——16 GiB 的机器分走一半后宿主机只剩 8 GiB，IDE 一开就紧张，建议给 4~6 GiB，把内存留给宿主机。</li>
+<li><strong>磁盘</strong>：默认 100 GiB，我设了 60。<strong>磁盘只能调大不能调小</strong>，官方注释写得很直白（<code>value can only be increased after virtual machine has been created</code>），所以一开始宁可给宽一点。</li>
+</ul>
+<p>有个细节要提醒：我这份配置里 <code>disk</code> 写的是 60，但进虚拟机看实际设备是 100 GiB：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ colima ssh -- lsblk
+</span></span><span class="line"><span class="cl">NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+</span></span><span class="line"><span class="cl">vda     253:0    <span class="m">0</span>   20G  <span class="m">0</span> disk
+</span></span><span class="line"><span class="cl">├─vda1  253:1    <span class="m">0</span>   19G  <span class="m">0</span> part /
+</span></span><span class="line"><span class="cl">├─vda15 253:15   <span class="m">0</span>   99M  <span class="m">0</span> part /boot/efi
+</span></span><span class="line"><span class="cl">└─vda16 259:0    <span class="m">0</span>  923M  <span class="m">0</span> part /boot
+</span></span><span class="line"><span class="cl">vdb     253:16   <span class="m">0</span>  100G  <span class="m">0</span> disk
+</span></span><span class="line"><span class="cl">└─vdb1  253:17   <span class="m">0</span>  100G  <span class="m">0</span> part /var/lib/docker
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为磁盘只支持扩容、不支持缩容——<code>--disk</code> 如果是在虚拟机建好之后才补上的，它不会真的把盘改小。所以磁盘大小最好创建时一次定好，或者干脆别省，直接用默认的 100。</p>
+<p><strong>有些配置没法用命令行参数表达</strong>，比如 dockerd 的 daemon 配置、provision 脚本。这种情况用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --edit
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>它会打开 yaml，改完保存再启动。也可以直接编辑 <code>~/.colima/default/colima.yaml</code>，下次 start 生效。</p>
+<h2 id="docker-compose-用不了怎么办">docker compose 用不了，怎么办</h2>
+<p>装完 <code>docker run</code> 是好的，但 <code>docker compose</code>（带空格那个）会直接报错：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">$ docker compose version
+</span></span><span class="line"><span class="cl">docker: unknown command: docker compose
+</span></span><span class="line"><span class="cl">Run &#39;docker --help&#39; for more information
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>原因是 brew 装的 <code>docker-compose</code> 是 Docker CLI 的<strong>插件</strong>，它被放在 Homebrew 自己的插件目录里（<code>$(brew --prefix)/lib/docker/cli-plugins</code>），而 Docker CLI 默认不会去那里找。</p>
+<h3 id="最省事直接用-docker-compose">最省事：直接用 docker-compose</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker-compose version
+</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>就是命令名多了个连字符，别的没差别。我比对过两者的 md5——brew 在插件目录里放的那个 <code>docker-compose</code>，本身就是指向 <code>bin/docker-compose</code> 的软链，<strong>同一个二进制、同一个版本</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/bin/docker-compose
+</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
+</span></span><span class="line"><span class="cl">$ md5 -q /opt/homebrew/Cellar/docker-compose/5.5.1/lib/docker/cli-plugins/docker-compose
+</span></span><span class="line"><span class="cl">dccdcf38cd7fff7f229d3a1748b74126
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以它不是&quot;旧版 Compose v1&quot;，就是正牌的 Compose v2：</p>
+<ul>
+<li>功能完全一致，<code>up</code> / <code>down</code> / <code>build</code> / <code>logs</code> 一个不少</li>
+<li>配置文件也完全通用，<code>docker-compose.yaml</code>、<code>docker-compose.yml</code>、<code>compose.yaml</code>、<code>compose.yml</code> 都能识别，内容格式一模一样</li>
+<li>现有脚本只要把 <code>docker compose xxx</code> 改成 <code>docker-compose xxx</code> 就能跑</li>
+</ul>
+<p>不配任何东西就能用，我一开始就是这么用的。</p>
+<h3 id="如果确实要用带空格的-docker-compose">如果确实要用带空格的 docker compose</h3>
+<p>团队里都在敲 <code>docker compose</code>、或者不想改脚本的话，把它注册成插件就行。两种方式我都实测过，都能生效。</p>
+<p><strong>方式一</strong>，告诉 Docker CLI 去 Homebrew 的插件目录找（Homebrew 官方推荐）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;auths&#34;</span><span class="p">:</span> <span class="p">{},</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;currentContext&#34;</span><span class="p">:</span> <span class="s2">&#34;colima&#34;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">	<span class="nt">&#34;cliPluginsExtraDirs&#34;</span><span class="p">:</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">		<span class="s2">&#34;/opt/homebrew/lib/docker/cli-plugins&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意是往已有的 <code>~/.docker/config.json</code> 里<strong>加</strong>一个字段，别整个覆盖。Apple Silicon 的 brew 前缀是 <code>/opt/homebrew</code>，Intel 机器是 <code>/usr/local</code>，用 <code>brew --prefix</code> 确认一下。</p>
+<p><strong>方式二</strong>，软链到用户级插件目录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mkdir -p ~/.docker/cli-plugins
+</span></span><span class="line"><span class="cl">ln -sfn /opt/homebrew/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>改完验证：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker compose version
+</span></span><span class="line"><span class="cl">Docker Compose version 5.5.1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这一步不是必须的——不做也能用 <code>docker-compose</code> 正常干活，功能没有任何差别。我平时就是直接用 <code>docker-compose</code>。</p>
+<h2 id="跑起来长什么样">跑起来长什么样</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ colima list
+</span></span><span class="line"><span class="cl">PROFILE    STATUS     ARCH       CPUS    MEMORY    DISK     RUNTIME    ADDRESS
+</span></span><span class="line"><span class="cl">default    Running    aarch64    <span class="m">4</span>       8GiB      60GiB    docker
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ colima status
+</span></span><span class="line"><span class="cl">INFO<span class="o">[</span>0000<span class="o">]</span> colima is running using macOS Virtualization.Framework
+</span></span><span class="line"><span class="cl">INFO<span class="o">[</span>0000<span class="o">]</span> arch: aarch64
+</span></span><span class="line"><span class="cl">INFO<span class="o">[</span>0000<span class="o">]</span> runtime: docker
+</span></span><span class="line"><span class="cl">INFO<span class="o">[</span>0000<span class="o">]</span> mountType: virtiofs
+</span></span><span class="line"><span class="cl">INFO<span class="o">[</span>0000<span class="o">]</span> docker socket: unix:///Users/&lt;用户名&gt;/.colima/default/docker.sock
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>进虚拟机看资源占用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ colima ssh -- free -h
+</span></span><span class="line"><span class="cl">               total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           7.7Gi       1.2Gi       615Mi       804Ki       6.1Gi       6.5Gi
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ colima ssh -- df -h /var/lib/docker
+</span></span><span class="line"><span class="cl">Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span class="line"><span class="cl">/dev/vdb1        98G  7.2G   86G   8% /var/lib/docker
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>free</code> 里的 7.7Gi 就是配置的 8 GiB 减掉内核占用后的数。宿主机目录通过 virtiofs 挂进去，虚拟机里能直接看到：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ colima ssh -- mount <span class="p">|</span> grep virtiofs
+</span></span><span class="line"><span class="cl">lima-xxxxxxxx on /Users/&lt;用户名&gt; <span class="nb">type</span> virtiofs <span class="o">(</span>rw,relatime<span class="o">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>docker 侧的信息：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ docker info --format <span class="s1">&#39;{{.ServerVersion}} | {{.Driver}} | cgroup{{.CgroupVersion}} | {{.NCPU}}CPU | {{.MemTotal}}&#39;</span>
+</span></span><span class="line"><span class="cl">29.5.2 <span class="p">|</span> overlayfs <span class="p">|</span> cgroup2 <span class="p">|</span> 4CPU <span class="p">|</span> <span class="m">8307167232</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>客户端 29.8.0、服务端 29.5.2，版本不完全一致是正常的。</p>
+<h2 id="日常用法">日常用法</h2>
+<h3 id="起停和状态">起停和状态</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start
+</span></span><span class="line"><span class="cl">colima stop
+</span></span><span class="line"><span class="cl">colima restart
+</span></span><span class="line"><span class="cl">colima status
+</span></span><span class="line"><span class="cl">colima list        <span class="c1"># 别名 ls</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>彻底删掉重来：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima delete --data --force
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>--data</code> 连镜像和容器一起清，<code>--force</code> 跳过确认。这两个一起用之前心里要有数，删了就真没了。</p>
+<h3 id="改资源">改资源</h3>
+<p>只能先停再改：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima stop
+</span></span><span class="line"><span class="cl">colima start --cpu <span class="m">6</span> --memory <span class="m">12</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>CPU 和内存随便调，磁盘只能往上加。</p>
+<h3 id="挂载目录">挂载目录</h3>
+<p>默认会把 <code>$HOME</code> 和 <code>/tmp/colima</code> 挂进去，容器里能直接访问你的代码目录。要额外挂别的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --mount ~/work:w     <span class="c1"># :w 表示可写</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我平时用默认的就够。</p>
+<h3 id="端口和网络">端口和网络</h3>
+<p>容器映射到宿主机的端口默认就能访问，不用额外配。要让虚拟机在局域网里有独立 IP：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --network-address
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>国内网络可能需要指定 DNS：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --dns 223.5.5.5 --dns 1.1.1.1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="多套环境用-profile">多套环境用 profile</h3>
+<p>想同时跑两套互不干扰的环境，用 profile：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --profile dev  --cpu <span class="m">2</span> --memory <span class="m">4</span>
+</span></span><span class="line"><span class="cl">colima start --profile <span class="nb">test</span> --runtime containerd
+</span></span><span class="line"><span class="cl">colima list
+</span></span><span class="line"><span class="cl">colima stop --profile dev
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>每个 profile 是独立的虚拟机和 socket。</p>
+<h3 id="换-containerd--nerdctl">换 containerd + nerdctl</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --runtime containerd
+</span></span><span class="line"><span class="cl">colima nerdctl install
+</span></span><span class="line"><span class="cl">nerdctl run hello-world
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="顺手起个-k3s">顺手起个 k3s</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">brew install kubectl
+</span></span><span class="line"><span class="cl">colima start --kubernetes
+</span></span><span class="line"><span class="cl">kubectl get nodes
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>管理命令：<code>colima kubernetes start|stop|reset|delete</code>。</p>
+<h3 id="进虚拟机">进虚拟机</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima ssh
+</span></span><span class="line"><span class="cl">colima ssh -- htop     <span class="c1"># 直接执行命令</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="踩坑记录">踩坑记录</h2>
+<p><strong>docker compose 用不了</strong> —— 前面说过。直接用 <code>docker-compose</code> 就行，两者是同一个二进制；想用带空格的，按上面注册插件。</p>
+<p><strong>Cannot connect to the Docker daemon</strong> —— 十有八九是虚拟机没起来，或者 context 跑偏：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima status
+</span></span><span class="line"><span class="cl">docker context use colima
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>起不来，报虚拟化相关的错</strong> —— 换个 VM 类型试试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --vm-type vz      <span class="c1"># Apple Silicon 默认，最快</span>
+</span></span><span class="line"><span class="cl">colima start --vm-type qemu    <span class="c1"># 兼容性更好，慢一些</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>挂载的文件改了容器里不更新</strong> —— 开一下 inotify：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima start --mount-inotify
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="卸载">卸载</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">colima stop
+</span></span><span class="line"><span class="cl">colima delete -f
+</span></span><span class="line"><span class="cl">brew uninstall colima docker docker-compose docker-buildx
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="最后">最后</h2>
+<p>换成 Colima 之后，<code>docker</code> 命令照旧，compose 用 <code>docker-compose</code>（或者按上面的方式注册一下，让 <code>docker compose</code> 也能用），公司合规问题没了，机器上也少了一个常驻的 GUI 应用。</p>
+<p>16 GiB 的机器上，把内存参数往下调一点、CPU 给 4 核，日常开发完全够用。团队用的话，把 <code>colima.yaml</code> 一起提交，新同事 clone 下来 <code>colima start --edit</code> 就能对齐环境，省得口头描述配置。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2026-10-10</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://midaug.100180.xyz/posts/2026101001/" data-title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker" data-hashtags="Docker,Colima,Docker Compose,容器,macOS,虚拟化,Homebrew"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://midaug.100180.xyz/posts/2026101001/" data-hashtag="Docker"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://midaug.100180.xyz/posts/2026101001/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://midaug.100180.xyz/posts/2026101001/" data-title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://midaug.100180.xyz/posts/2026101001/" data-title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://midaug.100180.xyz/posts/2026101001/" data-title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://midaug.100180.xyz/posts/2026101001/" data-title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/docker/">Docker</a>,&nbsp;<a href="/tags/colima/">Colima</a>,&nbsp;<a href="/tags/docker-compose/">Docker Compose</a>,&nbsp;<a href="/tags/%E5%AE%B9%E5%99%A8/">容器</a>,&nbsp;<a href="/tags/macos/">MacOS</a>,&nbsp;<a href="/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/">虚拟化</a>,&nbsp;<a href="/tags/homebrew/">Homebrew</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/2026062302/" class="prev" rel="prev" title="AI大模型Prompt调优实战指南"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>AI大模型Prompt调优实战指南</a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2026</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
