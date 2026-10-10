@@ -1005,7 +1005,10 @@
       tags: ["bird", "骑", "单车", "bike"],
       stats: { speed: 12.5, stamina: 88, height: 1.4 },
       friends: [{ name: "toucan", score: 91 }, { name: "flamingo", score: 76 }],
-      config: { theme: "dark", nested: { deep: { deeper: 42 } } }
+      config: { theme: "dark", nested: { deep: { deeper: 42 } } },
+      // 下面两个字段的值本身就是 JSON 字符串，勾选「嵌套解析」后会展开成结构
+      payload: '{"event":"deploy","ok":true,"retries":2}',
+      trace: '[{"span":"db","ms":12},{"span":"cache","ms":3}]'
     };
   }
 
