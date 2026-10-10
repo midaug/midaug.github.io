@@ -4,7 +4,15 @@
         <link>https://midaug.100180.xyz/tags/ssh/</link>
         <description>SSH - Tag - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/ssh/" rel="self" type="application/rss+xml" /><item>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/ssh/" rel="self" type="application/rss+xml" /><item>
+    <title>SSH Tunnel：用图形界面管理多条 SSH 隧道</title>
+    <link>https://midaug.100180.xyz/posts/2026101002/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/posts/2026101002/</guid>
+    <description><![CDATA[一、前言 SSH 端口转发的命令不算难，难的是日常维护。隧道一多，命令记不住、终端不敢关、断了要手动重连、哪个还活着全靠记忆。这个工具就是来收拾这些]]></description>
+</item>
+<item>
     <title>SSH Tunnel 端口转发详解</title>
     <link>https://midaug.100180.xyz/posts/2026062301/</link>
     <pubDate>Tue, 23 Jun 2026 14:22:00 &#43;0000</pubDate>

@@ -4,7 +4,71 @@
         <link>https://midaug.100180.xyz/tags/</link>
         <description>Tags - Tag - MidAug&#39;s  Blog</description>
         <generator>Hugo -- gohugo.io</generator><language>en</language><managingEditor>days0814@gmail.com (MidAug)</managingEditor>
-            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/" rel="self" type="application/rss+xml" /><item>
+            <webMaster>days0814@gmail.com (MidAug)</webMaster><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</lastBuildDate><atom:link href="https://midaug.100180.xyz/tags/" rel="self" type="application/rss+xml" /><item>
+    <title>Go</title>
+    <link>https://midaug.100180.xyz/tags/go/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/go/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>SSH</title>
+    <link>https://midaug.100180.xyz/tags/ssh/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/ssh/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Tunnel</title>
+    <link>https://midaug.100180.xyz/tags/tunnel/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/tunnel/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Vue3</title>
+    <link>https://midaug.100180.xyz/tags/vue3/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/vue3/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>Wails</title>
+    <link>https://midaug.100180.xyz/tags/wails/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/wails/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>开源项目</title>
+    <link>https://midaug.100180.xyz/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>桌面应用</title>
+    <link>https://midaug.100180.xyz/tags/%E6%A1%8C%E9%9D%A2%E5%BA%94%E7%94%A8/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E6%A1%8C%E9%9D%A2%E5%BA%94%E7%94%A8/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
+    <title>端口转发</title>
+    <link>https://midaug.100180.xyz/tags/%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91/</link>
+    <pubDate>Sat, 10 Oct 2026 23:30:00 &#43;0800</pubDate>
+    <author>MidAug</author>
+    <guid>https://midaug.100180.xyz/tags/%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91/</guid>
+    <description><![CDATA[]]></description>
+</item>
+<item>
     <title>Colima</title>
     <link>https://midaug.100180.xyz/tags/colima/</link>
     <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
@@ -18,70 +82,6 @@
     <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
     <author>MidAug</author>
     <guid>https://midaug.100180.xyz/tags/docker/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Docker Compose</title>
-    <link>https://midaug.100180.xyz/tags/docker-compose/</link>
-    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/docker-compose/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Homebrew</title>
-    <link>https://midaug.100180.xyz/tags/homebrew/</link>
-    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/homebrew/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>MacOS</title>
-    <link>https://midaug.100180.xyz/tags/macos/</link>
-    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/macos/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>容器</title>
-    <link>https://midaug.100180.xyz/tags/%E5%AE%B9%E5%99%A8/</link>
-    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/%E5%AE%B9%E5%99%A8/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>虚拟化</title>
-    <link>https://midaug.100180.xyz/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/</link>
-    <pubDate>Sat, 10 Oct 2026 22:10:00 &#43;0800</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/%E8%99%9A%E6%8B%9F%E5%8C%96/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>AI</title>
-    <link>https://midaug.100180.xyz/tags/ai/</link>
-    <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/ai/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>LLM</title>
-    <link>https://midaug.100180.xyz/tags/llm/</link>
-    <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/llm/</guid>
-    <description><![CDATA[]]></description>
-</item>
-<item>
-    <title>Prompt</title>
-    <link>https://midaug.100180.xyz/tags/prompt/</link>
-    <pubDate>Tue, 23 Jun 2026 20:52:00 &#43;0000</pubDate>
-    <author>MidAug</author>
-    <guid>https://midaug.100180.xyz/tags/prompt/</guid>
     <description><![CDATA[]]></description>
 </item>
 </channel>

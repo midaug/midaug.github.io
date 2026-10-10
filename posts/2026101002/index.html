@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>SSH Tunnel：用图形界面管理多条 SSH 隧道 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/2026101002/">
+  <meta property="og:site_name" content="MidAug&#39;s  Blog">
+  <meta property="og:title" content="SSH Tunnel：用图形界面管理多条 SSH 隧道">
+  <meta property="og:description" content="一、前言 SSH 端口转发的命令不算难，难的是日常维护。隧道一多，命令记不住、终端不敢关、断了要手动重连、哪个还活着全靠记忆。这个工具就是来收拾这些">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+  <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-10-10T23:30:00+08:00">
+    <meta property="article:modified_time" content="2026-10-10T23:30:00+08:00">
+    <meta property="article:tag" content="SSH">
+    <meta property="article:tag" content="Tunnel">
+    <meta property="article:tag" content="端口转发">
+    <meta property="article:tag" content="开源项目">
+    <meta property="article:tag" content="Go">
+    <meta property="article:tag" content="Wails">
+    <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="SSH Tunnel：用图形界面管理多条 SSH 隧道">
+<meta name="twitter:description" content="一、前言 SSH 端口转发的命令不算难，难的是日常维护。隧道一多，命令记不住、终端不敢关、断了要手动重连、哪个还活着全靠记忆。这个工具就是来收拾这些">
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://midaug.100180.xyz/posts/2026101002/" /><link rel="prev" href="https://midaug.100180.xyz/posts/2026101001/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript>
+    <link rel="stylesheet" href="/css/custom.css">
+<script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "SSH Tunnel：用图形界面管理多条 SSH 隧道",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/midaug.100180.xyz\/posts\/2026101002\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "SSH, Tunnel, 端口转发, 开源项目, Go, Wails, Vue3, 桌面应用","wordcount":  2321 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/2026101002\/","datePublished": "2026-10-10T23:30:00+08:00","dateModified": "2026-10-10T23:30:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">SSH Tunnel：用图形界面管理多条 SSH 隧道</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/ssh/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>SSH</a>&nbsp;<a href="/categories/%E4%BB%A3%E7%90%86%E8%BD%AC%E5%8F%91/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>代理转发</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;2321 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;5 minutes&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#一前言">一、前言</a></li>
+    <li><a href="#二解决什么问题">二、解决什么问题</a></li>
+    <li><a href="#三主要功能">三、主要功能</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-多隧道管理">1. 多隧道管理</a></li>
+            <li><a href="#2-三种转发模式">2. 三种转发模式</a></li>
+            <li><a href="#3-代理中转">3. 代理中转</a></li>
+            <li><a href="#4-自动重连">4. 自动重连</a></li>
+            <li><a href="#5-系统托盘">5. 系统托盘</a></li>
+            <li><a href="#6-导入与导出">6. 导入与导出</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#四界面预览">四、界面预览</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-隧道列表">1. 隧道列表</a></li>
+            <li><a href="#2-新建与编辑隧道">2. 新建与编辑隧道</a></li>
+            <li><a href="#3-导入与导出">3. 导入与导出</a></li>
+            <li><a href="#4-设置">4. 设置</a></li>
+            <li><a href="#5-系统托盘-1">5. 系统托盘</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#五下载与安装">五、下载与安装</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-直接下载">1. 直接下载</a></li>
+            <li><a href="#2-从源码构建">2. 从源码构建</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#六技术实现">六、技术实现</a></li>
+    <li><a href="#七平台支持与系统要求">七、平台支持与系统要求</a></li>
+    <li><a href="#八小结">八、小结</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="一前言">一、前言</h2>
+<blockquote>
+<p>SSH 端口转发的命令不算难，难的是日常维护。隧道一多，命令记不住、终端不敢关、断了要手动重连、哪个还活着全靠记忆。这个工具就是来收拾这些事的。</p>
+</blockquote>
+<p>写一条转发命令是几秒钟的事：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">ssh -N -L 3306:db.internal:3306 -i ~/.ssh/id_rsa user@jump.example.com
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>但用起来就不是几秒钟的事了。手上同时开着五六条隧道的时候，问题会一个接一个冒出来——参数记不住要翻笔记，每条隧道都得占一个终端窗口，终端一关隧道就没了，网络抖一下断线还得手动敲一遍重连，至于哪条还活着、哪条已经挂了，基本靠猜。</p>
+<p>我把自己这套流程做成了一个桌面工具：<strong>SSH Tunnel</strong>，基于 Wails v2 + Vue 3，用图形界面管理多条 SSH 隧道。</p>
+<ul>
+<li>项目地址：<a href="https://github.com/midaug/ssh-tunnel" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel</a></li>
+<li>开源协议：MIT</li>
+<li>当前版本：v0.0.1</li>
+</ul>
+<!-- more -->
+<h2 id="二解决什么问题">二、解决什么问题</h2>
+<p>针对上面那几个痛点，工具的做法是这样的。</p>
+<p><strong>命令不用记了。</strong> 隧道保存成配置，点一下启停。已经写好的 <code>ssh -L ...</code> 命令可以直接粘贴进来，工具会解析成配置项，不用重新填一遍表单。</p>
+<p><strong>终端可以关了。</strong> 隧道跑在应用自己的进程里，配合系统托盘常驻，关掉主窗口隧道照样跑。macOS 上还能把 Dock 图标藏起来，完全当菜单栏应用用。</p>
+<p><strong>断线不用手动重连。</strong> 内置自动重连，最小退避、最大退避、心跳间隔都能配。</p>
+<p><strong>状态看得见。</strong> 每条隧道的状态实时同步，托盘图标会随整体状态变色：有隧道在跑是蓝色，全部停止自动变灰。</p>
+<h2 id="三主要功能">三、主要功能</h2>
+<h4 id="1-多隧道管理">1. 多隧道管理</h4>
+<p>每条隧道独立启停，状态实时同步，支持一键全部启用 / 全部关闭。</p>
+<h4 id="2-三种转发模式">2. 三种转发模式</h4>
+<p><code>-L</code> 本地转发、<code>-R</code> 远程转发、<code>-D</code> 动态转发都支持。</p>
+<p>动态转发这里做了一点额外的事：同一个监听端口上同时兼容 SOCKS5 和 HTTP 代理，按首字节自动识别协议。HTTP 模式下支持 <code>CONNECT</code> 隧道（可以走 HTTPS 或任意 TCP），也支持普通请求转发，并复用 keep-alive 连接。</p>
+<h4 id="3-代理中转">3. 代理中转</h4>
+<p>到 SSH 服务器的这一段连接，可以再经由 HTTP / HTTPS / SOCKS5 代理建立，支持代理认证。适用于跳板机本身也要走代理才能访问的场景，连接测试同样走这条链路。</p>
+<h4 id="4-自动重连">4. 自动重连</h4>
+<p>断线后自动重试，退避策略可配置。默认最小退避 1000 ms、最大退避 30000 ms，心跳间隔 30 秒（填 0 关闭）。</p>
+<h4 id="5-系统托盘">5. 系统托盘</h4>
+<p>托盘菜单里可以直接启停隧道、全部启用、全部关闭、显示窗口、退出程序。每条隧道用符号标识状态：</p>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>●</code></td>
+<td>运行中</td>
+</tr>
+<tr>
+<td><code>◐</code></td>
+<td>连接中</td>
+</tr>
+<tr>
+<td><code>⚠</code></td>
+<td>错误</td>
+</tr>
+<tr>
+<td><code>○</code></td>
+<td>已停止</td>
+</tr>
+</tbody>
+</table>
+<h4 id="6-导入与导出">6. 导入与导出</h4>
+<p>三种方式，覆盖迁移和备份的场景：</p>
+<ul>
+<li><strong>从 SSH 命令导入</strong> —— 粘贴 <code>ssh -L 8080:localhost:80 -i ~/.ssh/id_rsa user@host</code>，自动解析成隧道配置</li>
+<li><strong>导出为 SSH 命令</strong> —— 任意隧道一键导出成等效的 ssh 命令行，方便直接粘到终端里用</li>
+<li><strong>JSON 导入导出</strong> —— 支持合并和覆盖两种模式，换机器或者备份配置都用得上</li>
+</ul>
+<h2 id="四界面预览">四、界面预览</h2>
+<h4 id="1-隧道列表">1. 隧道列表</h4>
+<p>主界面列出所有隧道配置，包含运行状态、转发规则和错误信息。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/tunnel-list.png"
+        data-srcset="/images/post/2026101002/tunnel-list.png, /images/post/2026101002/tunnel-list.png 1.5x, /images/post/2026101002/tunnel-list.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/tunnel-list.png"
+        title="隧道列表界面" /></p>
+<h4 id="2-新建与编辑隧道">2. 新建与编辑隧道</h4>
+<p>配置 SSH 连接信息、认证方式（密钥或密码）、端口转发规则和高级选项。保存前可以先用「测试连接」验证 SSH 连通性，这一步只测连接，不会真的启动转发。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/tunnel-edit.png"
+        data-srcset="/images/post/2026101002/tunnel-edit.png, /images/post/2026101002/tunnel-edit.png 1.5x, /images/post/2026101002/tunnel-edit.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/tunnel-edit.png"
+        title="新建隧道界面" /></p>
+<h4 id="3-导入与导出">3. 导入与导出</h4>
+<p>三个页签对应三种方式：从 SSH 命令导入、JSON 导入导出、导出 SSH 命令。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/import-export.png"
+        data-srcset="/images/post/2026101002/import-export.png, /images/post/2026101002/import-export.png 1.5x, /images/post/2026101002/import-export.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/import-export.png"
+        title="导入导出界面" /></p>
+<h4 id="4-设置">4. 设置</h4>
+<p>开机自启、窗口行为、Dock 显示这些全局配置都在这里。配置文件路径也会显示出来，可以直接打开所在目录。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/settings.png"
+        data-srcset="/images/post/2026101002/settings.png, /images/post/2026101002/settings.png 1.5x, /images/post/2026101002/settings.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/settings.png"
+        title="设置界面" /></p>
+<h4 id="5-系统托盘-1">5. 系统托盘</h4>
+<p>托盘菜单里直接操作隧道，图标颜色反映整体运行状态。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/tray-menu.png"
+        data-srcset="/images/post/2026101002/tray-menu.png, /images/post/2026101002/tray-menu.png 1.5x, /images/post/2026101002/tray-menu.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/tray-menu.png"
+        title="系统托盘菜单" /></p>
+<h2 id="五下载与安装">五、下载与安装</h2>
+<h4 id="1-直接下载">1. 直接下载</h4>
+<p>到 <a href="https://github.com/midaug/ssh-tunnel/releases/latest" target="_blank" rel="noopener noreffer ">Releases</a> 页面按平台取对应文件：</p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>架构</th>
+<th>文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td>Apple Silicon</td>
+<td><code>ssh-tunnel-v0.0.1-darwin-arm64.zip</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td>Intel</td>
+<td><code>ssh-tunnel-v0.0.1-darwin-amd64.zip</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td>通用（Intel + ARM）</td>
+<td><code>ssh-tunnel-v0.0.1-darwin-universal.zip</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>x64</td>
+<td><code>ssh-tunnel-v0.0.1-windows-amd64.exe</code>（含安装包）</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>x86</td>
+<td><code>ssh-tunnel-v0.0.1-windows-386.exe</code>（免安装）</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td>x64</td>
+<td><code>ssh-tunnel-v0.0.1-linux-amd64</code></td>
+</tr>
+</tbody>
+</table>
+<p>Windows x64 有 NSIS 安装包，其余是免安装的单文件。Linux 只提供 x64，因为 Wails v2 不支持 Linux 386。</p>
+<h4 id="2-从源码构建">2. 从源码构建</h4>
+<p>需要 Go 1.21+、Node.js 16+ 和 Wails CLI v2：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="c1"># 安装 Wails CLI</span>
+</span></span><span class="line"><span class="cl">go install github.com/wailsapp/wails/v2/cmd/wails@latest
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 克隆并安装前端依赖</span>
+</span></span><span class="line"><span class="cl">git clone https://github.com/midaug/ssh-tunnel.git
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> ssh-tunnel
+</span></span><span class="line"><span class="cl"><span class="nb">cd</span> frontend <span class="o">&amp;&amp;</span> npm install <span class="o">&amp;&amp;</span> <span class="nb">cd</span> ..
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 开发模式（热重载，可在 http://localhost:34115 调试）</span>
+</span></span><span class="line"><span class="cl">wails dev
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 构建当前平台</span>
+</span></span><span class="line"><span class="cl">wails build -clean
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 交叉编译</span>
+</span></span><span class="line"><span class="cl">wails build -platform darwin/universal -clean
+</span></span><span class="line"><span class="cl">wails build -platform windows/amd64 -clean
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建产物输出到 <code>build/bin/</code>。</p>
+<h2 id="六技术实现">六、技术实现</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>框架</td>
+<td><a href="https://wails.io" target="_blank" rel="noopener noreffer ">Wails v2</a>（Go + WebView）</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>Go，<code>golang.org/x/crypto/ssh</code>，<code>golang.org/x/net/proxy</code></td>
+</tr>
+<tr>
+<td>前端</td>
+<td>Vue 3 + TypeScript + Pinia + Vue Router</td>
+</tr>
+<tr>
+<td>系统托盘</td>
+<td><a href="https://github.com/fyne-io/systray" target="_blank" rel="noopener noreffer ">fyne.io/systray</a></td>
+</tr>
+<tr>
+<td>macOS Dock 控制</td>
+<td>cgo 调用 <code>NSApp.setActivationPolicy</code></td>
+</tr>
+<tr>
+<td>开机自启</td>
+<td>macOS LaunchAgent / Windows 注册表 / Linux <code>.desktop</code></td>
+</tr>
+</tbody>
+</table>
+<p>选 Wails 而不是 Electron，主要是看中产物体积和内存占用——它用系统自带的 WebView 渲染前端，不用打包一整个 Chromium。构建出来的 macOS ARM 版本压缩后不到 4 MB。</p>
+<p>隧道运行时分成三块：<code>manager.go</code> 管多隧道的启停和状态汇总，<code>tunnel.go</code> 管单条隧道的生命周期和自动重连，三种转发模式各自实现在 <code>forward_local.go</code> / <code>forward_remote.go</code> / <code>forward_dynamic.go</code> 里。<code>proxy.go</code> 负责经 HTTP/HTTPS/SOCKS5 代理拨号到 SSH 服务器，隧道拨号和连接测试共用这条路径。</p>
+<h2 id="七平台支持与系统要求">七、平台支持与系统要求</h2>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>最低版本</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td>10.13 High Sierra</td>
+<td>支持菜单栏模式、隐藏 Dock 图标</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>10 / Server 2016</td>
+<td>需要 WebView2 Runtime（Win10/11 通常已内置）</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td>—</td>
+<td>仅 x64</td>
+</tr>
+</tbody>
+</table>
+<p>Linux 没有 386 版本，Windows 7 也不支持——Wails v2 依赖 WebView2（Edge 内核），而且 Go 1.21+ 本身已经移除了 Win7 支持。</p>
+<p>配置文件按平台放在用户配置目录下：</p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/ssh-tunnel/config.json</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>%AppData%\ssh-tunnel\config.json</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.config/ssh-tunnel/config.json</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="八小结">八、小结</h2>
+<p>这个工具解决的是我自己的实际问题：隧道多了之后，命令行和终端窗口的方式确实不太够用。如果你也经常要同时维持几条 SSH 隧道，可以试试。</p>
+<p>项目还在早期（v0.0.1），有问题或者想要的功能，欢迎到 GitHub 上提 issue。</p>
+<ul>
+<li>仓库：<a href="https://github.com/midaug/ssh-tunnel" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel</a></li>
+<li>下载：<a href="https://github.com/midaug/ssh-tunnel/releases/latest" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel/releases/latest</a></li>
+<li>协议：MIT</li>
+</ul>
+<p>顺带一提，SSH 端口转发本身的用法，之前写过一篇 <a href="/posts/2026062301/" rel="">SSH Tunnel 端口转发详解</a>，三种转发模式的参数和场景在那里讲得比较细，可以对照着看。</p>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2026-10-10</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://midaug.100180.xyz/posts/2026101002/" data-title="SSH Tunnel：用图形界面管理多条 SSH 隧道" data-hashtags="SSH,Tunnel,端口转发,开源项目,Go,Wails,Vue3,桌面应用"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://midaug.100180.xyz/posts/2026101002/" data-hashtag="SSH"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://midaug.100180.xyz/posts/2026101002/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://midaug.100180.xyz/posts/2026101002/" data-title="SSH Tunnel：用图形界面管理多条 SSH 隧道"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://midaug.100180.xyz/posts/2026101002/" data-title="SSH Tunnel：用图形界面管理多条 SSH 隧道"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://midaug.100180.xyz/posts/2026101002/" data-title="SSH Tunnel：用图形界面管理多条 SSH 隧道"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://midaug.100180.xyz/posts/2026101002/" data-title="SSH Tunnel：用图形界面管理多条 SSH 隧道"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/ssh/">SSH</a>,&nbsp;<a href="/tags/tunnel/">Tunnel</a>,&nbsp;<a href="/tags/%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91/">端口转发</a>,&nbsp;<a href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a>,&nbsp;<a href="/tags/go/">Go</a>,&nbsp;<a href="/tags/wails/">Wails</a>,&nbsp;<a href="/tags/vue3/">Vue3</a>,&nbsp;<a href="/tags/%E6%A1%8C%E9%9D%A2%E5%BA%94%E7%94%A8/">桌面应用</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/2026101001/" class="prev" rel="prev" title="Mac 上不装 Docker Desktop，用 Colima 跑 Docker"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>Mac 上不装 Docker Desktop，用 Colima 跑 Docker</a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2026</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
