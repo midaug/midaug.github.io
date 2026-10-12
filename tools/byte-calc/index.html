@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>字节与网速计算</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    /* 数值强调色，与 JSON 工具的语法高亮同一批 */
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  /* 小型次要按钮：行内「示例」「复制」用 */
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"], input[type="number"] { cursor: text; font-variant-numeric: tabular-nums; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  input::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+  select optgroup { color: var(--text-3); font-size: 11px; }
+
+  /* ===== 主体 ===== */
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* 表单行。两处细节是为了让整页的左边缘整齐：
+     1) max-width 限制整行宽度 —— 否则在宽卡片（字节换算那张）里
+        input 会被 flex 拉到 978px，数字孤零零漂在一个巨大的框里；
+     2) 标签列宽度必须与 .kv > .k 一致（都是 84px）—— 两者若不同，
+        同一张卡片里「输入框的起始 x」与「结果值的起始 x」会错开 16px，
+        标签的右边缘也对不齐，看上去就是「排版乱」。 */
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 620px; }
+  .row + .row { margin-top: 8px; }
+  .row > label {
+    flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right;
+  }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  /* 下拉绝不收缩：一旦被 input 挤扁，选项文字会被截成「MB · 兆字…」。
+     所以单位的选项文字只放代码（中文在 optgroup 标题里），让它天然够窄。 */
+  .row > select { flex: 0 0 auto; max-width: 46%; }
+
+  /* 结果大号数字 */
+  .hero-num {
+    font-size: 28px; font-weight: 700; letter-spacing: .2px; line-height: 1.25;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+    user-select: all; cursor: pointer; word-break: break-word;
+  }
+  /* 键值行 */
+  .kv-list { margin-top: 10px; }
+  .kv {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-top: 1px solid var(--border); min-width: 0;
+  }
+  .kv:first-child { border-top: 0; }
+  .kv > .k { flex: none; width: 84px; font-size: 12px; color: var(--text-2); }
+  .kv > .v {
+    flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--text);
+    word-break: break-all; user-select: all; cursor: text;
+  }
+  .kv > .v.num { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kv > .v.unit { color: var(--text-2); }
+  .kv > .v.muted { color: var(--text-3); }
+  .kv > button { flex: none; }
+
+  /* ===== 表格 =====
+     `.r` 由 renderTbl() 按「列」同时写给表头与所有单元格（见该函数注释），
+     任何地方都不要手写对齐类；`.n` / `.u` / `.wrap` / `.sub` 只负责颜色与换行。
+     表头与内容同宽同对齐，列才不会「标题在右边、数字在左边」。 */
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2);
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl th.r, .tbl td.r { text-align: right; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl tbody tr.hit td { background: var(--accent-soft); }
+  .tbl tbody tr.hit td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+  .tbl td.wrap { white-space: normal; min-width: 150px; }
+  .tbl .sub { color: var(--text-3); font-size: 11px; }
+
+  /* ===== 测速入口（卡片 3 内）=====
+     只放外链，不自己实现测速 —— 浏览器端测速要求源发 Access-Control-Allow-
+     Origin，而国内镜像站一律不发，可用源极少，结果也受线路波动影响大。
+     刻意压成「一行文字链接」：这张卡与右侧「码率 → 体积」同处一行，面板每高
+     1px，右卡底部就多一条空白（曾用两行 chip 面板，实测多出 138px）。
+     标签列仍锁 84px，整页左边缘必须齐。 */
+  /* 间距刻意收得很紧（组间 6px、分隔符两侧 3px）：1280px 视口下可用宽 586px，
+     8 个链接排下来要 559px。放宽到 gap 8 / 分隔符 5px 就会溢出 7px，
+     flex-wrap 把整组甩到第二行，这张卡立刻比右边高 17px。 */
+  .spd {
+    display: flex; align-items: center; gap: 0 6px; flex-wrap: wrap;
+    margin-top: 8px; min-width: 0;
+  }
+  .spd > .tag {
+    flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right;
+  }
+  .spd > .grp { flex: none; display: flex; align-items: center; }
+  .spd > .grp > a {
+    font-size: 11.5px; color: var(--accent); text-decoration: none; white-space: nowrap;
+  }
+  .spd > .grp > a:hover { text-decoration: underline; }
+  .spd > .grp > a + a::before {
+    content: "\00b7"; color: var(--text-3); margin: 0 3px; text-decoration: none;
+  }
+  /* 国内 / 国外之间用一道淡竖线分开 */
+  .spd > .grp + .grp { border-left: 1px solid var(--border-2); padding-left: 6px; }
+
+  /* ===== 提示 ===== */
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.65; color: var(--text-2);
+  }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); font-size: 12px; }
+  .empty-tip { color: var(--text-3); font-size: 12px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+    .hero-num { font-size: 22px; }
+    /* 窄屏不再收窄标签列：它必须始终等于 .kv > .k 的宽度，否则又会对不齐 */
+
+    /* 收紧表格：内边距与「可换行列」的最小宽度都收一收，能显著减少表格内部的
+       横向滚动量（380px 下 119px→53px、169px→97px）。剩下的超宽部分由
+       .tbl-wrap 的 overflow-x: auto 承担 —— 「Thunderbolt」「1000BASE-T」
+       这类长词没法再压缩，页面本身不会横向溢出（已断言）。 */
+    .tbl th, .tbl td { padding: 5px 6px; }
+    .tbl td.wrap { min-width: 96px; }
+
+    /* 测速外链在窄屏让标签独占一行；竖线分隔在换行后会落到行首，去掉 */
+    .spd > .tag { flex: 1 1 100%; text-align: left; }
+    .spd > .grp + .grp { border-left: 0; padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Byte<span>Speed</span></div>
+  <span class="sep"></span>
+  <span class="stat">1 B = 8 bit</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">1 MB/s = 8 Mbps</span>
+  <span class="sep hide-sm"></span>
+  <button class="mini" id="btnReset" title="恢复所有输入框为初始状态">重置</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 字节单位换算 ============
+       半宽卡片。**不要给它加 wide**：整页共 4 张半宽卡片 + 1 张 wide，
+       4 张两行刚好占满网格；若把这张变 wide，剩下的半宽卡片就变成 3 张，
+       2 列网格里必然空出一整格（实测留白 571,424 px² → 56,997 px²，差 10 倍）。
+       各卡固有高度：换算 428 / 下载 487 / 带宽 710 / 码率 678（宽 634 时），
+       配对后每行只多出 58px 与 32px 的余量，几乎无留白。 -->
+  <section class="card">
+    <h2>
+      字节单位换算
+      <span class="hint">同时给出十进制（1000）与二进制（1024）两套结果</span>
+      <span class="right">
+        <button class="mini" id="btnConvCopy">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="cvVal">数值</label>
+      <input type="text" id="cvVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="1" placeholder="1" />
+      <select id="cvUnit" title="输入数值的单位">
+        <optgroup label="字节 · 十进制 (1000 进位)">
+          <option value="B">B</option>
+          <option value="KB">KB</option>
+          <option value="MB" selected>MB</option>
+          <option value="GB">GB</option>
+          <option value="TB">TB</option>
+          <option value="PB">PB</option>
+        </optgroup>
+        <optgroup label="字节 · 二进制 (1024 进位)">
+          <option value="KiB">KiB</option>
+          <option value="MiB">MiB</option>
+          <option value="GiB">GiB</option>
+          <option value="TiB">TiB</option>
+          <option value="PiB">PiB</option>
+        </optgroup>
+        <optgroup label="位 bit · 十进制">
+          <option value="bit">bit</option>
+          <option value="kbit">kbit</option>
+          <option value="Mbit">Mbit</option>
+          <option value="Gbit">Gbit</option>
+          <option value="Tbit">Tbit</option>
+        </optgroup>
+      </select>
+    </div>
+    <!-- 位 / 字节也作为表格的前两行，而不是单独一块 kv ——
+         否则 kv 的标签列（缩进 84px）与表格（贴着卡片左边缘）会形成参差的左边缘。 -->
+    <div class="tbl-wrap"><table class="tbl" id="cvTbl"></table></div>
+    <div class="note" id="cvNote"></div>
+  </section>
+
+  <!-- ============ 2. 文件大小 ÷ 速度 = 耗时 ============ -->
+  <section class="card">
+    <h2>
+      下载耗时
+      <span class="hint">文件大小 ÷ 传输速度</span>
+      <span class="right">
+        <button class="mini" data-ex="file">示例</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="szVal">文件大小</label>
+      <input type="text" id="szVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="4.7" />
+      <select id="szUnit">
+        <option value="B">B</option>
+        <option value="KB">KB</option>
+        <option value="MB">MB</option>
+        <option value="GB" selected>GB</option>
+        <option value="TB">TB</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="spVal">传输速度</label>
+      <input type="text" id="spVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="100" />
+      <select id="spUnit">
+        <optgroup label="比特 / 秒">
+          <option value="bps">bps</option>
+          <option value="Kbps">Kbps</option>
+          <option value="Mbps" selected>Mbps</option>
+          <option value="Gbps">Gbps</option>
+        </optgroup>
+        <optgroup label="字节 / 秒">
+          <option value="B/s">B/s</option>
+          <option value="KB/s">KB/s</option>
+          <option value="MB/s">MB/s</option>
+          <option value="GB/s">GB/s</option>
+        </optgroup>
+        <optgroup label="字节 / 秒 · 二进制">
+          <option value="KiB/s">KiB/s</option>
+          <option value="MiB/s">MiB/s</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="kv-list">
+      <div class="kv">
+        <span class="k">预计耗时</span>
+        <span class="v"><span class="hero-num" id="dlTime" style="font-size:20px">—</span></span>
+      </div>
+    </div>
+    <div class="kv-list" id="dlKv"></div>
+    <div class="note" id="dlNote"></div>
+  </section>
+
+  <!-- ============ 3. 带宽 → 速率 ============ -->
+  <section class="card">
+    <h2>
+      带宽 → 下载 / 上传速率
+      <span class="hint">运营商说的 Mbps ÷ 8 = 实际 MB/s</span>
+      <span class="right">
+        <button class="mini" data-ex="bw">示例</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="bwVal">下行带宽</label>
+      <input type="text" id="bwVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="500" />
+      <select id="bwUnit">
+        <option value="Kbps">Kbps</option>
+        <option value="Mbps" selected>Mbps</option>
+        <option value="Gbps">Gbps</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="upVal">上行带宽</label>
+      <input type="text" id="upVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="50" placeholder="留空则不计" />
+      <select id="upUnit">
+        <option value="Kbps">Kbps</option>
+        <option value="Mbps" selected>Mbps</option>
+        <option value="Gbps">Gbps</option>
+      </select>
+    </div>
+
+    <!-- 测速入口：一行文字链接，不自己实现测速。
+         浏览器端测速必须让源发 Access-Control-Allow-Origin，而国内镜像站
+         （阿里云 mirrors / 清华 / 中科大 / 南大 / 华为 / 腾讯）实测一律不发，
+         可用源极少；就算跑通，结果也受线路波动影响，不如直接开官方测速站。
+         下面这些站点 2026-10 实测均可访问，全部新标签页打开，不把人带离本页。 -->
+    <div class="spd">
+      <span class="tag">测速站</span>
+      <span class="grp">
+        <a href="https://www.speedtest.cn/" target="_blank" rel="noopener noreferrer">测速网</a>
+        <a href="https://test.ustc.edu.cn/" target="_blank" rel="noopener noreferrer">中科大</a>
+        <a href="https://test.nju.edu.cn/" target="_blank" rel="noopener noreferrer">南京大学</a>
+        <a href="https://speedtest4.cc.shu.edu.cn/" target="_blank" rel="noopener noreferrer">上海大学</a>
+      </span>
+      <span class="grp">
+        <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer">Ookla</a>
+        <a href="https://speed.cloudflare.com/" target="_blank" rel="noopener noreferrer">Cloudflare</a>
+        <a href="https://fast.com/" target="_blank" rel="noopener noreferrer">fast.com</a>
+        <a href="https://librespeed.org/" target="_blank" rel="noopener noreferrer">LibreSpeed</a>
+      </span>
+    </div>
+
+    <div class="kv-list" id="bwKv"></div>
+    <div class="tbl-wrap"><table class="tbl" id="bwTbl"></table></div>
+    <div class="note" id="bwNote"></div>
+  </section>
+
+  <!-- ============ 4. 码率 → 体积 ============ -->
+  <section class="card">
+    <h2>
+      码率 → 体积
+      <span class="hint">音视频码率换算成每小时占用</span>
+      <span class="right">
+        <button class="mini" data-ex="br">示例</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="brVal">码率</label>
+      <input type="text" id="brVal" inputmode="decimal" spellcheck="false" autocomplete="off" value="25" />
+      <select id="brUnit">
+        <option value="kbps">kbps</option>
+        <option value="Mbps" selected>Mbps</option>
+        <option value="Gbps">Gbps</option>
+      </select>
+    </div>
+    <div class="kv-list" id="brKv"></div>
+    <div class="tbl-wrap"><table class="tbl" id="brTbl"></table></div>
+    <div class="note" id="brNote"></div>
+  </section>
+
+  <!-- ============ 5. 介质理论速度对照 ============ -->
+  <section class="card wide">
+    <h2>
+      介质理论速度对照
+      <span class="hint">理论峰值，实际普遍打 5~7 折</span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl" id="mediaTbl"></table></div>
+    <div class="note">
+      <b>为什么标称和实测差这么多？</b>
+      一是<b>协议开销</b>：以太网有帧头、前导码与帧间隙（约 5%），USB / PCIe 有 8b/10b 或 128b/130b 编码开销；
+      二是<b>物理层</b>：Wi-Fi 是共享介质，标称速率是「所有空间流 + 最高调制 + 最短保护间隔」的极限值，实景受距离、干扰、墙体影响很大；
+      三是<b>两端瓶颈</b>：网速再快，对方服务器与硬盘写入速度才是天花板。
+      上表的「1 GB 耗时」按 <code>1 GB = 1000 MB</code> 计算。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const BITS_PER_BYTE = 8;
+  /* 有效带宽系数：以太网 / 互联网链路的经验值（协议开销 + 拥塞控制） */
+  const EFF = 0.85;
+
+  /* ============================================================
+     数字与时长格式化
+     ============================================================ */
+
+  function group(s) {
+    const neg = s.charAt(0) === "-";
+    if (neg) s = s.slice(1);
+    const p = s.split(".");
+    return (neg ? "-" : "") + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (p[1] ? "." + p[1] : "");
+  }
+
+  /* 6 位有效数字 + 千分位。整数量级用不到小数，小数量级自动补足有效位，
+     极小 / 极大值退回科学计数法 —— 否则 1 MB 换算成 PB 会显示成 0.000000001，
+     一长串 0 反而数不清位数。 */
+  function fmtNum(v, sig) {
+    if (v == null || !isFinite(v)) return "—";
+    if (v === 0) return "0";
+    const a = Math.abs(v);
+    const digits = sig || 6;
+    if (a >= 1e15 || a < 1e-6) {
+      return v.toExponential(3).replace(/\.?0+e/, "e").replace("e+", "e");
+    }
+    const dec = a < 1
+      ? Math.min(15, digits - 1 - Math.floor(Math.log10(a)))
+      : Math.max(0, digits - (Math.floor(Math.log10(a)) + 1));
+    let s = v.toFixed(Math.min(dec, 15));
+    if (s.indexOf(".") >= 0) s = s.replace(/0+$/, "").replace(/\.$/, "");
+    return group(s);
+  }
+
+  /* 把秒数写成人话。最多三段（天 / 小时 / 分 / 秒），不足 1 秒时用毫秒。 */
+  function fmtDur(sec) {
+    if (sec == null || !isFinite(sec) || sec < 0) return "—";
+    if (sec === 0) return "0 秒";
+    if (sec < 1) return fmtNum(sec * 1000, 3) + " 毫秒";
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const out = [];
+    if (d) out.push(d + " 天");
+    if (h) out.push(h + " 小时");
+    if (m) out.push(m + " 分");
+    if (out.length < 3) {
+      // 已经有「天 / 小时 / 分」时秒取整；只有秒时才保留两位小数
+      const sv = out.length === 0 ? +s.toFixed(2) : Math.round(s);
+      if (sv || out.length === 0) out.push(sv + " 秒");
+    }
+    return out.join(" ");
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  /* 读一个数值输入框：返回 null 表示空，NaN 表示非法 */
+  function readNum(el) {
+    const raw = el.value.trim().replace(/[,\s_]/g, "");
+    if (!raw) return null;
+    const v = Number(raw);
+    return isFinite(v) ? v : NaN;
+  }
+
+  /* 数值框的合法性标记 + 错误提示。返回 { v, ok } */
+  function takeNum(el, allowZero) {
+    const v = readNum(el);
+    if (v == null) { el.classList.remove("bad"); return { v: null, ok: true, empty: true }; }
+    if (isNaN(v) || v < 0 || (!allowZero && v === 0)) {
+      el.classList.add("bad");
+      return { v: null, ok: false };
+    }
+    el.classList.remove("bad");
+    return { v: v, ok: true };
+  }
+
+  /* ============================================================
+     单位体系
+     ============================================================ */
+
+  /* 单位表。折算成「比特」的系数 = (1000 或 1024)^exp ×（字节则 ×8）。
+     统一以「比特」为中间量，字节 / 位、十进制 / 二进制之间的换算就不会串。 */
+  const UNITS = [
+    { id: "bit",   cn: "位",     kind: "bit",  base: "si",  exp: 0 },
+    { id: "kbit",  cn: "千位",   kind: "bit",  base: "si",  exp: 1 },
+    { id: "Mbit",  cn: "兆位",   kind: "bit",  base: "si",  exp: 2 },
+    { id: "Gbit",  cn: "吉位",   kind: "bit",  base: "si",  exp: 3 },
+    { id: "Tbit",  cn: "太位",   kind: "bit",  base: "si",  exp: 4 },
+    { id: "Kibit", cn: "千位",   kind: "bit",  base: "iec", exp: 1 },
+    { id: "Mibit", cn: "兆位",   kind: "bit",  base: "iec", exp: 2 },
+    { id: "Gibit", cn: "吉位",   kind: "bit",  base: "iec", exp: 3 },
+    { id: "B",     cn: "字节",   kind: "byte", base: "si",  exp: 0 },
+    { id: "KB",    cn: "千字节", kind: "byte", base: "si",  exp: 1 },
+    { id: "MB",    cn: "兆字节", kind: "byte", base: "si",  exp: 2 },
+    { id: "GB",    cn: "吉字节", kind: "byte", base: "si",  exp: 3 },
+    { id: "TB",    cn: "太字节", kind: "byte", base: "si",  exp: 4 },
+    { id: "PB",    cn: "拍字节", kind: "byte", base: "si",  exp: 5 },
+    { id: "KiB",   cn: "千字节", kind: "byte", base: "iec", exp: 1 },
+    { id: "MiB",   cn: "兆字节", kind: "byte", base: "iec", exp: 2 },
+    { id: "GiB",   cn: "吉字节", kind: "byte", base: "iec", exp: 3 },
+    { id: "TiB",   cn: "太字节", kind: "byte", base: "iec", exp: 4 },
+    { id: "PiB",   cn: "拍字节", kind: "byte", base: "iec", exp: 5 }
+  ];
+  const U = {};
+  UNITS.forEach(u => { U[u.id] = u; });
+
+  function unitBits(id) {
+    const u = U[id];
+    return Math.pow(u.base === "si" ? 1000 : 1024, u.exp) * (u.kind === "byte" ? BITS_PER_BYTE : 1);
+  }
+
+  /* 文件大小单位 → 字节 */
+  const SIZE_F = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9, TB: 1e12 };
+  /* 传输速度单位 → 比特 / 秒 */
+  const SPEED_F = {
+    "bps": 1, "Kbps": 1e3, "Mbps": 1e6, "Gbps": 1e9,
+    "B/s": 8, "KB/s": 8e3, "MB/s": 8e6, "GB/s": 8e9,
+    "KiB/s": 8 * 1024, "MiB/s": 8 * 1048576
+  };
+  /* 带宽单位 → 比特 / 秒 */
+  const BW_F = { Kbps: 1e3, Mbps: 1e6, Gbps: 1e9 };
+  /* 码率单位 → 比特 / 秒 */
+  const BR_F = { kbps: 1e3, Mbps: 1e6, Gbps: 1e9 };
+
+  /* ============================================================
+     渲染工具
+     ============================================================ */
+
+  function renderKV(box, items) {
+    box.innerHTML = items.map(it => {
+      const cls = it.cls ? " " + it.cls : "";
+      const val = it.html != null ? it.html : escapeHTML(it.v);
+      return '<div class="kv"><span class="k">' + escapeHTML(it.k) + '</span>'
+           + '<span class="v' + cls + '">' + val + '</span></div>';
+    }).join("");
+  }
+
+  /* 表格。对齐由**列**统一决定，不由单元格自己决定：
+     `cols[i].a = "r"` 会同时写到第 i 列的表头与**所有**单元格上。
+     最初表头写 cls:"r"、单元格写 cls:"n"（只有颜色没有对齐），
+     结果「十进制」表头右对齐落在 732px、内容却左对齐从 243px 起，
+     同一列差了近 500px —— 单元格的 cls 从此只用来带颜色/换行，禁止带对齐。 */
+  function renderTbl(tbl, cols, rows) {
+    const a = i => (cols[i] && cols[i].a === "r" ? "r" : "");
+    const clsOf = (base, own) => [base, own].filter(Boolean).join(" ");
+    const attr = s => (s ? ' class="' + s + '"' : "");
+
+    tbl.innerHTML =
+      "<thead><tr>" + cols.map((c, i) =>
+        "<th" + attr(clsOf(a(i), c.cls)) + ">" + escapeHTML(c.t) + "</th>"
+      ).join("") + "</tr></thead><tbody>"
+      + rows.map(r => {
+        const cells = (r.cells || r).map((c, i) => {
+          const o = typeof c === "string" ? { t: c } : c;
+          return "<td" + attr(clsOf(a(i), o.cls)) + ">"
+               + (o.html != null ? o.html : escapeHTML(o.t)) + "</td>";
+        }).join("");
+        return "<tr" + attr(r.cls) + ">" + cells + "</tr>";
+      }).join("") + "</tbody>";
+  }
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+
+  function copy(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  /* file:// 下 clipboard API 不可用，退回 textarea + execCommand */
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     一、字节单位换算
+     ============================================================ */
+
+  /* 数量级：cn 用完整的中文名（千字节 / 兆字节 …），
+     单写一个「千」「兆」太省略，配上右侧的 KB/KiB 反而不好读。 */
+  const MAG = [
+    { exp: 0, cn: "字节",   si: "B",   iec: "B"   },
+    { exp: 1, cn: "千字节", si: "KB",  iec: "KiB" },
+    { exp: 2, cn: "兆字节", si: "MB",  iec: "MiB" },
+    { exp: 3, cn: "吉字节", si: "GB",  iec: "GiB" },
+    { exp: 4, cn: "太字节", si: "TB",  iec: "TiB" },
+    { exp: 5, cn: "拍字节", si: "PB",  iec: "PiB" }
+  ];
+  let convSummary = "";
+
+  function runConv() {
+    const el = $("cvVal"), sel = $("cvUnit");
+    const tbl = $("cvTbl");
+    const t = takeNum(el, true);
+    if (!t.ok) {
+      tbl.innerHTML = "";
+      $("cvNote").innerHTML = '<span class="err-tip">请输入一个不小于 0 的数字</span>';
+      convSummary = "";
+      return;
+    }
+    if (t.empty) {
+      tbl.innerHTML = "";
+      $("cvNote").innerHTML = '<span class="empty-tip">输入数值后自动换算</span>';
+      convSummary = "";
+      return;
+    }
+
+    const v = t.v;
+    const uid = sel.value;
+    const inU = U[uid];
+    const bits = v * unitBits(uid);
+    const bytes = bits / BITS_PER_BYTE;
+
+    /* 位与字节不受「1000 / 1024」影响（没有前缀就没有进位差），
+       所以这两行的两列是同一个值 —— 这不是 bug。
+       高亮的语义是「你输入的那个量落在哪一行」：位单位（bit/kbit/Mbit/…）
+       无论前缀如何，对应的都是「位」这一行；字节单位则按数量级匹配。 */
+    const rowBit = {
+      cls: inU.kind === "bit" ? "hit" : "",
+      cells: [
+        { t: "位", cls: "u" },
+        { t: fmtNum(bits) + " bit", cls: "n" },
+        { t: fmtNum(bits) + " bit", cls: "n" }
+      ]
+    };
+
+    /* 同一份字节数，分别按 1000 与 1024 展开到 6 个数量级 */
+    const rowBytes = MAG.map(m => ({
+      cls: inU.kind === "byte" && inU.exp === m.exp ? "hit" : "",
+      cells: [
+        { t: m.cn, cls: "u" },
+        { t: fmtNum(bytes / Math.pow(1000, m.exp)) + " " + m.si, cls: "n" },
+        { t: fmtNum(bytes / Math.pow(1024, m.exp)) + " " + m.iec, cls: "n" }
+      ]
+    }));
+
+    renderTbl(tbl, [
+      { t: "单位" },
+      { t: "十进制 (1000 进制)", a: "r" },
+      { t: "二进制 (1024 进制)", a: "r" }
+    ], [rowBit].concat(rowBytes));
+
+    /* 两套进制的差距：只在「千」及以上才有意义。
+       注意方向 —— 同一份字节数按 1024 读出的数字更小，所以差距要取绝对值描述，
+       直接写 (iecV/siV - 1) 会得到一个带负号的百分数，读起来莫名其妙。 */
+    const exp = Math.max(1, inU.exp);
+    const GAP_CN = { 1: "千", 2: "兆", 3: "吉", 4: "太", 5: "拍" };
+    const gaps = [1, 2, 3, 4, 5].map(e => {
+      const g = (1 - Math.pow(1000, e) / Math.pow(1024, e)) * 100;
+      const txt = "「" + GAP_CN[e] + "」" + g.toFixed(2) + "%";
+      return e === exp ? "<b>" + txt + "</b>" : txt;
+    }).join(" · ");
+    const diskNote = exp >= 3
+      ? '这也是为什么标称 <b>1 TB</b> 的硬盘在系统里只显示约 <b>931.32 GiB</b> —— 厂商标的是十进制，系统按二进制算。'
+      : '';
+
+    $("cvNote").innerHTML =
+      '<b>' + fmtNum(v) + ' ' + uid + '</b>（' + inU.cn + '，' + (inU.base === "si" ? "1000 进制" : "1024 进制") + '）'
+      + ' = <b>' + fmtNum(bytes) + ' B</b> = <b>' + fmtNum(bits) + ' bit</b>。<br>'
+      + '十进制（SI）按 1000 进位、二进制（IEC）按 1024 进位，同一份字节数用两套读法的差距随数量级放大：'
+      + gaps + '。'
+      + (diskNote ? '<br>' + diskNote : '');
+
+    convSummary = [
+      "字节换算：" + fmtNum(v) + " " + uid,
+      "= " + fmtNum(bits) + " bit",
+      "= " + fmtNum(bytes) + " B",
+      "= " + fmtNum(bytes / Math.pow(1000, 2)) + " MB（十进制）",
+      "= " + fmtNum(bytes / Math.pow(1024, 2)) + " MiB（二进制）"
+    ].join("\n");
+  }
+
+  $("cvVal").addEventListener("input", runConv);
+  $("cvUnit").addEventListener("change", runConv);
+  $("btnConvCopy").addEventListener("click", () => {
+    if (!convSummary) { toast("还没有可复制的结果"); return; }
+    copy(convSummary, "已复制换算结果");
+  });
+
+  /* ============================================================
+     二、下载耗时
+     ============================================================ */
+
+  let dlSummary = "";
+
+  function runDownload() {
+    const szT = takeNum($("szVal"), false);
+    const spT = takeNum($("spVal"), false);
+    const box = $("dlKv");
+
+    if (!szT.ok || !spT.ok) {
+      $("dlTime").textContent = "—";
+      box.innerHTML = "";
+      $("dlNote").innerHTML = '<span class="err-tip">文件大小与传输速度都需要是大于 0 的数字</span>';
+      dlSummary = "";
+      return;
+    }
+    if (szT.empty || spT.empty) {
+      $("dlTime").textContent = "—";
+      box.innerHTML = "";
+      $("dlNote").innerHTML = '<span class="empty-tip">填入文件大小与传输速度后计算</span>';
+      dlSummary = "";
+      return;
+    }
+
+    const szUnit = $("szUnit").value, spUnit = $("spUnit").value;
+    const bytes = szT.v * SIZE_F[szUnit];
+    const bits = bytes * BITS_PER_BYTE;
+    const bps = spT.v * SPEED_F[spUnit];      // 比特 / 秒
+    const bpsBytes = bps / BITS_PER_BYTE;     // 字节 / 秒
+    const sec = bits / bps;
+
+    $("dlTime").textContent = fmtDur(sec);
+
+    renderKV(box, [
+      { k: "数据量", v: fmtNum(bytes) + " B  ·  " + fmtNum(bytes / 1e6) + " MB  ·  " + fmtNum(bytes / 1073741824) + " GiB" },
+      { k: "数据量(位)", v: fmtNum(bits) + " bit", cls: "unit" },
+      { k: "传输速度", v: fmtNum(spT.v) + " " + spUnit + "  =  " + fmtNum(bpsBytes) + " B/s  =  " + fmtNum(bpsBytes / 1e6) + " MB/s", cls: "num" },
+      { k: "每秒", v: fmtNum(bpsBytes / 1e6) + " MB" },
+      { k: "每分钟", v: fmtNum(bpsBytes * 60 / 1e6) + " MB" },
+      { k: "每小时", v: fmtNum(bpsBytes * 3600 / 1e9) + " GB" },
+      { k: "精确秒数", v: fmtNum(sec, 8) + " 秒", cls: "unit" }
+    ]);
+
+    /* 速度波动区间：给出 ±20% 的耗时范围，比一个点值更有参考意义 */
+    const slow = sec / 0.8, fast = sec / 1.2;
+    $("dlNote").innerHTML =
+      '换算过程：' + fmtNum(bytes) + ' B × 8 = ' + fmtNum(bits) + ' bit，'
+      + '÷ ' + fmtNum(bps) + ' bps = <b>' + fmtDur(sec) + '</b>。<br>'
+      + '实测速度通常有波动，若按 ±20% 估算，耗时大约落在 <b>' + fmtDur(fast) + '</b> ~ <b>' + fmtDur(slow) + '</b> 之间。';
+
+    dlSummary = [
+      "下载耗时：" + fmtNum(szT.v) + " " + szUnit + " @ " + fmtNum(spT.v) + " " + spUnit,
+      "预计耗时：" + fmtDur(sec),
+      "（数据量 " + fmtNum(bits) + " bit，" + fmtNum(bpsBytes) + " B/s）"
+    ].join("\n");
+  }
+
+  ["szVal", "spVal"].forEach(id => $(id).addEventListener("input", runDownload));
+  ["szUnit", "spUnit"].forEach(id => $(id).addEventListener("change", runDownload));
+
+  /* ============================================================
+     三、带宽 → 速率
+     ============================================================ */
+
+  /* 常见文件参照物（字节） */
+  const FILES = [
+    { n: "1 首 MP3（5 MB）",        b: 5e6 },
+    { n: "1 GB 电影",               b: 1e9 },
+    { n: "4.7 GB DVD 镜像",         b: 4.7e9 },
+    { n: "25 GB 蓝光原盘",          b: 25e9 },
+    { n: "50 GB 游戏",              b: 50e9 },
+    { n: "100 GB 全量备份",         b: 100e9 },
+    { n: "1 TB 数据迁移",           b: 1e12 }
+  ];
+
+  function runBandwidth() {
+    const dT = takeNum($("bwVal"), false);
+    const uT = takeNum($("upVal"), false);
+    const box = $("bwKv");
+
+    if (!dT.ok || !uT.ok) {
+      box.innerHTML = "";
+      $("bwTbl").innerHTML = "";
+      $("bwNote").innerHTML = '<span class="err-tip">带宽需要是大于 0 的数字（上行可留空）</span>';
+      return;
+    }
+    if (dT.empty) {
+      box.innerHTML = "";
+      $("bwTbl").innerHTML = "";
+      $("bwNote").innerHTML = '<span class="empty-tip">填入下行带宽后计算</span>';
+      return;
+    }
+
+    const dF = BW_F[$("bwUnit").value];
+    const dOwn = $("bwUnit").value;
+    const downBps = dT.v * dF;             // 比特 / 秒
+    const downBytes = downBps / BITS_PER_BYTE;
+
+    /* 换到「相邻」的那一档单位，而不是把输入原样再念一遍 ——
+       否则选 Mbps 输入 500 就会显示成「500 Mbps = 500 Mbps = 62.5 MB/s」。
+       Gbps 往下换 Mbps，Kbps / Mbps 往上换。 */
+    const alt = dOwn === "Kbps" ? { u: "Mbps", f: 1e6 }
+              : dOwn === "Mbps" ? { u: "Gbps", f: 1e9 }
+              : { u: "Mbps", f: 1e6 };
+
+    const items = [
+      { k: "下行理论", v: fmtNum(downBytes / 1e6) + " MB/s  ·  " + fmtNum(downBytes / 1048576) + " MiB/s", cls: "num" },
+      { k: "下行实际", v: fmtNum(downBytes * EFF / 1e6) + " MB/s（按 " + (EFF * 100) + "% 有效带宽）" },
+      { k: "换算", v: fmtNum(dT.v) + " " + dOwn + "  =  " + fmtNum(downBps / alt.f) + " " + alt.u + "  =  " + fmtNum(downBps / 8 / 1e6) + " MB/s", cls: "unit" }
+    ];
+
+    let upBytes = 0, hasUp = false;
+    if (!uT.empty) {
+      hasUp = true;
+      const uOwn = $("upUnit").value;
+      const upBps = uT.v * BW_F[uOwn];
+      upBytes = upBps / BITS_PER_BYTE;
+      items.push({ k: "上行理论", v: fmtNum(upBytes / 1e6) + " MB/s  ·  " + fmtNum(upBytes / 1048576) + " MiB/s", cls: "num" });
+      items.push({ k: "上行实际", v: fmtNum(upBytes * EFF / 1e6) + " MB/s（按 " + (EFF * 100) + "% 有效带宽）" });
+      items.push({ k: "上下行比", v: "1 : " + fmtNum(downBps / (uT.v * BW_F[uOwn]), 3) + "  ·  上行是下行的 " + fmtNum(upBps / downBps * 100, 3) + "%", cls: "unit" });
+    }
+    renderKV(box, items);
+
+    const effBps = downBytes * EFF;
+    renderTbl($("bwTbl"), [
+      { t: "文件" }, { t: "理论最快", a: "r" }, { t: "实际（" + (EFF * 100) + "%）", a: "r" }
+    ], FILES.map(f => ({
+      cells: [
+        { t: f.n, cls: "wrap" },
+        { t: fmtDur(f.b / downBytes) },
+        { t: fmtDur(f.b / effBps), cls: "n" }
+      ]
+    })));
+
+    const note = [];
+    note.push('运营商标的 <b>' + fmtNum(dT.v) + ' ' + dOwn + '</b> 是<b>比特率</b>，下载软件显示的是<b>字节率</b>，中间差 8 倍，所以理论下载峰值是 <b>' + fmtNum(downBytes / 1e6) + ' MB/s</b>。');
+    if (hasUp) {
+      note.push('上传同理：' + fmtNum(upBytes / 1e6) + ' MB/s 峰值。家用宽带普遍上下行不对称，上传大文件前先看这一项。');
+    } else {
+      note.push('留空「上行带宽」可以只算下行；家用宽带上下行通常不对称（常见 10:1 甚至更低）。');
+    }
+    note.push('上表的「实际」按 85% 有效带宽估算 —— 以太网帧开销、TCP 拥塞控制、对方服务器限速都会吃掉一部分，实测到 80%~90% 就算正常。');
+    $("bwNote").innerHTML = note.join("<br>");
+  }
+
+  ["bwVal", "upVal"].forEach(id => $(id).addEventListener("input", runBandwidth));
+  ["bwUnit", "upUnit"].forEach(id => $(id).addEventListener("change", runBandwidth));
+
+  /* ============================================================
+     四、码率 → 体积
+     ============================================================ */
+
+  /* 常见场景码率参考（比特 / 秒） */
+  const BITRATES = [
+    { n: "音乐 · MP3 128 kbps",     bps: 128e3 },
+    { n: "音乐 · MP3 320 kbps",     bps: 320e3 },
+    { n: "音乐 · FLAC 无损",        bps: 1000e3 },
+    { n: "视频 · 720p",             bps: 2.5e6 },
+    { n: "视频 · 1080p",            bps: 5e6 },
+    { n: "视频 · 1080p 高码率",     bps: 10e6 },
+    { n: "视频 · 4K",               bps: 25e6 },
+    { n: "视频 · 4K HDR 60fps",     bps: 60e6 },
+    { n: "视频 · 8K",               bps: 100e6 }
+  ];
+
+  function runBitrate() {
+    const t = takeNum($("brVal"), false);
+    const box = $("brKv");
+    if (!t.ok) {
+      box.innerHTML = "";
+      $("brTbl").innerHTML = "";
+      $("brNote").innerHTML = '<span class="err-tip">码率需要是大于 0 的数字</span>';
+      return;
+    }
+    if (t.empty) {
+      box.innerHTML = "";
+      $("brTbl").innerHTML = "";
+      $("brNote").innerHTML = '<span class="empty-tip">填入码率后计算</span>';
+      return;
+    }
+
+    const unit = $("brUnit").value;
+    const bps = t.v * BR_F[unit];
+    const Bps = bps / BITS_PER_BYTE;    // 字节 / 秒
+
+    renderKV(box, [
+      { k: "每秒", v: fmtNum(Bps / 1e3) + " KB  ·  " + fmtNum(Bps / 1e6) + " MB", cls: "num" },
+      { k: "每分钟", v: fmtNum(Bps * 60 / 1e6) + " MB" },
+      { k: "每小时", v: fmtNum(Bps * 3600 / 1e9) + " GB  ·  " + fmtNum(Bps * 3600 / 1073741824) + " GiB", cls: "num" },
+      { k: "每 10 分钟", v: fmtNum(Bps * 600 / 1e6) + " MB" },
+      { k: "2 小时影片", v: fmtNum(Bps * 7200 / 1e9) + " GB" }
+    ]);
+
+    /* 该码率落在哪一档：用它决定高亮行 */
+    let hitIdx = -1, best = Infinity;
+    BITRATES.forEach((b, i) => {
+      const d = Math.abs(Math.log(b.bps / bps));
+      if (d < best) { best = d; hitIdx = i; }
+    });
+
+    renderTbl($("brTbl"), [
+      { t: "场景" }, { t: "码率", a: "r" }, { t: "每小时", a: "r" }
+    ], BITRATES.map((b, i) => ({
+      cls: i === hitIdx ? "hit" : "",
+      cells: [
+        { t: b.n, cls: "wrap" },
+        { t: b.bps >= 1e6 ? fmtNum(b.bps / 1e6) + " Mbps" : fmtNum(b.bps / 1e3) + " kbps" },
+        { t: fmtNum(b.bps / 8 * 3600 / 1e9) + " GB", cls: "n" }
+      ]
+    })));
+
+    $("brNote").innerHTML =
+      '码率是<b>比特</b>率，体积是<b>字节</b>数，所以要先 ÷ 8 再 × 时间：'
+      + fmtNum(bps) + ' bps ÷ 8 = ' + fmtNum(Bps) + ' B/s，× 3600 秒 = <b>' + fmtNum(Bps * 3600 / 1e9) + ' GB/小时</b>。<br>'
+      + '同理，<code>' + fmtNum(bps / 1e6) + ' Mbps</code> 的流媒体至少需要 <b>' + fmtNum(bps / 1e6) + ' Mbps</b> 带宽，'
+      + '考虑到波动，建议带宽留 1.5~2 倍余量（约 <b>' + fmtNum(bps / 1e6 * 1.5) + ' ~ ' + fmtNum(bps / 1e6 * 2) + ' Mbps</b>）。';
+  }
+
+  $("brVal").addEventListener("input", runBitrate);
+  $("brUnit").addEventListener("change", runBitrate);
+
+  /* ============================================================
+     五、介质理论速度对照（静态表）
+     ============================================================ */
+
+  /* [名称, 比特/秒, 备注] */
+  const MEDIA = [
+    ["蓝牙 5.3（BLE）",        2e6,      "低功耗链路"],
+    ["百兆以太网",             100e6,    "100BASE-TX"],
+    ["4G LTE 下行",            100e6,    "Cat.4 量级"],
+    ["USB 2.0",                480e6,    "High Speed"],
+    ["Wi-Fi 4（3×3）",         600e6,    "802.11n 40MHz"],
+    ["SD UHS-I",               832e6,    "104 MB/s"],
+    ["Wi-Fi 5（2×2）",         866e6,    "802.11ac 80MHz"],
+    ["千兆以太网",             1e9,      "1000BASE-T"],
+    ["5G Sub-6 下行",          1e9,      "中频实测区间上限"],
+    ["Wi-Fi 6（2×2）",         1201e6,   "802.11ax 80MHz"],
+    ["2.5G 以太网",            2.5e9,    "2.5GBASE-T"],
+    ["Wi-Fi 7（2×2 320MHz）",  2882e6,   "802.11be"],
+    ["USB 3.2 Gen 1",          5e9,      "原 USB 3.0"],
+    ["SATA III",               6e9,      "8b/10b 编码"],
+    ["万兆以太网",             10e9,     "10GBASE-T"],
+    ["USB 3.2 Gen 2",          10e9,     "原 USB 3.1"],
+    ["USB 3.2 Gen 2×2",        20e9,     "双通道"],
+    ["PCIe 3.0 ×4（NVMe）",    31.5e9,   "128b/130b 编码"],
+    ["PCIe 4.0 ×4（NVMe）",    63e9,     "128b/130b 编码"],
+    ["PCIe 5.0 ×4（NVMe）",    126e9,    "128b/130b 编码"],
+    ["Thunderbolt 4 / USB4",   40e9,     "双向各 40 Gbps"]
+  ];
+
+  function paintMedia() {
+    renderTbl($("mediaTbl"), [
+      { t: "介质 / 接口" },
+      { t: "理论带宽", a: "r" },
+      { t: "理论速率", a: "r" },
+      { t: "1 GB 耗时", a: "r" },
+      { t: "备注", cls: "hide-sm" }
+    ], MEDIA.map(([n, bps, memo]) => {
+      const bytes = bps / 8;
+      const gbps = bps / 1e9;
+      return {
+        cells: [
+          { t: n, cls: "wrap" },
+          { t: gbps >= 1 ? fmtNum(gbps) + " Gbps" : fmtNum(bps / 1e6) + " Mbps" },
+          { t: bytes >= 1e9 ? fmtNum(bytes / 1e9) + " GB/s" : fmtNum(bytes / 1e6) + " MB/s", cls: "n" },
+          { t: fmtDur(1e9 / bytes) },
+          { t: memo, cls: "hide-sm sub" }
+        ]
+      };
+    }));
+  }
+
+  /* ============================================================
+     示例 / 重置
+     ============================================================ */
+
+  const DEFAULTS = {
+    cvVal: "1", cvUnit: "MB",
+    szVal: "4.7", szUnit: "GB", spVal: "100", spUnit: "Mbps",
+    bwVal: "500", bwUnit: "Mbps", upVal: "50", upUnit: "Mbps",
+    brVal: "25", brUnit: "Mbps"
+  };
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-ex]");
+    if (!b) return;
+    const kind = b.dataset.ex;
+    if (kind === "file") {          // 常见场景：100 Mbps 下拖一张 DVD 镜像
+      $("szVal").value = "4.7"; $("szUnit").value = "GB";
+      $("spVal").value = "100"; $("spUnit").value = "Mbps";
+      runDownload();
+      toast("示例：4.7 GB 镜像 @ 100 Mbps");
+    } else if (kind === "bw") {     // 500M / 50M 家用宽带
+      $("bwVal").value = "500"; $("bwUnit").value = "Mbps";
+      $("upVal").value = "50"; $("upUnit").value = "Mbps";
+      runBandwidth();
+      toast("示例：500M 下行 / 50M 上行");
+    } else if (kind === "br") {     // 4K 串流
+      $("brVal").value = "25"; $("brUnit").value = "Mbps";
+      runBitrate();
+      toast("示例：4K 码率 25 Mbps");
+    }
+  });
+
+  $("btnReset").addEventListener("click", () => {
+    Object.keys(DEFAULTS).forEach(k => { $(k).value = DEFAULTS[k]; });
+    runConv(); runDownload(); runBandwidth(); runBitrate();
+    toast("已恢复初始值");
+  });
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+
+  runConv();
+  runDownload();
+  runBandwidth();
+  runBitrate();
+  paintMedia();
+})();
+</script>
+</body>
+</html>
