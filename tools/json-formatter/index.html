@@ -112,6 +112,11 @@
   }
   .row:hover { background: #1a222c; }
   .row.sel { background: #1d3a4a; }
+  /* 行内容容器：拆成「前缀（缩进 / 折叠箭头 / 键名）」与「值」两块。
+     值单独成块，折行时续行自然悬挂对齐到值的起始列，缩进层级不会丢。 */
+  .body { display: flex; align-items: center; flex: none; }
+  .pre  { display: flex; align-items: center; flex: none; }
+  .val  { display: flex; align-items: center; flex: none; }
   /* 行号列固定在最左；缩进区绘制虚线层级引导线 */
   .ln {
     width: 52px; flex: none; text-align: right; padding-right: 14px; color: #4d5b6b;
@@ -127,6 +132,32 @@
   .tw { width: 15px; flex: none; text-align: center; color: #7d8b9c; cursor: pointer;
     user-select: none; font-size: 11px; }
   .tw:hover { color: #fff; }
+
+  /* ===== 结果区自动换行模式 =====
+     长字符串不再把行撑宽（去掉横向滚动条），而是在值所在的列内折行；
+     行高随之不再固定，由 JS 实测每行高度 + 累积偏移来驱动虚拟滚动。 */
+  #viewport.wrap { overflow-x: hidden; }
+  #viewport.wrap #rows { width: 100%; }
+  #viewport.wrap .row {
+    width: 100%; min-width: 100%; height: auto; min-height: var(--row);
+    align-items: flex-start; position: relative;
+  }
+  #viewport.wrap .ln { line-height: var(--row); }
+  #viewport.wrap .body { flex: 1 1 auto; min-width: 0; align-items: flex-start; }
+  /* 前缀：不参与 flex-grow（值块用 flex-basis:0，长值不会挤压键名），
+     只在自身过宽时收缩并让键名折行，最多占 60% 宽度，保证值列始终有位置 */
+  #viewport.wrap .pre {
+    align-items: flex-start; line-height: var(--row);
+    flex: 0 1 auto; min-width: 0; max-width: 60%;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  /* 值块：吃掉剩余宽度并在自己列内折行，续行自然悬挂对齐 */
+  #viewport.wrap .val {
+    display: block; flex: 1 1 0; min-width: 0;
+    line-height: var(--row);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  #viewport.wrap .acts { position: absolute; right: 12px; top: 2px; margin-left: 0; }
   .k { color: #c3d3e4; }
   .p { color: #8fa0b3; margin-right: 8px; }
   .s { color: #98d98c; }
@@ -137,8 +168,8 @@
   .c { color: #9fb2c6; }
   .cm { color: #6f7d8d; }
 
-  /* 折叠提示：// 4 items */
-  .hint { color: #6b7887; font-size: 11px; margin-left: 10px; font-style: italic;
+  /* 折叠提示：// 4 items。line-height 收成 1，避免它把折行模式下的行盒撑高 1px */
+  .hint { color: #6b7887; font-size: 11px; line-height: 1; margin-left: 10px; font-style: italic;
     user-select: none; }
   .hint.none { display: none; }
 
@@ -246,6 +277,8 @@
   const ROW_H = 24, OVERSCAN = 14;
   const CHUNK_MS = 7;
   const INDENT_STEP = 20;
+  const GUTTER = 64;      // 行号列 52 + 行右侧留白 12，用于推算折行可用宽度
+  const CHAR_W = 7.8;     // 13px 等宽字体的近似字符宽度，仅用于未实测行的高度估算
   const ID_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
   /* ============================================================
@@ -261,6 +294,12 @@
   let selected = null;
   let allOpen = true, overrides = 0, anchor = null, maxRowWidth = 0;
   let nestedMs = 0, nestedCount = 0;
+
+  /* 结果区换行模式：行高不再固定，改用「每行实测高度 + 累积偏移」驱动虚拟滚动 */
+  let wrapMode = true, lastAvail = 0;
+  let heights = [];       // 与 flat 对齐：每行高度（已渲染过为实测值，否则为估算值）
+  let offs = [0];         // 累积偏移，长度 = heights.length + 1；offs[i] = 第 i 行的顶部坐标
+  let totalH = 0;         // 所有行高之和，即 sizer 的高度
 
   const countCache = new WeakMap();
   const isObj = v => v !== null && typeof v === "object";
@@ -430,11 +469,12 @@
 
   function startBuild(keepScroll) {
     anchor = (keepScroll && flat.length)
-      ? flat[Math.min(Math.floor(viewport.scrollTop / ROW_H), flat.length - 1)]
+      ? flat[Math.min(rowAt(viewport.scrollTop), flat.length - 1)]
       : null;
 
     flat = []; role = [];
     maxRowWidth = 0;
+    heights = []; offs = [0]; totalH = 0;    // 行内容已变，实测高度全部作废
     building = false;
     stack = null;
 
@@ -454,7 +494,6 @@
     else barTarget = 1;
     setBar(building ? 0 : 1);
 
-    sizer.style.height = (flat.length * ROW_H) + "px";
     render();
     if (building) pump();
     else restoreAnchor();
@@ -485,7 +524,6 @@
     const done = stack.length === 0;
     building = !done;
     if (done) setBar(1); else setBar(barTarget ? flat.length / barTarget : 0);
-    sizer.style.height = (flat.length * ROW_H) + "px";
     render();
     if (done) restoreAnchor();
     else requestAnimationFrame(pump);
@@ -495,7 +533,7 @@
     if (!anchor) { viewport.scrollTop = 0; return; }
     let n = anchor, idx = -1;
     while (n) { idx = flat.indexOf(n); if (idx >= 0) break; n = n.parent; }
-    viewport.scrollTop = idx < 0 ? 0 : idx * ROW_H;
+    viewport.scrollTop = idx < 0 ? 0 : offs[idx];
     anchor = null;
   }
 
@@ -520,6 +558,93 @@
   }
 
   /* ============================================================
+     可变行高
+     - 折行模式下每行高度由内容决定，heights[i] 优先用实测值（渲染后读 offsetHeight），
+       没渲染过的行先用估算值，滚动到附近时再被实测值替换
+     - offs[i] 是第 i 行的顶部坐标（前缀和），用二分查找把 scrollTop 映射到行号
+     ============================================================ */
+  const wrapAvail = () => Math.max(60, viewport.clientWidth - GUTTER);
+
+  // 粗略估算一行渲染出来有多少字符，只用于没渲染过的行的高度预估
+  function estChars(n, r) {
+    let c = 0;
+    if (r !== 2 && n !== root && !n.isIdx) c += String(n.key).length + 4;  // "key":
+    const v = n.raw;
+    if (r !== 0) c += 1;                                     // 容器头 / 尾行的括号
+    else if (v === null) c += 4;
+    else if (typeof v === "string") c += v.length + 2;
+    else if (isObj(v)) c += 2 + (childCount(v) ? 12 : 0);    // {} / [] 以及 // N items
+    else c += String(v).length;
+    return c;
+  }
+
+  function estimateH(i) {
+    if (!wrapMode) return ROW_H;
+    const n = flat[i];
+    if (!n) return ROW_H;
+    const px = n.depth * INDENT_STEP + 15 + estChars(n, role[i]) * CHAR_W;
+    const lines = Math.ceil(px / wrapAvail());
+    return (lines > 1 ? lines : 1) * ROW_H;
+  }
+
+  // 从 from 起重新累加偏移；from 之前的行高没有变化，可以直接续算
+  function rebuildOffsets(from) {
+    const n = heights.length;
+    let acc = from > 0 ? offs[from] : 0;
+    for (let i = from; i < n; i++) { offs[i] = acc; acc += heights[i]; }
+    offs[n] = acc;
+    totalH = acc;
+  }
+
+  // flat 长度变化时同步 heights / offs；新增的行先填估算高度
+  function ensureHeights() {
+    const n = flat.length;
+    if (heights.length === n) return;
+    if (n < heights.length) {
+      heights.length = n;
+      offs.length = n + 1;
+      rebuildOffsets(0);
+      return;
+    }
+    const from = heights.length;
+    for (let i = from; i < n; i++) heights.push(estimateH(i));
+    offs.length = n + 1;
+    rebuildOffsets(from);
+  }
+
+  // 行宽或换行模式变化后，所有实测高度失效，整体退回估算
+  function invalidateHeights() {
+    heights = [];
+    offs = [0];
+    totalH = 0;
+    lastAvail = wrapAvail();
+    ensureHeights();
+  }
+
+  // 二分查找覆盖纵坐标 y 的那一行
+  function rowAt(y) {
+    const n = flat.length;
+    if (!n) return 0;
+    let lo = 0, hi = n - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (offs[mid + 1] <= y) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  }
+
+  // 切换结果区换行模式，尽量保持当前顶部行不动
+  function setWrap(on) {
+    if (on === wrapMode) return;
+    const keep = flat.length ? rowAt(viewport.scrollTop) : 0;
+    wrapMode = on;
+    viewport.classList.toggle("wrap", on);
+    invalidateHeights();
+    viewport.scrollTop = offs[Math.min(keep, flat.length)] || 0;
+    render();
+  }
+
+  /* ============================================================
      虚拟滚动渲染
      ============================================================ */
   const pool = [];
@@ -527,15 +652,21 @@
     if (pool[i]) return pool[i];
     const d = document.createElement("div");
     d.className = "row";
-    d.innerHTML = '<span class="ln"></span><span class="ind"></span><span class="tw"></span>'
-                + '<span class="k"></span><span class="p"></span><span class="v"></span>'
-                + '<span class="cm"></span><span class="hint"></span>'
+    d.innerHTML = '<span class="ln"></span>'
+                + '<span class="body">'
+                + '<span class="pre"><span class="ind"></span><span class="tw"></span>'
+                + '<span class="k"></span><span class="p"></span></span>'
+                + '<span class="val"><span class="v"></span><span class="cm"></span>'
+                + '<span class="hint"></span></span>'
+                + '</span>'
                 + '<span class="acts">'
                 + '<button data-a="copy">复制</button><button data-a="path">路径</button>'
                 + '<button data-a="dl">下载</button><button data-a="del">删除</button></span>';
-    d._ln = d.children[0]; d._ind = d.children[1]; d._tw = d.children[2];
-    d._k = d.children[3];  d._p = d.children[4];  d._v = d.children[5];
-    d._cm = d.children[6]; d._hint = d.children[7]; d._acts = d.children[8];
+    d._ln = d.children[0]; d._body = d.children[1]; d._acts = d.children[2];
+    const bx = d._body, pre = bx.children[0], val = bx.children[1];
+    d._ind = pre.children[0]; d._tw = pre.children[1];
+    d._k = pre.children[2];   d._p = pre.children[3];
+    d._v = val.children[0];   d._cm = val.children[1]; d._hint = val.children[2];
     d._tw.onclick = e => { e.stopPropagation(); if (d._n) toggle(d._n); };
     d._acts.onclick = e => {
       const b = e.target.closest("button");
@@ -557,25 +688,46 @@
   function render() {
     const total = flat.length;
     $("empty").style.display = total ? "none" : "flex";
+
+    ensureHeights();
+
     const vh = viewport.clientHeight || 1;
-    const first = Math.max(0, Math.floor(viewport.scrollTop / ROW_H) - OVERSCAN);
-    const last = Math.min(total, Math.ceil((viewport.scrollTop + vh) / ROW_H) + OVERSCAN);
+    const y = viewport.scrollTop;
+    const first = total ? Math.max(0, rowAt(y) - OVERSCAN) : 0;
+    const last = total ? Math.min(total, rowAt(y + vh) + 1 + OVERSCAN) : 0;
     const need = Math.max(0, last - first);
 
     for (let i = 0; i < need; i++) getRow(i);
     for (let i = need; i < pool.length; i++) pool[i].style.display = "none";
     for (let i = 0; i < need; i++) pool[i].style.display = "";
 
+    // 先把这一屏全部写进 DOM，再统一读回尺寸：避免每行触发一次强制布局
     for (let i = 0; i < need; i++) {
       const idx = first + i;
       paint(pool[i], flat[idx], role[idx], idx + 1);
     }
 
-    let maxW = 0;
-    for (let i = 0; i < need; i++) { const w = pool[i].offsetWidth; if (w > maxW) maxW = w; }
-    rows.style.transform = `translateY(${first * ROW_H}px)`;
-    maxRowWidth = Math.max(maxRowWidth, maxW);
-    sizer.style.width = Math.max(viewport.clientWidth, maxRowWidth + 24) + "px";
+    let maxW = 0, changedFrom = -1;
+    for (let i = 0; i < need; i++) {
+      const idx = first + i, el = pool[i];
+      const h = el.offsetHeight || ROW_H;                 // 折行模式下这里会大于 ROW_H
+      if (heights[idx] !== h) {
+        heights[idx] = h;
+        if (changedFrom < 0 || idx < changedFrom) changedFrom = idx;
+      }
+      if (!wrapMode) { const w = el.offsetWidth; if (w > maxW) maxW = w; }
+    }
+    // 高度变化只影响该行及其之后的行，从这里往后重算累积偏移即可
+    if (changedFrom >= 0) rebuildOffsets(changedFrom);
+
+    rows.style.transform = `translateY(${Math.round(offs[first] || 0)}px)`;
+    sizer.style.height = Math.round(totalH) + "px";
+    if (wrapMode) {
+      sizer.style.width = "";                             // 交给 CSS 的 width:100%，不产生横向滚动
+    } else {
+      maxRowWidth = Math.max(maxRowWidth, maxW);
+      sizer.style.width = Math.max(viewport.clientWidth, maxRowWidth + 24) + "px";
+    }
 
     if (!total) $("outInfo").textContent = "—";
     else if (building) $("outInfo").textContent = `${total.toLocaleString()} 行 · 构建中…`;
@@ -676,7 +828,12 @@
   let resizeRaf = 0;
   window.addEventListener("resize", () => {
     if (resizeRaf) return;
-    resizeRaf = requestAnimationFrame(() => { resizeRaf = 0; render(); });
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      // 行宽变了，折行行数随之变化，之前的实测高度不再成立
+      if (wrapMode && wrapAvail() !== lastAvail) invalidateHeights();
+      render();
+    });
   });
 
   function select(n) {
@@ -940,7 +1097,10 @@
   };
   $("btnCopyPath").onclick = () => { if (selected) copyPath(selected); };
 
-  $("wrap").onchange = e => input.classList.toggle("wrap", e.target.checked);
+  $("wrap").onchange = e => {
+    input.classList.toggle("wrap", e.target.checked);
+    setWrap(e.target.checked);          // 结果区同步换行 / 恢复横向滚动
+  };
   $("indent").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
   $("sortKeys").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
   $("nested").onchange = () => { if (input.value.trim()) parseAndRender(); };
@@ -1011,6 +1171,11 @@
       trace: '[{"span":"db","ms":12},{"span":"cache","ms":3}]'
     };
   }
+
+  // 初始换行状态与顶栏复选框保持一致
+  wrapMode = $("wrap").checked;
+  viewport.classList.toggle("wrap", wrapMode);
+  lastAvail = wrapAvail();
 
   parseAndRender();
 })();
