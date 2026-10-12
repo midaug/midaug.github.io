@@ -255,6 +255,7 @@ var ICONS = {
   chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20V10.5"/><path d="M10 20V4.5"/><path d="M15.5 20v-6.5"/><path d="M21 20H3"/></svg>',
   clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2.1"/></svg>',
   transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 3.6v13"/><path d="m3.6 12.6 3.9 3.9 3.9-3.9"/><path d="M16.5 20.4v-13"/><path d="m12.6 11.4 3.9-3.9 3.9 3.9"/></svg>',
+  av:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.6" width="6" height="11" rx="3"/><path d="M5.6 11.4a6.4 6.4 0 0 0 12.8 0"/><path d="M12 17.8v3.4"/><path d="M8.6 21.2h6.8"/></svg>',
   doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>'
 };
 
@@ -268,6 +269,8 @@ var TOOLS = [
     desc:'实时时间戳（10/13 位）、日期与时间戳互转、两个日期相差、日期前后推算。', tags:['时间戳','日期计算'] },
   { group:'开发工具', name:'字节与网速计算', path:'byte-calc/', icon:'transfer',
     desc:'字节单位换算（1000/1024 双基准）、文件大小与速度算耗时、带宽换算实际速率、码率算体积。', tags:['字节','带宽','网速','换算'] },
+  { group:'运维调试', name:'麦克风 · 音响 · 摄像头', path:'media-test/', icon:'av',
+    desc:'麦克风实时电平与录音回放、HRTF 环绕声试听与左右声道检测、摄像头预览与拍照，全部本地运行。', tags:['麦克风','音响','摄像头','环绕声'] },
   { group:'运维调试', name:'客户端信息查看', path:'client-info/', icon:'monitor',
     desc:'实时显示当前时间戳、浏览器 User-Agent 与页面 meta 信息。', tags:['UA','调试'] },
   { group:'运维调试', name:'xping.sh 下载', path:'xping/', icon:'download',

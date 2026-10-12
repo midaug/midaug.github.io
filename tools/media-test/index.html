@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>麦克风 · 音响 · 摄像头测试</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    /* 数值强调色，与 JSON 工具的语法高亮同一批 */
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  .stat > .dot { vertical-align: middle; margin-right: 5px; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  /* 红色为「进行中 / 危险」态：录音中、摄像头开启中、旋转中 */
+  button.danger {
+    background: var(--err); border-color: var(--err); color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(209,36,47,.45);
+  }
+  button.danger:hover { background: #b81d28; border-color: #b81d28; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled, select:disabled, input:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  button.mini:disabled:hover { background: var(--panel-2); color: var(--text-2); border-color: var(--border); }
+  button.primary:disabled:hover { background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: #fff; border-color: transparent; }
+  button.danger:disabled:hover { background: var(--err); color: #fff; border-color: var(--err); }
+  input[type="text"], input[type="number"] { cursor: text; font-variant-numeric: tabular-nums; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+
+  /* 滑块（播放进度）。自带外观在浅色下与整体不搭，全部自绘。
+     轨道必须够深才看得见：--surface-2（8% 黑）在白底上几乎不可见，
+     实测截图里整条轨道像消失了一样，只剩一个孤零零的圆点。改用 --scrollbar（16%）。 */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    background: transparent; border: 0; padding: 0; height: 18px; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px; border-radius: 3px; background: var(--scrollbar);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 13px; height: 13px; margin-top: -4px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--panel);
+    box-shadow: 0 1px 3px rgba(15,23,42,.28);
+  }
+  input[type="range"]::-moz-range-track { height: 5px; border-radius: 3px; background: var(--scrollbar); }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; background: var(--accent);
+    border: 2px solid var(--panel); box-shadow: 0 1px 3px rgba(15,23,42,.28);
+  }
+  input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-3); box-shadow: none; }
+  input[type="range"]:disabled::-moz-range-thumb { background: var(--text-3); box-shadow: none; }
+
+  /* ===== 主体 ===== */
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* 表单行。两处细节是为了让整页的左边缘整齐：
+     1) max-width 限制整行宽度 —— 否则在宽卡片里 input 会被 flex 拉到近千像素；
+     2) 标签列固定 84px —— 同一张卡片里每行的「控件起始 x」才会对齐，
+        宽窄不一就会看出参差，观感上就是「排版乱」。
+     顶边距写在 .row 自己身上，**不要**写成 `.row + .row` —— 那只在两个相邻 .row
+     之间生效，跟在 canvas.wave / .cam-wrap / .dial 后面的按钮行会一点边距都没有，
+     按钮直接压在波形图、视频框、方位盘的边框上（实测间距 0px）。
+     紧跟在 h2 后面的第一行显式清零，靠 h2 自己的 margin-bottom 留白，
+     免得又依赖外边距折叠这种隐式行为。 */
+  .row {
+    display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 720px;
+    margin-top: 10px;
+  }
+  .card > h2 + .row { margin-top: 0; }
+  .row > label {
+    flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right;
+  }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  /* 下拉绝不收缩：一旦被 input 挤扁，选项文字会被截成「粉红噪…」 */
+  .row > select { flex: 0 0 auto; max-width: 46%; }
+
+  /* ===== 状态点 ===== */
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--text-3);
+    flex: none; display: inline-block;
+  }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(13,122,82,.16); }
+  .dot.live { background: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.16); animation: dotpulse 1.2s infinite; }
+  @keyframes dotpulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+
+  /* ===== 电平表 =====
+     渐变铺满整条、只改宽度：比「按音量切换颜色」少一次样式重算，60fps 下更稳。 */
+  .meter {
+    position: relative; margin-top: 10px; height: 10px; border-radius: 5px;
+    background: var(--surface-1); overflow: hidden;
+  }
+  .meter > i {
+    display: block; height: 100%; width: 0; border-radius: 5px;
+    background: linear-gradient(90deg, var(--ok) 0%, var(--accent) 55%, var(--num) 80%, var(--err) 100%);
+    transition: width .06s linear;
+  }
+
+  /* ===== 波形 =====
+     高度 148px 不只是为了好看：它与右侧 .cam-wrap 的宽度一起，是平衡两卡固有高度的
+     两个旋钮。实测 wave 118 + cam 430 时两卡差 83px（374 / 457），超出 60px 上限；
+     改成 148 + 400 后差 36px。改动任意一个都要重新量另一张卡。 */
+  .wave {
+    display: block; width: 100%; height: 148px; margin-top: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  }
+
+  /* ===== 播放器 ===== */
+  .player { display: flex; align-items: center; gap: 10px; margin-top: 10px; min-width: 0; }
+  /* 方形而不是圆形：整页按钮都是方的，一个填充蓝的圆键会显得像从别的设计里抠来的。
+     静止时是普通按钮外观，只在「播放中」填成实心 —— 状态靠填充表达，不靠形状。 */
+  .player > .play {
+    flex: none; width: 42px; height: 30px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; line-height: 1;
+  }
+  .player > .play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .player > .play.on:hover { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+  .player > .tm {
+    flex: none; font-size: 11.5px; color: var(--text-2);
+    font-variant-numeric: tabular-nums; min-width: 36px;
+  }
+  .player > .tm:last-child { text-align: right; }
+  .player > input[type="range"] { flex: 1 1 auto; min-width: 60px; }
+
+  /* ===== demo 试听列表 =====
+     auto-fit 而不是固定列数：窄屏下自动落成单列，不需要额外写媒体查询。 */
+  .demo-list {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
+    gap: 8px; margin-top: 2px;
+  }
+  .demo {
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    padding: 9px 11px; border-radius: 8px; font-weight: 400;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .demo:hover { background: var(--hover); border-color: var(--accent); color: var(--text); }
+  .demo.on { background: var(--accent-soft); border-color: var(--accent); }
+  .demo > .ico {
+    flex: none; width: 26px; height: 26px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; font-size: 9px; line-height: 1;
+  }
+  .demo > .txt { flex: 1 1 auto; min-width: 0; }
+  /* 注意是后代选择器：.nm / .ds 挂在 .txt 里面，写成 .demo > .nm 一条都命中不了
+     （名称不会加粗、描述不会变灰、两行也不会分开）—— 这类错误静态检查看不出来，
+     只能靠截图或运行时断言。 */
+  .demo .nm { display: block; font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .demo .ds { display: block; font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .demo > .tm { flex: none; font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+  /* 录音参数行。刻意做成一行横排而不是多行键值列表：
+     这张卡与右侧摄像头卡同行，多 4 行 kv（约 130px）会把高差从 36px 顶到 100px 以上。 */
+  .meta-line {
+    margin-top: 8px; font-size: 11.5px; color: var(--text-3);
+    display: flex; flex-wrap: wrap; gap: 3px 9px; min-width: 0;
+  }
+  .meta-line > span { white-space: nowrap; }
+  .meta-line b { color: var(--text-2); font-weight: 600; }
+  /* 分隔符用 ::after 挂在「前一项」末尾，而不是 ::before 挂在「后一项」开头：
+     窄屏下 meta-line 会折行，::before 会让 \00b7 落到新行行首（像孤立标点），
+     ::after 则留在上一行行尾，读起来是正常的句末分隔。 */
+  .meta-line > span:not(:last-child)::after {
+    content: "\00b7"; color: var(--border-2); margin-left: 8px;
+  }
+
+  /* ===== 摄像头 =====
+     aspect-ratio 而非 padding-top 撑高：2026 年主流浏览器支持率已足够。
+     视频底色固定深色（不跟随主题）—— 预览区留黑边是行业惯例，且能一眼区分「未开启」。
+     max-width 400px 对应高度 225px，与左侧波形一起把两卡固有高差压到 36px。 */
+  .cam-wrap {
+    position: relative; margin-top: 8px; width: 100%; max-width: 400px;
+    aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden;
+    background: #0e1220; border: 1px solid var(--border);
+  }
+  .cam-wrap > video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .cam-wrap.mirror > video { transform: scaleX(-1); }
+  .cam-wrap > .ph {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 7px;
+    color: #7b86a1; font-size: 11.5px; text-align: center; padding: 0 16px;
+  }
+  .cam-wrap > .ph svg { width: 26px; height: 26px; opacity: .8; }
+  .cam-wrap.live > .ph { display: none; }
+  .cam-wrap > .badge {
+    position: absolute; left: 8px; top: 8px; padding: 2px 7px; border-radius: 5px;
+    font-size: 10px; letter-spacing: .4px; background: rgba(10,14,26,.66); color: #e8ecf5;
+  }
+
+  /* ===== 方位盘 =====
+     8 个方位按钮绕中心排一圈。半径靠 transform 链算：先按角度转出去，
+     再把按钮自身转回来，文字才不会是歪的。
+     半径 82 + 按钮半宽 23 = 外缘 105，直径 210 < 容器 216，留 3px 边距。 */
+  .dial {
+    position: relative; width: 216px; height: 216px; margin: 6px auto 0;
+    border-radius: 50%; border: 1px dashed var(--border-2);
+    background: radial-gradient(circle at 50% 50%, var(--accent-soft), transparent 68%);
+    flex: none;
+  }
+  .dial > .dir {
+    position: absolute; left: 50%; top: 50%;
+    width: 46px; height: 46px; padding: 0; border-radius: 50%;
+    font-size: 11px; line-height: 1; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transform: translate(-50%,-50%) rotate(var(--d)) translateY(-82px) rotate(var(--nd));
+  }
+  .dial > .dir.on {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  .dial > .hub {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 70px; height: 70px; padding: 0; border-radius: 50%;
+    font-size: 11.5px; font-weight: 700; line-height: 1.25;
+    background: var(--panel-2); border: 1px solid var(--border-2); color: var(--text-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dial > .hub.on {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff;
+  }
+
+  /* ===== 宽卡内部的两栏 =====
+     左栏必须显式给宽度，不能靠 auto 让 .dial 去撑：
+     方位盘只有 216px，auto 会把整列锁在 216px，下面「自动旋转」那一行
+     （84 标签 + 按钮）放不下，「开始旋转」会被压成两行字。
+     纵向用 stretch + space-between（而不是 center）：右栏的小标题要顶到与左栏
+     同一水平线，只把最后一块说明推到栏底 —— 用 center 会让两个小标题一高一低。 */
+  .split { display: grid; grid-template-columns: minmax(0, 310px) minmax(0, 1fr); gap: 26px; margin-top: 14px; }
+  .split > .side-r { display: flex; flex-direction: column; justify-content: space-between; }
+  .sub-h {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-size: 12px; font-weight: 600; color: var(--text-2);
+    margin: 0 0 10px;
+  }
+  .sub-h > .hint { font-weight: 400; color: var(--text-3); font-size: 11px; }
+
+  /* ===== 提示 ===== */
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.65; color: var(--text-2);
+  }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .note.warn { background: rgba(209,36,47,.06); border-color: rgba(209,36,47,.22); }
+  .note.warn b { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0; max-width: 86vw;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+    font-size: 12px; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+    .split { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .cam-wrap { max-width: 100%; }
+    /* 窄屏方位盘缩一圈：半径 74 + 半宽 21 = 95，直径 190 < 196 */
+    .dial { width: 196px; height: 196px; }
+    .dial > .dir {
+      width: 42px; height: 42px; font-size: 10.5px;
+      transform: translate(-50%,-50%) rotate(var(--d)) translateY(-74px) rotate(var(--nd));
+    }
+    .dial > .hub { width: 64px; height: 64px; font-size: 11px; }
+    .player { flex-wrap: wrap; }
+    .player > input[type="range"] { flex: 1 1 100%; order: 9; }
+    .row { max-width: 100%; }
+
+    /* 按钮多的行（录制 / 操作）在 380px 下会溢出：5 个字的「关闭摄像头」+
+       切换 + 镜像 + 拍照，连 84px 标签一起要 340px，而可用宽只有 320px，
+       flex 默认 nowrap 就把每个按钮压成两行字。让这几行允许折行、
+       标签独占一行，按钮再平分下一行。 */
+    .row.wrap-sm { flex-wrap: wrap; }
+    .row.wrap-sm > label { flex: 1 1 100%; text-align: left; }
+    .row.wrap-sm > button { flex: 1 1 auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Media<span>Test</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="envStat"><span class="dot"></span>检测环境…</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">麦克风 · 音响 · 摄像头</span>
+  <span class="sep hide-sm"></span>
+  <button class="mini" id="btnReset" title="停止所有设备并恢复初始状态">重置</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 麦克风 · 录音 ============
+       与右侧「摄像头 · 预览」同处一行，两卡由 grid 的 align-items: stretch 拉平。
+       两卡固有高度差要控制在 60px 内，否则矮的那张底部会空出一条 —— 波形图高度
+       （.wave 的 height）与视频框宽度（.cam-wrap 的 max-width）就是用来对账的旋钮。 -->
+  <section class="card" id="cardMic">
+    <h2>
+      麦克风 · 录音
+      <span class="hint hide-sm">实时电平 + 录制回放</span>
+      <span class="right"><span class="dot" id="micDot"></span></span>
+    </h2>
+
+    <div class="row">
+      <label for="micSel">输入设备</label>
+      <select id="micSel"><option value="">麦克风：系统默认</option></select>
+    </div>
+
+    <!-- 电平条：-60 dB 映射到 0%，0 dB 映射到 100% -->
+    <div class="meter" id="micMeter"><i id="micBar"></i></div>
+    <canvas class="wave" id="micWave"></canvas>
+
+    <div class="row wrap-sm">
+      <label>录制</label>
+      <button class="primary" id="btnRec">开始录音</button>
+      <button id="btnDl" disabled>下载</button>
+      <button class="mini" id="btnClr" disabled>清除</button>
+    </div>
+
+    <!-- 回放用 Web Audio 的 AudioBufferSourceNode，而不是 <audio>：
+         MediaRecorder 在 Chrome 上产出的 webm 没有 duration 元数据，
+         <audio>.duration 会是 Infinity，进度条与总时长都没法显示。 -->
+    <div class="player">
+      <button class="play" id="btnPlay" disabled aria-label="播放录音">▶</button>
+      <span class="tm" id="recCur">0:00</span>
+      <input type="range" id="recSeek" min="0" max="1000" value="0" step="1" disabled aria-label="播放进度" />
+      <span class="tm" id="recDur">0:00</span>
+    </div>
+
+    <!-- 每个值都带 id，由 JS 逐项改 textContent，而不是整体重写 innerHTML ——
+         时长栏在录音过程中每 200ms 更新一次，若被 renderRecMeta 的 innerHTML 覆盖掉，
+         #recTime 会整个消失，下一次计时就抛 null。 -->
+    <div class="meta-line" id="recMeta">
+      <span>时长 <b id="recTime">—</b></span>
+      <span>格式 <b id="recFmt">—</b></span>
+      <span>采样率 <b id="recRate">—</b></span>
+      <span>声道 <b id="recCh">—</b></span>
+      <span>大小 <b id="recSize">—</b></span>
+    </div>
+
+    <div class="note" id="micNote">
+      录音全程在本机完成，<b>不上传任何数据</b>。首次点击会弹出麦克风授权，
+      若浏览器此前拒绝过，需在地址栏的站点设置里重新允许。
+      电平条进红区说明输入过载，容易削波失真，可离麦克风远一点或调低系统输入音量。
+    </div>
+  </section>
+
+  <!-- ============ 2. 摄像头 · 预览 ============ -->
+  <section class="card" id="cardCam">
+    <h2>
+      摄像头 · 预览
+      <span class="hint hide-sm">前后置切换 + 拍照</span>
+      <span class="right"><span class="dot" id="camDot"></span></span>
+    </h2>
+
+    <div class="row">
+      <label for="camSel">视频设备</label>
+      <select id="camSel"><option value="">摄像头：系统默认</option></select>
+    </div>
+
+    <div class="cam-wrap" id="camWrap">
+      <!-- playsinline + muted 是 iOS Safari 的必要条件，缺一个就会强制全屏播放 -->
+      <video id="cam" playsinline webkit-playsinline muted autoplay></video>
+      <span class="badge" id="camBadge" hidden>● LIVE</span>
+      <div class="ph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7.5h3.2l1.4-2h8.8l1.4 2H21v11H3z"/><circle cx="12" cy="12.6" r="3.6"/>
+        </svg>
+        <span>摄像头未开启</span>
+      </div>
+    </div>
+
+    <div class="row wrap-sm">
+      <label>操作</label>
+      <button class="primary" id="btnCam">开启摄像头</button>
+      <button id="btnCamNext">切换</button>
+      <button id="btnMirror">镜像</button>
+      <button id="btnSnap" disabled>拍照</button>
+    </div>
+
+    <!-- 与左侧 recMeta 同款的一行参数。刻意不用多行键值列表：
+         那样摄像头一开启卡片就涨 124px，而左侧麦克风卡纹丝不动，
+         两卡高差会从 11px 跳到 145px，右卡底部空出一大片。 -->
+    <div class="meta-line" id="camInfo">
+      <span>设备 <b>—</b></span>
+      <span>分辨率 <b>—</b></span>
+      <span>帧率 <b>—</b></span>
+      <span>朝向 <b>—</b></span>
+    </div>
+
+    <div class="note">
+      画面只在本地渲染，<b>不会上传</b>。手机上「切换」会在前后置摄像头之间轮换；
+      「镜像」同时作用于预览与拍照结果（所见即所得），仅影响显示方向，不改变真实画面。
+      若长时间黑屏，检查是否有其它程序（会议软件等）正在占用摄像头。
+    </div>
+  </section>
+
+  <!-- ============ 3. 环绕声 · 听声辨位（wide）============
+       刻意不加载任何音频文件：环绕测试用粉红噪声 + HRTF 空间化，比现成音频更可控，
+       也顺带避开了外部资源会带来的跨域、体积与版权问题。 -->
+  <section class="card wide" id="cardAudio">
+    <h2>
+      环绕声 · 耳机测试
+      <span class="hint hide-sm">戴耳机效果最佳</span>
+      <span class="right">
+        <span class="dot" id="auDot"></span>
+        <button class="primary" id="btnAudio">启用音频</button>
+        <button class="mini" id="btnStop">停止</button>
+      </span>
+    </h2>
+
+    <!-- 试听 demo：整段实时合成，不加载任何音频文件。
+         每个音符各自带一个 PannerNode，方位逐音符指定，所以「声音从哪来」是确定的，
+         比现成立体声音乐更容易分辨方向。 -->
+    <div class="sub-h">试听 demo<span class="hint">点一下即播放，声音会绕着你走</span></div>
+    <div class="demo-list" id="demoList"></div>
+
+    <div class="split">
+      <div>
+        <div class="sub-h">方位环绕<span class="hint">点方位即从该处发声</span></div>
+        <div class="dial" id="dial"></div>
+        <div class="row">
+          <label>自动旋转</label>
+          <button id="btnRot">开始旋转</button>
+        </div>
+      </div>
+
+      <!-- 右栏只有一个按钮行 + 说明，比左栏的方位盘矮 130px。
+           用 stretch + space-between 把说明推到右栏底部，与左栏的按钮行齐平。
+           小标题与按钮行必须包在同一个组里，否则 space-between 会把「声道测试」
+           和它的按钮行也拉开 120px。 -->
+      <div class="side-r">
+        <div class="grp">
+          <div class="sub-h">声道测试<span class="hint">查左右接线是否接反</span></div>
+          <div class="row">
+            <label>声道</label>
+            <button id="btnChL">左声道</button>
+            <button id="btnChR">右声道</button>
+            <button id="btnChB">双声道</button>
+          </div>
+        </div>
+        <div class="note" id="auNote">
+          方位定位靠 Web Audio 的 <code>PannerNode</code> + <b>HRTF</b>（头相关传递函数）
+          实时卷积，模拟耳廓与头部对声波的滤波，所以 <b>戴耳机效果远好于外放</b> ——
+          扬声器会与房间声学叠加，前后方向的区分度会明显下降。
+          若听不出前后，先用上面的声道测试确认耳机左右没有戴反。
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ================= 通用工具 ================= */
+
+  var toastTimer = 0;
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) s = 0;
+    var m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return m + ":" + (r < 10 ? "0" : "") + r;
+  }
+
+  function fmtBytes(n) {
+    if (!n) return "0 B";
+    var u = ["B", "KB", "MB", "GB"], i = 0;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? String(n) : n.toFixed(n < 10 ? 2 : 1)) + " " + u[i];
+  }
+
+  function stamp() {
+    var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" +
+           p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+
+  /* 把 getUserMedia 的异常翻译成能看懂的话。中文提示比 DOMException 名字有用得多。 */
+  function errMsg(e) {
+    if (!e) return "未知错误";
+    var n = e.name || "";
+    if (n === "NotAllowedError" || n === "SecurityError") return "权限被拒绝，请在地址栏的站点设置里允许访问";
+    if (n === "NotFoundError" || n === "DevicesNotFoundError") return "没有找到可用设备";
+    if (n === "NotReadableError" || n === "TrackStartError") return "设备被其它程序占用";
+    if (n === "OverconstrainedError" || n === "ConstraintNotSatisfiedError") return "设备不支持所请求的参数";
+    if (n === "AbortError") return "设备已断开或不可用";
+    return e.message || n || "未知错误";
+  }
+
+  function downloadBlob(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+
+  function angleDiff(a, b) {
+    var d = Math.abs(((a - b) % 360 + 360) % 360);
+    return d > 180 ? 360 - d : d;
+  }
+
+  /* 环境检测：getUserMedia 只在安全上下文（https / localhost / file 以外的本机）可用。
+     提前把结论摆在顶栏，比让用户点了按钮没反应要好。 */
+  function checkEnv() {
+    var el = $("envStat");
+    var hasMd = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    var ok = window.isSecureContext && hasMd;
+    if (ok) {
+      el.innerHTML = '<span class="dot ok"></span>本地采集可用';
+      return true;
+    }
+    el.innerHTML = '<span class="dot live"></span>需 HTTPS 才能采集';
+    var tip = '<b>当前环境无法访问麦克风与摄像头。</b>' +
+      '浏览器只允许安全上下文（<code>https://</code> 或 <code>localhost</code>）调用设备采集接口，' +
+      '当前页面既不是 https 也不是 localhost，因此授权弹窗不会出现。' +
+      '请改用 https 地址访问，或把页面放到本机 http 服务下打开。';
+    $("micNote").innerHTML = tip;
+    $("micNote").classList.add("warn");
+    $("btnRec").disabled = true;
+    $("btnCam").disabled = true;
+    return false;
+  }
+
+  /* ================= 设备枚举 ================= */
+
+  function fillSel(sel, devs, fallback) {
+    var prev = sel.value;
+    if (!devs.length) {
+      sel.innerHTML = '<option value="">' + fallback + '：未检测到</option>';
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    var html = '<option value="">' + fallback + '：系统默认</option>';
+    for (var i = 0; i < devs.length; i++) {
+      var d = devs[i];
+      var label = d.label || (fallback + " " + (i + 1));
+      html += '<option value="' + escapeHTML(d.deviceId) + '">' + escapeHTML(label) + '</option>';
+    }
+    sel.innerHTML = html;
+    /* 保留用户选择：枚举会在每次开启设备后重跑，若不还原会把选择重置成默认 */
+    if (prev) {
+      for (var j = 0; j < devs.length; j++) {
+        if (devs[j].deviceId === prev) { sel.value = prev; break; }
+      }
+    }
+  }
+
+  /* 未授权时 enumerateDevices 返回的 label 是空字符串，只有 deviceId。
+     所以第一次调用拿到的名字都是「麦克风 1」这种占位，授权后要再刷一次。 */
+  function refreshDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return Promise.resolve();
+    return navigator.mediaDevices.enumerateDevices().then(function (list) {
+      var mics = [], cams = [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].kind === "audioinput") mics.push(list[i]);
+        else if (list[i].kind === "videoinput") cams.push(list[i]);
+      }
+      fillSel($("micSel"), mics, "麦克风");
+      fillSel($("camSel"), cams, "摄像头");
+    }, function () { /* 某些隐私模式下会直接拒绝，忽略即可 */ });
+  }
+
+  /* ================= 麦克风：采集 + 电平 + 波形 ================= */
+
+  var micStream = null, micAC = null, micAn = null, micSrc = null;
+  var micRaf = 0, micBuf = null;   /* micBuf：波形用的时域样本缓冲，与录音计时器无关 */
+
+  function micOpen() {
+    if (micStream) return Promise.resolve(true);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast("当前环境不支持麦克风采集");
+      return Promise.resolve(false);
+    }
+    var dev = $("micSel").value;
+    var want = dev ? { audio: { deviceId: { exact: dev } } } : { audio: true };
+    return navigator.mediaDevices.getUserMedia(want).catch(function () {
+      /* 指定设备可能已被拔掉，退回默认设备再试一次 */
+      $("micSel").value = "";
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }).then(function (stream) {
+      micStream = stream;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        try {
+          if (!micAC) micAC = new AC();
+          if (micAC.state === "suspended" && micAC.resume) micAC.resume();
+          micSrc = micAC.createMediaStreamSource(micStream);
+          micAn = micAC.createAnalyser();
+          micAn.fftSize = 1024;
+          micAn.smoothingTimeConstant = 0.72;
+          micSrc.connect(micAn);
+          /* 必须给 analyser 一条通往 destination 的路径，否则部分浏览器不驱动它算数据。
+             但直接连 destination 会把麦克风原声放出来形成啸叫，所以中间串一个 0 增益。 */
+          var mute = micAC.createGain();
+          mute.gain.value = 0;
+          micAn.connect(mute);
+          mute.connect(micAC.destination);
+        } catch (e) { micAn = null; }
+      }
+      $("micDot").className = "dot live";
+      drawWave();
+      return refreshDevices().then(function () { return true; });
+    }, function (e) {
+      toast("麦克风开启失败：" + errMsg(e));
+      return false;
+    });
+  }
+
+  function micClose() {
+    if (micRaf) { cancelAnimationFrame(micRaf); micRaf = 0; }
+    if (micSrc) { try { micSrc.disconnect(); } catch (e) {} micSrc = null; }
+    micAn = null;
+    if (micStream) {
+      micStream.getTracks().forEach(function (t) { t.stop(); });
+      micStream = null;
+    }
+    $("micDot").className = "dot";
+    $("micBar").style.width = "0%";
+    clearWave();
+  }
+
+  function clearWave() {
+    var cv = $("micWave");
+    if (!cv) return;
+    var g = cv.getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cv.width, cv.height);
+    /* 不把 cv.width/height 归零：那会让画布在下一帧前塌成 0×0，
+       引起一次多余的布局计算，而 clientWidth 本来就由 CSS 决定。 */
+  }
+
+  /* 波形 + 电平：一帧内同时算时域波形与 RMS，避免跑两遍循环。 */
+  function drawWave() {
+    var cv = $("micWave");
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) { micRaf = 0; return; }
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+    }
+    var g = cv.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    var font = '12px ' + (getComputedStyle(document.body).fontFamily || "monospace");
+
+    if (!micAn) {
+      g.fillStyle = "#94a0b0";
+      g.font = font;
+      g.textAlign = "center";
+      g.fillText("等待麦克风授权…", w / 2, h / 2 + 4);
+      micRaf = 0;
+      return;
+    }
+
+    var N = micAn.fftSize;
+    if (!micBuf || micBuf.length !== N) micBuf = new Uint8Array(N);
+    micAn.getByteTimeDomainData(micBuf);
+
+    /* 中线 */
+    g.strokeStyle = "rgba(15,23,42,.08)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(0, h / 2);
+    g.lineTo(w, h / 2);
+    g.stroke();
+
+    /* 波形。按像素列抽样而不是逐样本画：1024 个点画在 ~600px 宽的画布上，
+       逐样本会让线宽叠加成一片实心块。
+       WAVE_GAIN 把弱信号拉起来：真实麦克风说话约 -20dBFS，而有些设备（含
+       Chrome 的虚拟麦克风）只有 -38dBFS，不放大时波形几乎是一条直线。
+       代价是强信号会贴到上下边界 —— 是否过载仍以电平条为准，波形只负责看形状。 */
+    var WAVE_GAIN = 2.0;
+    var amp = h / 2 - 6;
+    g.strokeStyle = "#4f6bed";
+    g.lineWidth = 1.6;
+    g.beginPath();
+    var sum = 0, step = N / w;
+    for (var x = 0; x < w; x++) {
+      var i = Math.floor(x * step);
+      if (i >= N) i = N - 1;
+      var v = (micBuf[i] - 128) / 128;
+      sum += v * v;
+      var y = h / 2 - Math.max(-1, Math.min(1, v * WAVE_GAIN)) * amp;
+      if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+
+    /* 电平：RMS → dBFS，-60 dB 记 0%，0 dB 记 100% */
+    var rms = Math.sqrt(sum / w);
+    var db = 20 * Math.log10(rms > 1e-7 ? rms : 1e-7);
+    var pct = (db + 60) / 60 * 100;
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    $("micBar").style.width = pct.toFixed(1) + "%";
+
+    micRaf = requestAnimationFrame(drawWave);
+  }
+
+  /* ================= 录音 / 回放 ================= */
+
+  var mr = null, mrChunks = [], mrMime = "", recT0 = 0, recTimer = null;
+  var recBlob = null, recBuf = null, recNode = null;
+  var recOffset = 0, recStartedAt = 0, recRaf = 0;
+
+  /* 各浏览器的编码支持差异很大：Chrome/Firefox 给 webm/opus，Safari 只给 mp4/aac。
+     必须逐个 isTypeSupported 探测，写死一个 mimeType 会在另一种内核上直接抛错。 */
+  function pickMime() {
+    var MR = window.MediaRecorder;
+    if (!MR || !MR.isTypeSupported) return "";
+    var list = [
+      "audio/webm;codecs=opus", "audio/webm",
+      "audio/mp4;codecs=mp4a.40.2", "audio/mp4",
+      "audio/ogg;codecs=opus", "audio/ogg"
+    ];
+    for (var i = 0; i < list.length; i++) {
+      try { if (MR.isTypeSupported(list[i])) return list[i]; } catch (e) {}
+    }
+    return "";
+  }
+
+  function extOf(mime) {
+    if (/webm/.test(mime)) return "webm";
+    if (/mp4|aac|m4a/.test(mime)) return "m4a";
+    if (/ogg|opus/.test(mime)) return "ogg";
+    if (/wav/.test(mime)) return "wav";
+    return "webm";
+  }
+
+  function recIsRecording() { return !!mr && mr.state === "recording"; }
+
+  function recStart() {
+    if (recIsRecording()) return;
+    micOpen().then(function (ok) {
+      if (!ok) return;
+      if (!window.MediaRecorder) { toast("当前浏览器不支持录音（MediaRecorder 不可用）"); return; }
+      mrMime = pickMime();
+      try {
+        mr = mrMime ? new MediaRecorder(micStream, { mimeType: mrMime })
+                    : new MediaRecorder(micStream);
+      } catch (e) {
+        try { mr = new MediaRecorder(micStream); } catch (e2) { toast("录音初始化失败"); return; }
+      }
+      mrChunks = [];
+      mr.ondataavailable = function (e) { if (e.data && e.data.size) mrChunks.push(e.data); };
+      mr.onstop = onRecStop;
+      try { mr.start(); } catch (e) { toast("录音启动失败：" + errMsg(e)); return; }
+
+      recT0 = Date.now();
+      $("btnRec").textContent = "停止录音";
+      $("btnRec").classList.remove("primary");
+      $("btnRec").classList.add("danger");
+      $("recTime").textContent = "0:00";
+      /* 时长单独走一个 200ms 的定时器：波形那个 rAF 只负责画面，
+         不该兼职计时，否则暂停波形就等于暂停了计时。 */
+      clearInterval(recTimer);
+      recTimer = setInterval(function () {
+        $("recTime").textContent = fmtTime((Date.now() - recT0) / 1000);
+      }, 200);
+    });
+  }
+
+  function onRecStop() {
+    clearInterval(recTimer);
+    recTimer = null;
+    var type = (mr && mr.mimeType) || mrMime || "audio/webm";
+    recBlob = new Blob(mrChunks, { type: type });
+    mrChunks = [];
+
+    $("btnRec").textContent = recBlob.size ? "重新录音" : "开始录音";
+    $("btnRec").classList.remove("danger");
+    $("btnRec").classList.add("primary");
+    $("btnDl").disabled = !recBlob.size;
+    $("btnClr").disabled = !recBlob.size;
+    $("recTime").textContent = fmtTime((Date.now() - recT0) / 1000);
+
+    if (!recBlob.size) { toast("没有录到数据，请检查麦克风"); renderRecMeta(null); return; }
+
+    /* 解码成 AudioBuffer 而不是交给 <audio>：
+       MediaRecorder 产出的 webm 缺 duration 元数据，<audio>.duration 是 Infinity，
+       进度条会直接失效。decodeAudioData 能拿到精确时长，seek 也更稳。 */
+    recDecode().then(function (buf) {
+      if (buf) {
+        /* 必须存回模块级变量：recToggle / recStartAt / updateSeek 全靠 recBuf 判断
+           能不能播、总长多少。只把 buf 留在回调里，回放会静默失效。 */
+        recBuf = buf;
+        recOffset = 0;
+        renderRecMeta(buf);
+        $("btnPlay").disabled = false;
+        $("recSeek").disabled = false;
+        $("recSeek").value = "0";
+        $("recDur").textContent = fmtTime(buf.duration);
+        $("recCur").textContent = "0:00";
+        toast("录音完成 · " + buf.duration.toFixed(1) + "s · " + fmtBytes(recBlob.size));
+      } else {
+        /* 解码失败时退回到原生 <audio>，至少保证能听 */
+        recFallbackAudio();
+      }
+    });
+  }
+
+  function recDecode() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return Promise.resolve(null);
+    if (!micAC) micAC = new AC();
+    var ready = (micAC.state === "suspended" && micAC.resume)
+      ? micAC.resume().catch(function () {})
+      : Promise.resolve();
+    return ready.then(function () {
+      return recBlob.arrayBuffer();
+    }).then(function (ab) {
+      /* decodeAudioData 会「转移」掉传入的 ArrayBuffer，之后原 buffer 不可用。
+         用 slice 拷一份，万一需要重试还有原始数据。 */
+      return new Promise(function (res) {
+        var p = micAC.decodeAudioData(ab.slice(0), function (b) { res(b); }, function () { res(null); });
+        if (p && p.then) p.then(function (b) { res(b); }, function () { res(null); });
+      });
+    }).catch(function () { return null; });
+  }
+
+  function recFallbackAudio() {
+    if (!recBlob) return;
+    renderRecMeta(null);   /* 拿不到采样率/声道，但格式与大小仍可显示 */
+    var url = URL.createObjectURL(recBlob);
+    var a = new Audio(url);
+    window.__recFallback = a;
+    $("btnPlay").disabled = false;
+    $("recSeek").disabled = true;
+    a.addEventListener("loadedmetadata", function () {
+      if (isFinite(a.duration)) $("recDur").textContent = fmtTime(a.duration);
+    });
+    a.addEventListener("timeupdate", function () {
+      $("recCur").textContent = fmtTime(a.currentTime);
+    });
+    a.addEventListener("ended", function () { setPlayIcon(false); $("recCur").textContent = "0:00"; });
+    $("recDur").textContent = fmtTime((Date.now() - recT0) / 1000);
+    toast("解码不可用，已改用原生播放");
+  }
+
+  /* 录音参数行。格式名从实际 mime 反推 —— 不同内核录出来的容器/编码本来就不同
+     （Chrome 是 webm/opus，Safari 是 mp4/aac），把真实值显示出来比写死更有意义。
+     逐项改 textContent，绝不重写 #recMeta 的 innerHTML：#recTime 是常驻元素，
+     被覆盖掉之后计时器下一次 tick 就会读到 null。 */
+  function renderRecMeta(buf) {
+    /* 以 recBlob 为唯一依据：mrMime 会一直留到下次录音，用它做兜底会让「清除」后
+       格式一栏仍显示上一次的 WEBM / Opus。 */
+    var mime = recBlob ? (recBlob.type || mrMime || "") : "";
+    var fmt = "";
+    if (mime) {
+      fmt = extOf(mime).toUpperCase();
+      if (/opus/.test(mime)) fmt += " / Opus";
+      else if (/mp4a|aac/.test(mime)) fmt += " / AAC";
+      else if (/vorbis/.test(mime)) fmt += " / Vorbis";
+    }
+    $("recFmt").textContent = fmt || "—";
+    $("recRate").textContent = buf ? (buf.sampleRate / 1000).toFixed(1) + " kHz" : "—";
+    $("recCh").textContent = buf ? (buf.numberOfChannels === 1 ? "单声道" : "立体声") : "—";
+    $("recSize").textContent = recBlob ? fmtBytes(recBlob.size) : "—";
+  }
+
+  function setPlayIcon(playing) {
+    $("btnPlay").textContent = playing ? "❚❚" : "▶";
+  }
+
+  function recStopNode() {
+    if (recNode) {
+      try { recNode.onended = null; recNode.stop(); recNode.disconnect(); } catch (e) {}
+      recNode = null;
+    }
+    if (recRaf) { cancelAnimationFrame(recRaf); recRaf = 0; }
+  }
+
+  function recStartAt(offset) {
+    if (!recBuf || !micAC) return;
+    recStopNode();
+    recOffset = Math.max(0, Math.min(offset, Math.max(0, recBuf.duration - 0.01)));
+    var n = micAC.createBufferSource();
+    n.buffer = recBuf;
+    n.connect(micAC.destination);
+    n.onended = function () {
+      if (recNode === n) { recNode = null; recOffset = 0; setPlayIcon(false); updateSeek(); }
+    };
+    n.start(0, recOffset);
+    recNode = n;
+    recStartedAt = micAC.currentTime;
+    setPlayIcon(true);
+    recTick();
+  }
+
+  function recTick() {
+    if (!recNode) return;
+    updateSeek();
+    recRaf = requestAnimationFrame(recTick);
+  }
+
+  function updateSeek() {
+    if (!recBuf) return;
+    var cur = recNode
+      ? Math.min(recOffset + (micAC.currentTime - recStartedAt), recBuf.duration)
+      : recOffset;
+    $("recCur").textContent = fmtTime(cur);
+    /* 正在拖进度条时不要回写 value，否则会跟用户的手抢 */
+    if (document.activeElement !== $("recSeek")) {
+      $("recSeek").value = String(Math.round(cur / recBuf.duration * 1000));
+    }
+  }
+
+  function recToggle() {
+    if (recBuf && micAC) {
+      if (recNode) {
+        recOffset = Math.min(recOffset + (micAC.currentTime - recStartedAt), recBuf.duration);
+        recStopNode();
+        setPlayIcon(false);
+        updateSeek();
+      } else {
+        recStartAt(recOffset >= recBuf.duration - 0.02 ? 0 : recOffset);
+      }
+      return;
+    }
+    var a = window.__recFallback;
+    if (a) {
+      if (a.paused) { a.play(); setPlayIcon(true); }
+      else { a.pause(); setPlayIcon(false); }
+    }
+  }
+
+  function recClear() {
+    if (recIsRecording() && mr) { try { mr.stop(); } catch (e) {} }
+    recStopNode();
+    if (window.__recFallback) { try { window.__recFallback.pause(); } catch (e) {} window.__recFallback = null; }
+    recBlob = null; recBuf = null; recOffset = 0; mrMime = "";
+    renderRecMeta(null);
+    $("btnPlay").disabled = true;
+    $("btnDl").disabled = true;
+    $("btnClr").disabled = true;
+    $("recSeek").disabled = true;
+    $("recSeek").value = "0";
+    $("recCur").textContent = "0:00";
+    $("recDur").textContent = "0:00";
+    $("recTime").textContent = "—";
+    $("btnRec").textContent = "开始录音";
+    $("btnRec").classList.remove("danger");
+    $("btnRec").classList.add("primary");
+    setPlayIcon(false);
+  }
+
+  /* ================= 摄像头 ================= */
+
+  var camStream = null, camFacing = "user";
+
+  function camOpen() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast("当前环境不支持摄像头采集");
+      return Promise.resolve(false);
+    }
+    camClose();
+    var dev = $("camSel").value;
+    var v = { width: { ideal: 1280 }, height: { ideal: 720 } };
+    if (dev) v.deviceId = { exact: dev };
+    else if (camFacing) v.facingMode = camFacing;
+    var want = { video: v, audio: false };
+
+    return navigator.mediaDevices.getUserMedia(want).catch(function () {
+      /* 1280×720 是「理想值」，理论上不该失败；但某些 USB 摄像头对
+         width/height 组合很挑剔，退回不带分辨率的约束再试一次。 */
+      var v2 = dev ? { deviceId: { exact: dev } } : true;
+      return navigator.mediaDevices.getUserMedia({ video: v2, audio: false });
+    }).then(function (stream) {
+      camStream = stream;
+      var el = $("cam");
+      el.srcObject = stream;
+      var p = el.play();
+      if (p && p.catch) p.catch(function () {});
+
+      var track = stream.getVideoTracks()[0];
+      var st = (track && track.getSettings) ? track.getSettings() : {};
+      $("camWrap").classList.add("live");
+      $("camBadge").hidden = false;
+      $("camDot").className = "dot live";
+      $("btnCam").textContent = "关闭摄像头";
+      $("btnCam").classList.remove("primary");
+      $("btnCam").classList.add("danger");
+      $("btnSnap").disabled = false;
+
+      var w = st.width || el.videoWidth || 0;
+      var h = st.height || el.videoHeight || 0;
+      var fm = st.facingMode || "";
+      $("camInfo").innerHTML =
+        "<span>设备 <b>" + escapeHTML((track && track.label) || "摄像头") + "</b></span>" +
+        "<span>分辨率 <b>" + (w && h ? w + " × " + h : "—") + "</b></span>" +
+        "<span>帧率 <b>" + (st.frameRate ? Math.round(st.frameRate) + " fps" : "—") + "</b></span>" +
+        "<span>朝向 <b>" + (/user|front/i.test(fm) ? "前置" :
+                             /environment|back/i.test(fm) ? "后置" : "—") + "</b></span>";
+      return refreshDevices().then(function () { return true; });
+    }, function (e) {
+      toast("摄像头开启失败：" + errMsg(e));
+      return false;
+    });
+  }
+
+  function camClose() {
+    if (camStream) {
+      camStream.getTracks().forEach(function (t) { t.stop(); });
+      camStream = null;
+    }
+    var el = $("cam");
+    if (el) {
+      try { el.pause(); } catch (e) {}
+      el.srcObject = null;
+    }
+    $("camWrap").classList.remove("live");
+    $("camBadge").hidden = true;
+    $("camDot").className = "dot";
+    $("btnCam").textContent = "开启摄像头";
+    $("btnCam").classList.remove("danger");
+    $("btnCam").classList.add("primary");
+    $("btnSnap").disabled = true;
+    $("camInfo").innerHTML =
+      '<span>设备 <b>—</b></span><span>分辨率 <b>—</b></span>' +
+      '<span>帧率 <b>—</b></span><span>朝向 <b>—</b></span>';
+  }
+
+  /* 优先在多个 videoinput 之间轮换（桌面 / 安卓常见）；
+     只有一个设备时再退回到 facingMode 翻转（部分手机上 enumerateDevices 只报一个）。 */
+  function camNext() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+      toast("当前环境无法枚举摄像头");
+      return;
+    }
+    navigator.mediaDevices.enumerateDevices().then(function (list) {
+      var devs = list.filter(function (d) { return d.kind === "videoinput"; });
+      if (devs.length >= 2) {
+        var cur = $("camSel").value;
+        if (!cur && camStream) {
+          var st = camStream.getVideoTracks()[0].getSettings ? camStream.getVideoTracks()[0].getSettings() : {};
+          cur = st.deviceId || "";
+        }
+        var idx = -1;
+        for (var i = 0; i < devs.length; i++) { if (devs[i].deviceId === cur) { idx = i; break; } }
+        var next = devs[(idx + 1) % devs.length];
+        $("camSel").value = next.deviceId;
+        camOpen();
+        return;
+      }
+      camFacing = camFacing === "user" ? "environment" : "user";
+      $("camSel").value = "";
+      camOpen().then(function (ok) {
+        if (ok) toast("已切换到" + (camFacing === "user" ? "前置" : "后置") + "摄像头");
+      });
+    }, function () { toast("无法读取摄像头列表"); });
+  }
+
+  function camSnap() {
+    var el = $("cam");
+    if (!camStream || !el.videoWidth) { toast("摄像头还没准备好"); return; }
+    var w = el.videoWidth, h = el.videoHeight;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var g = c.getContext("2d");
+    /* 预览镜像了，拍照也要镜像，否则「所见」与「所得」不一致 */
+    if ($("camWrap").classList.contains("mirror")) {
+      g.translate(w, 0);
+      g.scale(-1, 1);
+    }
+    g.drawImage(el, 0, 0, w, h);
+    if (!c.toBlob) { toast("当前浏览器不支持导出图片"); return; }
+    c.toBlob(function (b) {
+      if (!b) { toast("截图失败"); return; }
+      downloadBlob(b, "snapshot-" + stamp() + ".png");
+      toast("已保存照片 " + w + " × " + h);
+    }, "image/png");
+  }
+
+  /* ================= 音频引擎（环绕声） ================= */
+
+  /* 角度约定：0° = 正前，顺时针增大。Web Audio 的坐标系是 x 向右、y 向上、
+     z 向后（即 -z 为前方），所以 x = sin(θ)、z = -cos(θ)。
+     校验：90° → (1, 0, 0) 正右；180° → (0, 0, 1) 正后；270° → (-1, 0, 0) 正左。 */
+  var DIRS = [
+    { name: "前",   deg: 0   },
+    { name: "右前", deg: 45  },
+    { name: "右",   deg: 90  },
+    { name: "右后", deg: 135 },
+    { name: "后",   deg: 180 },
+    { name: "左后", deg: 225 },
+    { name: "左",   deg: 270 },
+    { name: "左前", deg: 315 }
+  ];
+
+  var au = null, auSrc = null, auPan = null, auGain = null, auBuilt = false;
+  var pinkBuf = null;
+  var auVol = 0.32, auDeg = 0;
+  var burstTmr = 0;
+  var rotOn = false, rotRaf = 0, rotDeg = 0;
+
+  /* 粉红噪声：能量按 1/f 分布，听感比白噪声柔和，是环绕 / 房间声学测试的标准信号。
+     用 Paul Kellet 的 7 级极点近似，比 Voss-McCartney 更平滑且无需逐倍频程更新。
+     只保留粉红噪声一种信号源 —— 白噪声听感偏刺、正弦音只是纯音，
+     对「判断方位」都没帮助，多两个下拉只是增加界面噪音。 */
+  function makePink(seconds) {
+    var sr = au.sampleRate;
+    var len = Math.floor(sr * seconds);
+    var buf = au.createBuffer(2, len, sr);
+    for (var ch = 0; ch < 2; ch++) {
+      var d = buf.getChannelData(ch);
+      var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (var i = 0; i < len; i++) {
+        var w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179;
+        b1 = 0.99332 * b1 + w * 0.0750759;
+        b2 = 0.96900 * b2 + w * 0.1538520;
+        b3 = 0.86650 * b3 + w * 0.3104856;
+        b4 = 0.55000 * b4 + w * 0.5329522;
+        b5 = -0.7616 * b5 - w * 0.0168980;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+        b6 = w * 0.115926;
+      }
+    }
+    return buf;
+  }
+
+  /* AudioContext 在自动播放策略下初始是 suspended，必须在用户手势里 resume。
+     拿不到 running 状态就明确告诉用户「再点一次」，而不是静默失败。 */
+  function ensureAu() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { toast("当前浏览器不支持 Web Audio API"); return Promise.resolve(null); }
+    if (!au) au = new AC();
+    var ready = (au.state === "suspended" && au.resume) ? au.resume().catch(function () {}) : Promise.resolve();
+    return ready.then(function () {
+      if (au.state !== "running") {
+        toast("浏览器拦截了音频，请再点一次「启用音频」");
+        return null;
+      }
+      if (!auBuilt) { buildAu(); auBuilt = true; }
+      return au;
+    });
+  }
+
+  function buildAu() {
+    if (!pinkBuf) pinkBuf = makePink(2);
+
+    auGain = au.createGain();
+    auGain.gain.value = 0;
+    auGain.connect(au.destination);
+
+    auPan = au.createPanner();
+    /* HRTF 是耳机上唯一能区分前后的模型；Safari 早期版本会拒绝赋值，故兜底。 */
+    try { auPan.panningModel = "HRTF"; } catch (e) { try { auPan.panningModel = "equalpower"; } catch (e2) {} }
+    try { auPan.distanceModel = "inverse"; } catch (e) {}
+    auPan.refDistance = 1;
+    auPan.maxDistance = 10;
+    auPan.rolloffFactor = 0.5;
+    auPan.connect(auGain);
+
+    attachSource();
+  }
+
+  /* 持续发声 + 用增益开关，而不是每次点击新建音源：
+     噪声源可以 loop，淡入淡出也没有拼接噪声。 */
+  function attachSource() {
+    if (auSrc) {
+      try { auSrc.stop(); } catch (e) {}
+      try { auSrc.disconnect(); } catch (e) {}
+      auSrc = null;
+    }
+    var n = au.createBufferSource();
+    n.buffer = pinkBuf;
+    n.loop = true;
+    n.connect(auPan);
+    n.start();
+    auSrc = n;
+    setPos(auDeg, true);
+  }
+
+  /* instant = true 用于「点击方位」：声音要立刻出现在那一侧，不能滑过去。
+     自动旋转则用 setTargetAtTime 做平滑跟随，避免每帧硬跳产生阶梯感。 */
+  function setPos(deg, instant) {
+    auDeg = ((deg % 360) + 360) % 360;
+    if (!auPan) return;
+    var r = auDeg * Math.PI / 180;
+    var x = Math.sin(r), z = -Math.cos(r);
+    var t = au.currentTime;
+    if (auPan.positionX) {
+      if (instant) {
+        auPan.positionX.setValueAtTime(x, t);
+        auPan.positionY.setValueAtTime(0, t);
+        auPan.positionZ.setValueAtTime(z, t);
+      } else {
+        auPan.positionX.setTargetAtTime(x, t, 0.02);
+        auPan.positionY.setTargetAtTime(0, t, 0.02);
+        auPan.positionZ.setTargetAtTime(z, t, 0.02);
+      }
+    } else if (auPan.setPosition) {
+      auPan.setPosition(x, 0, z);
+    }
+  }
+
+  function fade(to, ms) {
+    if (!auGain) return;
+    var t = au.currentTime, g = auGain.gain;
+    try {
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(to, t + ms / 1000);
+    } catch (e) { g.value = to; }
+  }
+
+  function audioLive() {
+    return !!(au && au.state === "running" && auGain);
+  }
+
+  function burst(deg, ms) {
+    if (!audioLive()) { toast("请先点「启用音频」"); return false; }
+    setPos(deg, true);
+    markDir(deg);
+    fade(auVol, 60);
+    $("hub").classList.add("on");
+    clearTimeout(burstTmr);
+    burstTmr = setTimeout(function () {
+      fade(0, 220);
+      $("hub").classList.remove("on");
+    }, ms || 1500);
+    return true;
+  }
+
+  function markDir(deg) {
+    var d = ((deg % 360) + 360) % 360;
+    var list = document.querySelectorAll(".dial > .dir");
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      b.classList.toggle("on", angleDiff(parseFloat(b.getAttribute("data-deg")), d) < 22.5);
+    }
+  }
+
+  function clearDirMarks() {
+    var list = document.querySelectorAll(".dial > .dir");
+    for (var i = 0; i < list.length; i++) list[i].classList.remove("on");
+  }
+
+  function rotStart() {
+    if (!audioLive()) { toast("请先点「启用音频」"); return; }
+    if (rotOn) { rotStop(); return; }
+    rotOn = true;
+    rotDeg = auDeg;
+    fade(auVol, 80);
+    $("hub").classList.add("on");
+    $("btnRot").textContent = "停止旋转";
+    $("btnRot").classList.remove("primary");
+    $("btnRot").classList.add("danger");
+    var step = function () {
+      if (!rotOn) return;
+      /* 0.9°/帧 × 60fps ≈ 54°/s，约 6.7 秒转一圈 */
+      rotDeg = (rotDeg + 0.9) % 360;
+      setPos(rotDeg, false);
+      markDir(rotDeg);
+      rotRaf = requestAnimationFrame(step);
+    };
+    step();
+  }
+
+  function rotStop() {
+    rotOn = false;
+    if (rotRaf) { cancelAnimationFrame(rotRaf); rotRaf = 0; }
+    clearTimeout(burstTmr);
+    fade(0, 200);
+    $("hub").classList.remove("on");
+    $("btnRot").textContent = "开始旋转";
+    $("btnRot").classList.remove("danger");
+    $("btnRot").classList.add("primary");
+  }
+
+  /* ================= demo 试听 =================
+     三段 demo 全部实时合成，不加载任何音频文件。
+     每个音符各自挂一个 PannerNode，方位逐音符指定 —— 这比现成立体声音乐更容易分辨方向：
+     音乐里的空间信息是混音师定死的，而这里「这个音符在哪个方位」是确定的。 */
+
+  /* C 大调五声音阶（无半音），听感自然不刺耳 */
+  var SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+
+  function makePanner() {
+    var pn = au.createPanner();
+    try { pn.panningModel = "HRTF"; } catch (e) {}
+    try { pn.distanceModel = "inverse"; } catch (e) {}
+    pn.refDistance = 1;
+    pn.maxDistance = 10;
+    pn.rolloffFactor = 0.5;
+    return pn;
+  }
+
+  /* 给任意 PannerNode 设方位。与 setPos 同一坐标系：0° 正前、顺时针增大。 */
+  function pannerAt(node, deg, t) {
+    var r = deg * Math.PI / 180;
+    var x = Math.sin(r), z = -Math.cos(r);
+    if (node.positionX) {
+      node.positionX.setValueAtTime(x, t);
+      node.positionY.setValueAtTime(0, t);
+      node.positionZ.setValueAtTime(z, t);
+    } else if (node.setPosition) {
+      node.setPosition(x, 0, z);
+    }
+  }
+
+  /* 一个音符：正弦 + 拨弦式包络（12ms 起音、指数衰减）。
+     pan 给数值时走 StereoPanner（纯左 / 纯右），否则走 PannerNode 的三维方位。 */
+  function note(t, hz, dur, deg, pan) {
+    var o = au.createOscillator();
+    o.type = "sine";
+    o.frequency.value = hz;
+    var g = au.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.34, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+
+    var tail = g;
+    if (pan != null) {
+      if (au.createStereoPanner) {
+        var sp = au.createStereoPanner();
+        sp.pan.value = pan;
+        g.connect(sp);
+        tail = sp;
+      }
+    } else {
+      var pn = makePanner();
+      pannerAt(pn, deg, t);
+      g.connect(pn);
+      tail = pn;
+    }
+    tail.connect(demoGain);
+    o.start(t);
+    o.stop(t + dur + 0.1);
+    o.onended = function () {
+      try {
+        o.disconnect();
+        g.disconnect();
+        if (tail !== g) tail.disconnect();
+      } catch (e) {}
+    };
+  }
+
+  /* ① 左右交替：左 → 右 → 双，循环两遍。查左右接线是否接反。 */
+  function buildLR(t0) {
+    var seq = [
+      { n: 0, pan: -1 }, { n: 2, pan: 1 }, { n: 4, pan: 0 },
+      { n: 2, pan: -1 }, { n: 0, pan: 1 }, { n: 4, pan: 0 },
+      { n: 5, pan: -1 }, { n: 5, pan: 1 }
+    ];
+    for (var k = 0; k < seq.length; k++) {
+      note(t0 + k * 0.62, SCALE[seq[k].n], 0.52, null, seq[k].pan);
+    }
+  }
+
+  /* ② 环绕旋转：8 个音符沿圆周依次落位，绕头一圈。 */
+  function buildOrbit(t0) {
+    for (var k = 0; k < 8; k++) {
+      note(t0 + k * 0.74, SCALE[k], 0.62, k * 45, null);
+    }
+  }
+
+  /* ③ 前后穿行：一个持续音在 z 轴上往返三次。
+     用持续音而不是音符跳变 —— 「穿行」靠的是位置的连续变化，
+     离散音符只能给出「前 / 后」两个点，中间的过渡听不出来。 */
+  function buildFB(t0) {
+    var o = au.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = 196;          /* G3：低频的前后区分度比高频好 */
+    var g = au.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.30, t0 + 0.18);
+    g.gain.setValueAtTime(0.30, t0 + 4.2);
+    g.gain.linearRampToValueAtTime(0.0001, t0 + 4.5);
+    var pn = makePanner();
+    if (pn.positionZ) {
+      pn.positionX.setValueAtTime(0, t0);
+      pn.positionY.setValueAtTime(0, t0);
+      pn.positionZ.setValueAtTime(-1, t0);
+      pn.positionZ.linearRampToValueAtTime(1, t0 + 1.1);     /* 前 → 后 */
+      pn.positionZ.setValueAtTime(1, t0 + 1.5);
+      pn.positionZ.linearRampToValueAtTime(-1, t0 + 2.6);    /* 后 → 前 */
+      pn.positionZ.setValueAtTime(-1, t0 + 3.0);
+      pn.positionZ.linearRampToValueAtTime(1, t0 + 4.1);     /* 前 → 后 */
+    }
+    o.connect(g);
+    g.connect(pn);
+    pn.connect(demoGain);
+    o.start(t0);
+    o.stop(t0 + 4.6);
+    o.onended = function () { try { o.disconnect(); g.disconnect(); pn.disconnect(); } catch (e) {} };
+  }
+
+  var DEMOS = [
+    { key: "lr",    name: "左右声道交替", desc: "左 → 右 → 双声道，查接线是否接反", dur: 5.6, build: buildLR },
+    { key: "orbit", name: "环绕旋转一圈", desc: "声音绕头一周，感受方位连续性",     dur: 6.5, build: buildOrbit },
+    { key: "fb",    name: "前后穿行",     desc: "正前 ↔ 正后，HRTF 定位测试",       dur: 5.0, build: buildFB }
+  ];
+
+  /* demo 走独立的 demoGain，不共用方位盘的 auGain：
+     两者同时响会互相干扰，而且「停止」要能只掐掉 demo 而不影响方位盘。 */
+  var demoGain = null, demoPlaying = null, demoEnd = 0, demoTimer = 0;
+
+  function buildDemoList() {
+    var h = "";
+    for (var i = 0; i < DEMOS.length; i++) {
+      var d = DEMOS[i];
+      h += '<button class="demo" data-demo="' + d.key + '">' +
+             '<span class="ico">▶</span>' +
+             '<span class="txt"><span class="nm">' + escapeHTML(d.name) + '</span>' +
+             '<span class="ds">' + escapeHTML(d.desc) + '</span></span>' +
+             '<span class="tm">' + fmtTime(d.dur) + '</span>' +
+           '</button>';
+    }
+    $("demoList").innerHTML = h;
+  }
+
+  function markDemo(key) {
+    var list = document.querySelectorAll(".demo");
+    for (var i = 0; i < list.length; i++) {
+      var on = list[i].getAttribute("data-demo") === key;
+      list[i].classList.toggle("on", on);
+      var ico = list[i].querySelector(".ico");
+      if (ico) ico.textContent = on ? "❚❚" : "▶";
+    }
+  }
+
+  function playDemo(key) {
+    if (!audioLive()) { toast("请先点「启用音频」"); return; }
+    if (demoPlaying === key) { stopDemo(); return; }
+    stopDemo();
+    /* demo 与方位盘共用输出，同时响会打架；播放前先收掉方位声与旋转 */
+    rotStop();
+    clearTimeout(burstTmr);
+    fade(0, 120);
+
+    if (!demoGain) {
+      demoGain = au.createGain();
+      demoGain.connect(au.destination);
+    }
+    demoGain.gain.cancelScheduledValues(au.currentTime);
+    demoGain.gain.setValueAtTime(1, au.currentTime);
+
+    var d = null;
+    for (var i = 0; i < DEMOS.length; i++) { if (DEMOS[i].key === key) d = DEMOS[i]; }
+    if (!d) return;
+    var t0 = au.currentTime + 0.08;
+    d.build(t0);
+    demoPlaying = key;
+    demoEnd = t0 + d.dur;
+    markDemo(key);
+    clearInterval(demoTimer);
+    demoTimer = setInterval(function () {
+      if (au.currentTime >= demoEnd) stopDemo();
+    }, 120);
+  }
+
+  function stopDemo() {
+    clearInterval(demoTimer);
+    demoTimer = 0;
+    /* 已经调度出去的音符收不回来，靠总增益拉 0 静音；下次播放前再设回 1 */
+    if (demoGain && au) {
+      try {
+        demoGain.gain.cancelScheduledValues(au.currentTime);
+        demoGain.gain.setValueAtTime(0, au.currentTime);
+      } catch (e) {}
+    }
+    demoPlaying = null;
+    markDemo(null);
+  }
+
+  /* ================= 声道测试 ================= */
+
+  /* 独立于环绕图：一次性的 1kHz 正弦 + StereoPanner，播完自动回收。
+     用 StereoPannerNode 而不是 PannerNode —— 这里要的是「纯左 / 纯右」，
+     3D 声场化反而会引入串扰，判断接线左右就不可靠了。 */
+  function chanBurst(ch) {
+    if (!audioLive()) { toast("请先点「启用音频」"); return; }
+    var t = au.currentTime;
+    var o = au.createOscillator();
+    o.type = "sine";
+    o.frequency.value = 1000;
+    var g = au.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(auVol, t + 0.05);
+    g.gain.setValueAtTime(auVol, t + 0.9);
+    g.gain.linearRampToValueAtTime(0, t + 1.1);
+    o.connect(g);
+
+    var tail = g;
+    if (au.createStereoPanner) {
+      var p = au.createStereoPanner();
+      p.pan.value = ch === "left" ? -1 : ch === "right" ? 1 : 0;
+      g.connect(p);
+      tail = p;
+    }
+    tail.connect(au.destination);
+    o.start(t);
+    o.stop(t + 1.2);
+    o.onended = function () {
+      try { o.disconnect(); g.disconnect(); if (tail !== g) tail.disconnect(); } catch (e) {}
+    };
+  }
+
+  /* ================= 方位盘构建 ================= */
+
+  function buildDial() {
+    var html = "";
+    for (var i = 0; i < DIRS.length; i++) {
+      var d = DIRS[i];
+      /* --d / --nd 成对传：一个正向角用于「转出去」，一个负向角用于「把按钮转回来」，
+         这样文字始终保持水平。用 calc(-1 * var(--d)) 也行，但两变量兼容性更稳。 */
+      html += '<button class="dir" data-deg="' + d.deg + '" style="--d:' + d.deg + 'deg;--nd:-' + d.deg + 'deg" ' +
+              'title="从' + d.name + '方发声">' + d.name + '</button>';
+    }
+    html += '<button class="hub" id="hub" title="从当前方向播放 1.6 秒">播放</button>';
+    $("dial").innerHTML = html;
+  }
+
+  /* ================= 事件绑定 ================= */
+
+  $("micSel").addEventListener("change", function () {
+    if (!micStream) return;
+    /* 录音进行中换设备：MediaRecorder 绑的是旧 stream，不先收掉会录出一段静音 */
+    if (recIsRecording() && mr) { try { mr.stop(); } catch (e) {} }
+    micClose();
+    toast("已切换输入设备，重新点「开始录音」生效");
+  });
+
+  $("btnRec").addEventListener("click", function () {
+    if (recIsRecording() && mr) { try { mr.stop(); } catch (e) {} return; }
+    recStart();
+  });
+
+  $("btnPlay").addEventListener("click", recToggle);
+
+  $("btnDl").addEventListener("click", function () {
+    if (!recBlob) return;
+    downloadBlob(recBlob, "recording-" + stamp() + "." + extOf(recBlob.type || mrMime));
+    toast("已开始下载录音");
+  });
+
+  $("btnClr").addEventListener("click", function () { recClear(); toast("已清除录音"); });
+
+  $("recSeek").addEventListener("input", function () {
+    if (!recBuf || !micAC) return;
+    var t = parseFloat($("recSeek").value) / 1000 * recBuf.duration;
+    if (recNode) recStartAt(t);
+    else { recOffset = t; updateSeek(); }
+  });
+
+  $("btnCam").addEventListener("click", function () {
+    if (camStream) camClose();
+    else camOpen();
+  });
+
+  $("btnCamNext").addEventListener("click", camNext);
+
+  $("btnMirror").addEventListener("click", function () {
+    var w = $("camWrap");
+    w.classList.toggle("mirror");
+    $("btnMirror").classList.toggle("primary", w.classList.contains("mirror"));
+  });
+
+  $("btnSnap").addEventListener("click", camSnap);
+
+  $("camSel").addEventListener("change", function () {
+    if (camStream) camOpen();
+  });
+
+  $("btnAudio").addEventListener("click", function () {
+    ensureAu().then(function (c) {
+      if (!c) return;
+      $("auDot").className = "dot ok";
+      $("btnAudio").textContent = "音频已启用";
+      $("btnAudio").disabled = true;
+      toast("音频已启用，点方位盘试听");
+    });
+  });
+
+  /* demo 列表：点一下播放，再点一下停 */
+  $("demoList").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".demo") : null;
+    if (!b) return;
+    playDemo(b.getAttribute("data-demo"));
+  });
+
+  $("dial").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    if (b.id === "hub") { burst(auDeg, 1600); return; }
+    var deg = parseFloat(b.getAttribute("data-deg"));
+    if (!isFinite(deg)) return;
+    rotStop();
+    burst(deg, 1600);
+  });
+
+  $("btnRot").addEventListener("click", rotStart);
+
+  $("btnStop").addEventListener("click", function () {
+    rotStop();
+    stopDemo();
+    clearTimeout(burstTmr);
+    fade(0, 150);
+    clearDirMarks();
+    $("auDot").className = au && au.state === "running" ? "dot ok" : "dot";
+  });
+
+  $("btnChL").addEventListener("click", function () { chanBurst("left"); });
+  $("btnChR").addEventListener("click", function () { chanBurst("right"); });
+  $("btnChB").addEventListener("click", function () { chanBurst("both"); });
+
+  $("btnReset").addEventListener("click", function () {
+    rotStop();
+    stopDemo();
+    clearTimeout(burstTmr);
+    fade(0, 120);
+    micClose();
+    camClose();
+    recClear();
+    $("camWrap").classList.remove("mirror");
+    $("btnMirror").classList.remove("primary");
+    clearDirMarks();
+    $("auDot").className = au && au.state === "running" ? "dot ok" : "dot";
+    toast("已重置");
+  });
+
+  /* 设备插拔时刷新下拉。用 addEventListener 而非 ondevicechange，便于将来叠加。 */
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", function () { refreshDevices(); });
+  }
+
+  /* 页面关闭时释放设备，否则摄像头指示灯会一直亮着 */
+  window.addEventListener("pagehide", function () {
+    micClose();
+    camClose();
+    if (au && au.state === "running" && au.suspend) { try { au.suspend(); } catch (e) {} }
+  });
+
+  /* ================= 初始化 ================= */
+
+  buildDial();
+  buildDemoList();
+  checkEnv();
+  refreshDevices();
+})();
+</script>
+</body>
+</html>
