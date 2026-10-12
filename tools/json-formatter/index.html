@@ -35,8 +35,14 @@
     --null: #94a0b0;
     --promoted: #9a3fbf;
     --err: #d1242f;
+    --ancestor: #e5484d;   /* 悬停时祖先链的层级提示色 */
 
-    --row: 24px;
+    /* 行高：一屏能放多少行的唯一旋钮。JS 的 ROW_H 会在启动时从它读一次，
+       所以改这一个值就够，不需要同步改脚本。
+       18px 的取舍：13px 等宽字体墨迹高约 12.3px，上下各留约 3px、相邻行墨迹
+       间隙 4px（VS Code 默认约 5~6px），比 24px 每屏多约 34% 内容；
+       再往下 16px 间隙只剩 2px，中文字形会贴行，且行内按钮会溢出。 */
+    --row: 18px;
     --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
   }
@@ -116,7 +122,11 @@
   textarea.wrap { white-space: pre-wrap; word-break: break-all; }
 
   /* ===== 虚拟列表 ===== */
-  #viewport { flex: 1; overflow: auto; position: relative; contain: strict;
+  /* 只做布局/尺寸隔离，不用 contain: paint：
+     结果区本来就有 overflow: auto 负责裁剪，再加 paint 隔离会让整棵子树
+     被单独缓存光栅化，个别引擎在「只改文字颜色」时容易漏掉重绘
+     （表现为某一行的高亮色残留）。 */
+  #viewport { flex: 1; overflow: auto; position: relative; contain: layout size;
     scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
   #viewport::-webkit-scrollbar { width: 10px; height: 10px; }
   #viewport::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
@@ -142,33 +152,53 @@
     100% { transform: translateX(320%); }
   }
   #sizer { position: relative; width: 100%; }
-  /* 行本身用 max-content 撑开，#sizer 的宽度由 JS 按最宽行设置，从而产生横向滚动 */
-  #rows { position: absolute; top: 0; left: 0; width: max-content; min-width: 100%; will-change: transform; }
+  /* 行本身用 max-content 撑开，#sizer 的宽度由 JS 按最宽行设置，从而产生横向滚动。
+     这里刻意不加 will-change: transform —— 滚动时每帧都会重渲染可见行，
+     整层本来就要重绘，提升成合成层拿不到收益，反而多一条「缓存光栅化」路径。 */
+  #rows { position: absolute; top: 0; left: 0; width: max-content; min-width: 100%; }
+  /* 行盒的 line-height 必须跟着 --row 走：否则文字按 body 的 13px/1.5 = 19.5px
+     撑高，wrap 模式下 .row 是 height:auto + min-height:var(--row)，
+     实际行高会被内容顶到 19.5px，--row 调小也压不下去。 */
   .row {
-    height: var(--row); display: flex; align-items: center; white-space: pre;
-    padding-right: 12px; cursor: default; user-select: none;
+    height: var(--row); line-height: var(--row);
+    display: flex; align-items: center; white-space: pre;
+    padding-right: 12px; cursor: default;
     width: max-content; min-width: 100%; background: var(--panel);
   }
+  /* 结果区文字可以像普通网页一样框选复制（行号 .ln、折叠箭头 .tw、
+     注释 .hint、按钮 .acts 都不参与选中），复制出来就是干净的 JSON。 */
   .row:hover { background: var(--hover); }
   .row.sel { background: var(--accent-soft); }
   /* 行内容容器：拆成「前缀（缩进 / 折叠箭头 / 键名）」与「值」两块。
-     值单独成块，折行时续行自然悬挂对齐到值的起始列，缩进层级不会丢。 */
-  .body { display: flex; align-items: center; flex: none; }
-  .pre  { display: flex; align-items: center; flex: none; }
-  .val  { display: flex; align-items: center; flex: none; }
-  /* 行号列固定在最左；缩进区绘制虚线层级引导线 */
+     值单独成块，折行时续行自然悬挂对齐到值的起始列，缩进层级不会丢。
+     两块都用 inline-block 而不是 flex item —— flex 布局下浏览器自带的复制
+     会把每个 flex item 当成独立一行，在中间插入换行（`"key"\n: \n"value"`）；
+     inline-block 属于同一行内流，复制出来就是连续的文本。 */
+  .body { display: block; flex: none; }
+  .pre  { display: inline-block; vertical-align: top; }
+  .val  { display: inline-block; vertical-align: top; }
+  /* 行号列固定在最左；缩进区绘制虚线层级引导线。
+     pointer-events: none 是必需的：Chrome 不允许从 user-select:none 的元素上
+     起选区，若行号列吞掉 mousedown，用户在左侧 52px 灰带里按下拖动会完全
+     选不中任何东西。让它穿透到 .row，选区就自然从正文起点开始；
+     行号本身仍因 user-select:none 而不进入复制内容。 */
   .ln {
     width: 52px; flex: none; text-align: right; padding-right: 14px; color: var(--text-3);
-    user-select: none; position: sticky; left: 0; background: inherit; z-index: 1;
+    user-select: none; pointer-events: none;
+    position: sticky; left: 0; background: inherit; z-index: 1;
   }
+  /* 缩进用固定步长控制视觉宽度（比真实空格紧凑），同时 .ind 里放着真实的
+     缩进字符（空格 / Tab）——font-size:0 让它不占宽度也看不见，但框选复制时
+     会跟着带走，于是复制出来的文本缩进层级和原文完全一致。 */
   .ind {
-    flex: none;
+    display: inline-block; vertical-align: top; font-size: 0;
     background-image: linear-gradient(90deg, var(--guide) 1px, transparent 1px);
     background-size: 20px 4px;
     background-repeat: repeat-x;
     background-position: 10px 0;
   }
-  .tw { width: 15px; flex: none; text-align: center; color: var(--text-3); cursor: pointer;
+  .tw { display: inline-block; vertical-align: top; width: 15px; text-align: center;
+    color: var(--text-3); cursor: pointer;
     user-select: none; font-size: 11px; }
   .tw:hover { color: var(--accent); }
 
@@ -182,23 +212,34 @@
     align-items: flex-start; position: relative;
   }
   #viewport.wrap .ln { line-height: var(--row); }
-  #viewport.wrap .body { flex: 1 1 auto; min-width: 0; align-items: flex-start; }
-  /* 前缀：不参与 flex-grow（值块用 flex-basis:0，长值不会挤压键名），
-     只在自身过宽时收缩并让键名折行，最多占 60% 宽度，保证值列始终有位置 */
+  #viewport.wrap .body { flex: 1 1 auto; min-width: 0; }
+  /* 前缀：最多占 60% 宽度，自身过宽时在列内折行，保证值列始终有位置 */
   #viewport.wrap .pre {
-    align-items: flex-start; line-height: var(--row);
-    flex: 0 1 auto; min-width: 0; max-width: 60%;
-    white-space: pre-wrap; overflow-wrap: anywhere;
-  }
-  /* 值块：吃掉剩余宽度并在自己列内折行，续行自然悬挂对齐 */
-  #viewport.wrap .val {
-    display: block; flex: 1 1 0; min-width: 0;
     line-height: var(--row);
+    max-width: 60%;
     white-space: pre-wrap; overflow-wrap: anywhere;
   }
-  #viewport.wrap .acts { position: absolute; right: 12px; top: 2px; margin-left: 0; }
+  /* 值块：占满键名之后的剩余宽度并在自己列内折行，续行自然悬挂对齐到值的起始列。
+     max-width 必须显式扣掉前缀宽度（--pre-w 由 JS 按实测的前缀宽度写进每个行元素）：
+     .val 是 inline-block，shrink-to-fit 的「可用宽度」是整个 .body 的宽度，并不
+     知道同一行左边已经被 .pre 占掉多少；不给上限时它会按整个 .body 取宽，再排到
+     前缀后面就撑出行外 —— 表现就是折行模式仍然冒出横向滚动条。 */
+  #viewport.wrap .val {
+    line-height: var(--row);
+    max-width: calc(100% - var(--pre-w, 0px));
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  /* 绝对定位的 .acts 会被拉伸成整行高，若再叠加 top 偏移，按钮底边就会越过行底
+     （--row:20 时溢出 1.19px）。显式给成 top:0 + height:var(--row) + flex 居中，
+     按钮正好落在行内，与行高解耦。 */
+  #viewport.wrap .acts {
+    position: absolute; right: 12px; top: 0; height: var(--row); margin-left: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+  }
   .k { color: var(--key); }
-  .p { color: var(--text-3); margin-right: 8px; }
+  /* 冒号后面直接跟一个真实空格（复制出来是 ": "，符合 JSON 惯例），
+     因此这里不再需要额外右边距 */
+  .p { color: var(--text-3); }
   .s { color: var(--str); }
   .n { color: var(--num); }
   .num { color: var(--num); }
@@ -215,12 +256,25 @@
   /* 由 JSON 字符串提升上来的节点 */
   .v.promoted { color: var(--promoted); }
 
+  /* ===== 层级提示 =====
+     鼠标悬停任意一行时，把它所在的整条祖先链染色：
+     祖先容器的「键名 + 折叠箭头 + 开括号 / 闭括号」一起变红，
+     首尾括号成对变色，一眼看清当前字段挂在哪条路径下。
+     根节点的括号不参与（否则整屏泛红反而失去指示意义）。
+     下面这条规则只是兜底：实际颜色由 setAnc() 直接写到 .k / .tw / .v
+     自身的行内样式上，重绘路径最短，不依赖父节点类名去失效整棵子树。 */
+  .row.anc .k,
+  .row.anc .tw,
+  .row.anc .v { color: var(--ancestor); }
+
   /* 行内操作按钮：hover 时显示，横向滚动时吸附在右侧 */
-  .acts { margin-left: auto; visibility: hidden; flex: none;
+  .acts { margin-left: auto; visibility: hidden; flex: none; user-select: none;
     position: sticky; right: 14px; background: inherit; }
   .row:hover .acts, .row.sel .acts { visibility: visible; }
   .acts button {
-    font-size: 11px; padding: 1px 8px; margin-left: 6px;
+    /* line-height 收成 1.2：按钮高 = 11×1.2 + 2(padding) + 2(border) = 17.2px，
+       刚好塞得进 18px 的行；沿用 body 的 1.5 会变成 20.5px 而溢出 */
+    font-size: 11px; line-height: 1.2; padding: 1px 8px; margin-left: 6px;
     background: var(--panel-2); border-color: var(--border-2); color: var(--text-2);
   }
   .acts button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -314,9 +368,17 @@
   const $ = id => document.getElementById(id);
   const input = $("input"), viewport = $("viewport"), sizer = $("sizer"), rows = $("rows");
   const statusText = $("statusText"), pathBox = $("path"), stat = $("stat");
-  const ROW_H = 24, OVERSCAN = 14;
+  /* ROW_H 是「未实测行的估算高度」，必须与 CSS 的 --row 一致，否则虚拟滚动的
+     总高度会算错。这里只给一个兜底值，启动时会从 --row 真读一次（见文件末尾），
+     这样调行高只需要改 CSS 一个地方。 */
+  let ROW_H = 18;
+  const OVERSCAN = 14;
   const CHUNK_MS = 7;
   const INDENT_STEP = 20;
+  /* 行数不超过这个值时，整篇都渲染进 DOM（不用虚拟滚动）：这样浏览器自带的
+     「框选复制」和「⌘F 网页搜索」能覆盖全文，行为跟普通网页完全一致。
+     超过这个值才退回虚拟滚动，避免超大文档把 DOM 撑爆。 */
+  const FULL_LIMIT = 4000;
   const GUTTER = 64;      // 行号列 52 + 行右侧留白 12，用于推算折行可用宽度
   const CHAR_W = 7.8;     // 13px 等宽字体的近似字符宽度，仅用于未实测行的高度估算
   const ID_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -337,6 +399,36 @@
 
   /* 结果区换行模式：行高不再固定，改用「每行实测高度 + 累积偏移」驱动虚拟滚动 */
   let wrapMode = true, lastAvail = 0;
+  /* 当前是否「整篇渲染」（行数 ≤ FULL_LIMIT），由 render() 维护；滚动时据此决定要不要重渲染 */
+  let fullMode = false;
+  /* 真实缩进字符（随「缩进」下拉变化），写进 .ind 供框选复制带走 */
+  let indentText = "    ";
+  /* 层级提示：当前悬停的节点，以及它的祖先链集合（不含根节点） */
+  let hoverNode = null, hoverAnc = null;
+  /* 祖先链提示色：从 CSS 变量取，和 --ancestor 保持单一来源 */
+  let ancColor = "";
+  function ancHint() {
+    if (!ancColor) {
+      ancColor = getComputedStyle(document.documentElement)
+        .getPropertyValue("--ancestor").trim() || "#e5484d";
+    }
+    return ancColor;
+  }
+  /* 给一行打 / 去「祖先链」标记。
+     除了在 .row 上挂 anc 类（CSS 里有一份同样的规则兜底），还把颜色直接
+     写到承载文字的三个 span 自身的行内样式上：改父节点的类名要靠引擎的
+     「样式失效集合」遍历子树才能确定该重画哪些后代，而改元素自身样式只
+     失效它自己 —— 重绘路径更短，也就不会出现「键名已恢复成蓝色、括号
+     还留着上一次的红色」这类残留。 */
+  function setAnc(el, on) {
+    if (el._ancOn === on) return;      // 状态没变就不写，避免滚动时反复改样式
+    el._ancOn = on;
+    el.classList.toggle("anc", on);
+    const c = on ? ancHint() : "";
+    el._k.style.color = c;
+    el._tw.style.color = c;
+    el._v.style.color = c;
+  }
   let heights = [];       // 与 flat 对齐：每行高度（已渲染过为实测值，否则为估算值）
   let offs = [0];         // 累积偏移，长度 = heights.length + 1；offs[i] = 第 i 行的顶部坐标
   let totalH = 0;         // 所有行高之和，即 sizer 的高度
@@ -508,6 +600,8 @@
   function push(n, r) { flat.push(n); role.push(r); }
 
   function startBuild(keepScroll) {
+    indentText = indentStr();              // 缩进设置可能刚被改过，重新取一次
+
     anchor = (keepScroll && flat.length)
       ? flat[Math.min(rowAt(viewport.scrollTop), flat.length - 1)]
       : null;
@@ -704,6 +798,7 @@
                 + '<button data-a="dl">下载</button><button data-a="del">删除</button></span>';
     d._ln = d.children[0]; d._body = d.children[1]; d._acts = d.children[2];
     const bx = d._body, pre = bx.children[0], val = bx.children[1];
+    d._pre = pre;
     d._ind = pre.children[0]; d._tw = pre.children[1];
     d._k = pre.children[2];   d._p = pre.children[3];
     d._v = val.children[0];   d._cm = val.children[1]; d._hint = val.children[2];
@@ -718,8 +813,20 @@
       else if (a === "dl") download(d._n);
       else deleteNode(d._n);
     };
-    d.onclick = () => { if (d._n) select(d._n); };
-    d.ondblclick = () => { if (d._n && isObj(d._n.raw)) toggle(d._n); };
+    // 点击选中该行；但拖选文字结束时浏览器也会补一个 click，
+    // 这时已经有选区了，就不该顺带把整行选中
+    d.onclick = () => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+      if (d._n) select(d._n);
+    };
+    // 双击文本是浏览器「选中一个词」的行为，此时不要顺带折叠容器；
+    // 双击缩进 / 空白区域才折叠（折叠也可以直接点 ▾ 箭头）
+    d.ondblclick = e => {
+      if (!d._n || !isObj(d._n.raw)) return;
+      if (e.target.closest && e.target.closest(".k, .p, .v, .cm, .hint")) return;
+      toggle(d._n);
+    };
     pool[i] = d;
     rows.appendChild(d);
     return d;
@@ -733,8 +840,12 @@
 
     const vh = viewport.clientHeight || 1;
     const y = viewport.scrollTop;
-    const first = total ? Math.max(0, rowAt(y) - OVERSCAN) : 0;
-    const last = total ? Math.min(total, rowAt(y + vh) + 1 + OVERSCAN) : 0;
+    // 行数不多时把整篇都渲染进 DOM：这样浏览器自带的「框选复制」和「⌘F 网页搜索」
+    // 能覆盖全文，和普通网页一致。构建过程中（building）始终走虚拟滚动，
+    // 避免每构建一批行就把整篇重画一遍。
+    fullMode = !building && total > 0 && total <= FULL_LIMIT;
+    const first = fullMode ? 0 : (total ? Math.max(0, rowAt(y) - OVERSCAN) : 0);
+    const last = fullMode ? total : (total ? Math.min(total, rowAt(y + vh) + 1 + OVERSCAN) : 0);
     const need = Math.max(0, last - first);
 
     for (let i = 0; i < need; i++) getRow(i);
@@ -745,6 +856,22 @@
     for (let i = 0; i < need; i++) {
       const idx = first + i;
       paint(pool[i], flat[idx], role[idx], idx + 1);
+    }
+
+    // 折行模式下值块要扣掉前缀占的宽度（见 CSS 里 #viewport.wrap .val 的说明）。
+    // 前缀宽度只取决于它自己的内容、与值块无关，所以可以「先全量读、再全量写」，
+    // 避免读写交错导致每行一次强制布局。
+    // 变量要写在 .body 上：自定义属性只沿树向下继承，.val 与 .pre 是兄弟，
+    // 写在 .pre 上 .val 读不到。
+    if (wrapMode) {
+      for (let i = 0; i < need; i++) pool[i]._preW = pool[i]._pre.offsetWidth;
+      for (let i = 0; i < need; i++) {
+        const el = pool[i];
+        if (el._preWApplied !== el._preW) {
+          el._preWApplied = el._preW;
+          el._body.style.setProperty("--pre-w", el._preW + "px");
+        }
+      }
     }
 
     let maxW = 0, changedFrom = -1;
@@ -774,7 +901,12 @@
     else {
       refreshMetrics();
       $("outInfo").textContent =
-        `${total.toLocaleString()} 行 / ${metricLines.toLocaleString()} 行 · ${metricNodes.toLocaleString()} 节点`;
+        `${total.toLocaleString()} 行 / ${metricLines.toLocaleString()} 行 · ${metricNodes.toLocaleString()} 节点`
+        + (fullMode ? "" : " · 虚拟滚动");
+      $("outInfo").title = fullMode
+        ? "全文已渲染：可以框选复制，浏览器搜索（⌘F）能命中全部内容"
+        : `行数超过 ${FULL_LIMIT.toLocaleString()}，已启用虚拟滚动：DOM 里只有可见区域，`
+          + "浏览器搜索（⌘F）只能命中已渲染的可见行";
     }
   }
 
@@ -794,13 +926,18 @@
   function paint(el, n, r, lineNo) {
     el._n = n;
     el.classList.toggle("sel", n === selected);
+    // 祖先链提示：容器的头行与尾行一起标（首尾括号成对变色），根节点不在 hoverAnc 里
+    setAnc(el, !!hoverAnc && hoverAnc.has(n));
     el._ln.textContent = lineNo;
 
     const isC = isObj(n.raw);
     const isTail = r === 2;
 
-    // 缩进：深度 n 的行缩进 n 层，容器的右括号行与其头部行自然对齐
+    // 缩进：视觉宽度按固定步长（比真实空格紧凑），容器的右括号行与其头部行自然对齐。
+    // 同时把真实缩进字符放进 .ind —— CSS 里是 font-size:0（不占宽度、看不见），
+    // 但框选复制时会跟着带走，复制出来的文本缩进层级就和原文一致。
     el._ind.style.width = (n.depth * INDENT_STEP) + "px";
+    el._ind.textContent = n.depth ? indentText.repeat(n.depth) : "";
 
     el._tw.textContent = (!isTail && isC && !isEmpty(n)) ? (n.open ? "▾" : "▸") : "";
 
@@ -809,7 +946,7 @@
       el._k.textContent = ""; el._p.textContent = "";
     } else {
       el._k.textContent = JSON.stringify(String(n.key));
-      el._p.textContent = ":";
+      el._p.textContent = ": ";              // 冒号 + 真实空格，复制出来就是 ": "
     }
     el._p.style.display = (n === root || n.isIdx || isTail) ? "none" : "inline";
 
@@ -860,10 +997,57 @@
     el._acts.children[3].disabled = n === root;     // 根节点不可删除
   }
 
+  /* ============================================================
+     层级提示：悬停任意字段，把它所在的整条祖先链染色
+     - 只在「悬停的那一行」变化时重算，再逐行 toggle 类名
+       （可见行只有几十个，开销可忽略）
+     - 滚动后新渲染出来的行由 paint() 依据 hoverAnc 自动补上标记
+     ============================================================ */
+  function applyAnc() {
+    for (let i = 0; i < pool.length; i++) {
+      const el = pool[i];
+      setAnc(el, !!hoverAnc && hoverAnc.has(el._n));
+    }
+  }
+
+  function setHoverNode(node) {
+    if (node === hoverNode) return;
+    hoverNode = node;
+    hoverAnc = null;
+    if (node && node !== root) {
+      const s = new Set();
+      for (let p = node.parent; p && p !== root; p = p.parent) s.add(p);
+      if (s.size) hoverAnc = s;
+    }
+    applyAnc();
+  }
+
+  // 记住鼠标位置：行是复用的，滚动 / 重排后必须按坐标重新定位，
+  // 否则高亮会停留在旧行上（虚拟列表特有的坑）
+  let hoverPt = null;
+  function setHoverFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const row = el && el.closest ? el.closest(".row") : null;
+    setHoverNode(row ? row._n : null);
+  }
+
+  rows.addEventListener("mousemove", e => {
+    hoverPt = { x: e.clientX, y: e.clientY };
+    const row = e.target.closest ? e.target.closest(".row") : null;
+    setHoverNode(row ? row._n : null);
+  });
+  rows.addEventListener("mouseleave", () => { hoverPt = null; setHoverNode(null); });
+
   let scrollRaf = 0;
   viewport.addEventListener("scroll", () => {
     if (scrollRaf) return;
-    scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; render(); });
+    scrollRaf = requestAnimationFrame(() => {
+      scrollRaf = 0;
+      // 整篇渲染时 DOM 里已经是全部行，滚动无需重渲染（也避免每帧重画几千行）
+      if (!fullMode) render();
+      // 滚动后鼠标下的行已经变了，按坐标重新定位悬停行
+      if (hoverPt) setHoverFromPoint(hoverPt.x, hoverPt.y);
+    });
   }, { passive: true });
   let resizeRaf = 0;
   window.addEventListener("resize", () => {
@@ -1210,6 +1394,12 @@
       payload: '{"event":"deploy","ok":true,"retries":2}',
       trace: '[{"span":"db","ms":12},{"span":"cache","ms":3}]'
     };
+  }
+
+  // 行高只有 --row 一个来源：读一次让估算高度与 CSS 对齐（改 --row 不用动 JS）
+  {
+    const cssRow = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row"));
+    if (cssRow > 0) ROW_H = cssRow;
   }
 
   // 初始换行状态与顶栏复选框保持一致
