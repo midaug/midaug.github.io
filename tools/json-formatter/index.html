@@ -4,50 +4,76 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>JSON 格式化工具</title>
+<meta name="theme-color" content="#f6f7f9" />
 <style>
   :root {
-    --bg: #0f1419;
-    --bg2: #151b23;
-    --bg3: #1b222c;
-    --line: #263140;
-    --fg: #d7e0ea;
-    --dim: #7d8b9c;
-    --key: #7cc7ff;
-    --str: #9ee493;
-    --num: #f7b955;
-    --bool: #c99bff;
-    --null: #8895a6;
-    --accent: #2b8fb2;
+    /* ===== 与「工具首页」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --guide: rgba(15,23,42,.14);
+
+    /* ===== 语法高亮（浅色）===== */
+    --key: #2f52c9;
+    --str: #0d7a52;
+    --num: #b25e09;
+    --bool: #7a3fd4;
+    --null: #94a0b0;
+    --promoted: #9a3fbf;
+    --err: #d1242f;
+
     --row: 24px;
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background: var(--bg); color: var(--fg);
-    font: 13px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, "PingFang SC", monospace;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
   }
   #app { display: flex; flex-direction: column; height: 100%; }
 
   /* ===== 顶栏 ===== */
   header {
     display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
-    padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--line);
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
     overflow: hidden;
   }
-  .brand { font-weight: 700; letter-spacing: .5px; color: #fff; margin-right: 4px; }
+  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; }
   .brand span { color: var(--accent); }
   button, select {
-    background: var(--bg3); color: var(--fg); border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
     border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit;
+    transition: background .15s, border-color .15s, color .15s;
   }
-  button:hover, select:hover { border-color: var(--accent); background: #222c38; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
   button:active { transform: translateY(1px); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #04222c; font-weight: 700; }
-  button.primary:hover { background: #37a3c9; }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
   button:disabled { opacity: .45; cursor: not-allowed; }
-  .sep { width: 1px; height: 22px; background: var(--line); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); }
   /* 顶栏可选控件：不换行，空间不足时整体隐藏 */
-  .stat { color: var(--dim); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; vertical-align: -1px; margin-right: 2px; }
 
   /* 性能统计：贴在结果区标题栏行尾，单行，空间不足时省略号截断 */
   .stat.perf {
@@ -68,32 +94,45 @@
   /* 左右 3 : 7 */
   .pane { flex: 3 1 0%; min-width: 0; display: flex; flex-direction: column; position: relative; }
   .pane.right { flex: 7 1 0%; }
-  .pane.left  { border-right: 1px solid var(--line); }
+  .pane.left  { border-right: 1px solid var(--border); }
   .pane-head {
     display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-    background: var(--bg2); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--dim);
+    background: var(--panel-2); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-2);
     flex: none; overflow: hidden;
   }
   .pane-head b, .pane-head #outInfo { flex: none; white-space: nowrap; }
+  .pane-head b { color: var(--text); font-weight: 600; }
 
   textarea {
     flex: 1; width: 100%; resize: none; border: 0; outline: 0; padding: 10px 12px;
-    background: var(--bg); color: var(--fg); font: inherit; tab-size: 4; white-space: pre;
+    background: var(--panel); color: var(--text); font: inherit; tab-size: 4; white-space: pre;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
   }
+  textarea::placeholder { color: var(--text-3); }
+  textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+  textarea::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  textarea::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  textarea::-webkit-scrollbar-track { background: transparent; }
   textarea.wrap { white-space: pre-wrap; word-break: break-all; }
 
   /* ===== 虚拟列表 ===== */
-  #viewport { flex: 1; overflow: auto; position: relative; contain: strict; }
+  #viewport { flex: 1; overflow: auto; position: relative; contain: strict;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+  #viewport::-webkit-scrollbar { width: 10px; height: 10px; }
+  #viewport::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  #viewport::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  #viewport::-webkit-scrollbar-track { background: transparent; }
+  #viewport::-webkit-scrollbar-corner { background: transparent; }
 
   /* 构建进度条：分片渲染大树时给出可见反馈 */
   #buildBar {
-    height: 2px; flex: none; background: #1a222c; overflow: hidden;
+    height: 2px; flex: none; background: var(--surface-1); overflow: hidden;
     opacity: 0; transition: opacity .2s;
   }
   #buildBar.on { opacity: 1; }
   #buildBar i {
     display: block; height: 100%; width: 0%;
-    background: linear-gradient(90deg, #2b8fb2, #7cc7ff);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
     transition: width .1s linear;
   }
   /* 无法预估总量时（如增量展开深层子树）用不定进度动画 */
@@ -108,10 +147,10 @@
   .row {
     height: var(--row); display: flex; align-items: center; white-space: pre;
     padding-right: 12px; cursor: default; user-select: none;
-    width: max-content; min-width: 100%; background: var(--bg);
+    width: max-content; min-width: 100%; background: var(--panel);
   }
-  .row:hover { background: #1a222c; }
-  .row.sel { background: #1d3a4a; }
+  .row:hover { background: var(--hover); }
+  .row.sel { background: var(--accent-soft); }
   /* 行内容容器：拆成「前缀（缩进 / 折叠箭头 / 键名）」与「值」两块。
      值单独成块，折行时续行自然悬挂对齐到值的起始列，缩进层级不会丢。 */
   .body { display: flex; align-items: center; flex: none; }
@@ -119,19 +158,19 @@
   .val  { display: flex; align-items: center; flex: none; }
   /* 行号列固定在最左；缩进区绘制虚线层级引导线 */
   .ln {
-    width: 52px; flex: none; text-align: right; padding-right: 14px; color: #4d5b6b;
+    width: 52px; flex: none; text-align: right; padding-right: 14px; color: var(--text-3);
     user-select: none; position: sticky; left: 0; background: inherit; z-index: 1;
   }
   .ind {
     flex: none;
-    background-image: linear-gradient(90deg, #2c3a49 1px, transparent 1px);
+    background-image: linear-gradient(90deg, var(--guide) 1px, transparent 1px);
     background-size: 20px 4px;
     background-repeat: repeat-x;
     background-position: 10px 0;
   }
-  .tw { width: 15px; flex: none; text-align: center; color: #7d8b9c; cursor: pointer;
+  .tw { width: 15px; flex: none; text-align: center; color: var(--text-3); cursor: pointer;
     user-select: none; font-size: 11px; }
-  .tw:hover { color: #fff; }
+  .tw:hover { color: var(--accent); }
 
   /* ===== 结果区自动换行模式 =====
      长字符串不再把行撑宽（去掉横向滚动条），而是在值所在的列内折行；
@@ -158,23 +197,23 @@
     white-space: pre-wrap; overflow-wrap: anywhere;
   }
   #viewport.wrap .acts { position: absolute; right: 12px; top: 2px; margin-left: 0; }
-  .k { color: #c3d3e4; }
-  .p { color: #8fa0b3; margin-right: 8px; }
-  .s { color: #98d98c; }
-  .n { color: #f7b955; }
-  .num { color: #7cc7ff; }
-  .b { color: #c99bff; }
-  .nl { color: #8895a6; font-style: italic; }
-  .c { color: #9fb2c6; }
-  .cm { color: #6f7d8d; }
+  .k { color: var(--key); }
+  .p { color: var(--text-3); margin-right: 8px; }
+  .s { color: var(--str); }
+  .n { color: var(--num); }
+  .num { color: var(--num); }
+  .b { color: var(--bool); }
+  .nl { color: var(--null); font-style: italic; }
+  .c { color: var(--text-2); }
+  .cm { color: var(--text-3); }
 
   /* 折叠提示：// 4 items。line-height 收成 1，避免它把折行模式下的行盒撑高 1px */
-  .hint { color: #6b7887; font-size: 11px; line-height: 1; margin-left: 10px; font-style: italic;
+  .hint { color: var(--text-3); font-size: 11px; line-height: 1; margin-left: 10px; font-style: italic;
     user-select: none; }
   .hint.none { display: none; }
 
   /* 由 JSON 字符串提升上来的节点 */
-  .v.promoted { color: #d2a3ff; }
+  .v.promoted { color: var(--promoted); }
 
   /* 行内操作按钮：hover 时显示，横向滚动时吸附在右侧 */
   .acts { margin-left: auto; visibility: hidden; flex: none;
@@ -182,26 +221,27 @@
   .row:hover .acts, .row.sel .acts { visibility: visible; }
   .acts button {
     font-size: 11px; padding: 1px 8px; margin-left: 6px;
-    background: #243040; border-color: #2f4055; color: #b8c6d6;
+    background: var(--panel-2); border-color: var(--border-2); color: var(--text-2);
   }
-  .acts button:hover { background: var(--accent); color: #04222c; border-color: var(--accent); }
+  .acts button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
   .acts button:disabled { opacity: .35; cursor: not-allowed; }
   .acts.off { visibility: hidden !important; }
 
   /* ===== 状态 / 提示 ===== */
   #empty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: var(--dim); text-align: center; pointer-events: none; line-height: 1.9;
+    color: var(--text-3); text-align: center; pointer-events: none; line-height: 1.9;
   }
   #status {
-    padding: 5px 12px; border-top: 1px solid var(--line); background: var(--bg2);
-    color: var(--dim); font-size: 12px; display: flex; align-items: center; gap: 10px; min-height: 28px;
+    padding: 5px 12px; border-top: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text-2); font-size: 12px; display: flex; align-items: center; gap: 10px; min-height: 28px;
   }
   #path { color: var(--str); word-break: break-all; }
-  #status .err { color: #ff7b72; }
+  #status .err { color: var(--err); }
   .toast {
     position: fixed; bottom: 46px; left: 50%; transform: translateX(-50%);
-    background: #0e2b36; border: 1px solid var(--accent); color: #bfe8f7;
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
     padding: 7px 16px; border-radius: 20px; opacity: 0; transition: opacity .25s; pointer-events: none;
   }
   .toast.show { opacity: 1; }
