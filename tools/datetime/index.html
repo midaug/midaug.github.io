@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>日期时间工具</title>
+<meta name="theme-color" content="#f6f7f9" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    /* 数值强调色，与 JSON 工具的语法高亮同一批 */
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat.perf {
+    margin-left: auto; padding-left: 12px; flex: 0 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #tz { color: var(--text-2); }
+  #tz b { color: var(--accent); font-weight: 600; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  /* 小型次要按钮：行内「复制」「现在」用 */
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"], input[type="number"] { cursor: text; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  input::placeholder { color: var(--text-3); }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+  /* 分段控件：10 位 / 13 位 */
+  .seg {
+    display: inline-flex; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 2px; gap: 2px; flex: none;
+  }
+  .seg button {
+    border: 0; background: transparent; color: var(--text-2);
+    padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 400;
+  }
+  .seg button:hover { background: transparent; color: var(--accent); }
+  .seg button.on {
+    background: var(--panel); color: var(--accent); font-weight: 600;
+    box-shadow: 0 1px 3px rgba(15,23,42,.09);
+  }
+
+  /* ===== 主体 ===== */
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .row + .row { margin-top: 8px; }
+  .row > label {
+    flex: none; width: 68px; font-size: 12px; color: var(--text-2); text-align: right;
+  }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  .row > .seg { margin-left: 0; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+
+  /* 大号数字展示（当前时间戳 / 推算结果） */
+  .hero-num {
+    font-size: 36px; font-weight: 700; letter-spacing: .5px; line-height: 1.15;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+    user-select: all; cursor: pointer; word-break: break-all;
+  }
+  .hero-sub { margin-top: 4px; font-size: 12px; color: var(--text-2); }
+  .hero-sub b { color: var(--text); font-weight: 600; }
+
+  /* 键值行：结果都用它展示，右侧带复制 */
+  .kv-list { margin-top: 10px; }
+  .kv {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-top: 1px solid var(--border); min-width: 0;
+  }
+  .kv:first-child { border-top: 0; }
+  .kv > .k { flex: none; width: 84px; font-size: 12px; color: var(--text-2); }
+  .kv > .v {
+    flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--text);
+    word-break: break-all; user-select: all; cursor: text;
+  }
+  .kv > .v.num { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kv > .v.unit { color: var(--text-2); }
+  .kv > .v.muted { color: var(--text-3); }
+  .kv > button { flex: none; }
+
+  /* 相差结果的醒目一行 */
+  .diff-line {
+    display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap;
+    font-size: 15px; color: var(--text); min-height: 24px;
+  }
+  .diff-line .n { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .diff-line .u { color: var(--text-2); font-size: 12px; margin-right: 4px; }
+  .diff-line .none { color: var(--text-3); font-size: 13px; }
+
+  .err-tip { color: var(--err); font-size: 12px; }
+  .ok-tip { color: var(--ok); font-size: 12px; }
+  .empty-tip { color: var(--text-3); font-size: 12px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+    .hero-num { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Date<span>Time</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="tz">—</span>
+  <span class="sep hide-sm"></span>
+  <button class="mini" id="btnNowTop" title="把所有输入框恢复为初始状态（当前时间）">重置</button>
+  <span class="stat perf" id="clock"></span>
+</header>
+
+<main>
+
+  <!-- ============ 当前时间戳 ============ -->
+  <section class="card wide">
+    <h2>
+      当前时间戳
+      <span class="hint">实时跳动，点击数字即可复制</span>
+      <span class="right">
+        <span class="seg" id="segLen">
+          <button data-v="13" class="on">13 位 · 毫秒</button>
+          <button data-v="10">10 位 · 秒</button>
+        </span>
+        <button id="btnPause">暂停</button>
+        <button id="btnCopyNow" class="mini">复制</button>
+      </span>
+    </h2>
+    <div class="hero-num" id="nowTs" title="点击复制">—</div>
+    <div class="hero-sub" id="nowText">—</div>
+  </section>
+
+  <!-- ============ 日期 → 时间戳 ============ -->
+  <section class="card">
+    <h2>
+      日期 → 时间戳
+      <span class="hint">按本地时区解析</span>
+    </h2>
+    <div class="row">
+      <label for="d2tIn">日期</label>
+      <input type="text" id="d2tIn" spellcheck="false" autocomplete="off"
+             placeholder="2026-10-10 15:52:17.000" />
+      <button class="mini" data-fill="d2tIn">现在</button>
+    </div>
+    <div class="kv-list" id="d2tOut"></div>
+  </section>
+
+  <!-- ============ 时间戳 → 日期 ============ -->
+  <section class="card">
+    <h2>
+      时间戳 → 日期
+      <span class="hint">10 / 13 位自动识别</span>
+    </h2>
+    <div class="row">
+      <label for="t2dIn">时间戳</label>
+      <input type="text" id="t2dIn" spellcheck="false" autocomplete="off" placeholder="1760000000000" />
+      <button class="mini" data-fill="t2dIn">现在</button>
+    </div>
+    <div class="kv-list" id="t2dOut"></div>
+  </section>
+
+  <!-- ============ 两个日期相差 ============ -->
+  <section class="card">
+    <h2>
+      日期相差
+      <span class="hint">按自然年月日拆分</span>
+      <span class="right">
+        <button class="mini" id="btnSwap" title="交换开始与结束时间">交换 ⇅</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="diffA">开始</label>
+      <input type="text" id="diffA" spellcheck="false" autocomplete="off" placeholder="2026-01-01 00:00:00.000" />
+      <button class="mini" data-fill="diffA">现在</button>
+    </div>
+    <div class="row">
+      <label for="diffB">结束</label>
+      <input type="text" id="diffB" spellcheck="false" autocomplete="off" placeholder="2026-10-10 15:52:17.000" />
+      <button class="mini" data-fill="diffB">现在</button>
+    </div>
+    <div class="kv-list">
+      <div class="kv">
+        <span class="k">相差</span>
+        <span class="v"><span class="diff-line" id="diffParts">—</span></span>
+      </div>
+    </div>
+    <div class="kv-list" id="diffTotals"></div>
+  </section>
+
+  <!-- ============ 日期推算 ============ -->
+  <section class="card">
+    <h2>
+      日期推算
+      <span class="hint">按年 / 月 / 天 / 小时 / 分钟 / 秒前后推算</span>
+    </h2>
+    <div class="row">
+      <label for="addBase">基准</label>
+      <input type="text" id="addBase" spellcheck="false" autocomplete="off" placeholder="2026-10-10 15:52:17.000" />
+      <button class="mini" data-fill="addBase">现在</button>
+    </div>
+    <div class="row">
+      <label for="addN">推算</label>
+      <select id="addDir" style="flex:none">
+        <option value="-1" selected>往前</option>
+        <option value="1">往后</option>
+      </select>
+      <input type="number" id="addN" value="30" min="0" step="1" style="flex:1 1 auto" />
+      <select id="addUnit" style="flex:none">
+        <option value="year">年</option>
+        <option value="month">月</option>
+        <option value="day" selected>天</option>
+        <option value="hour">小时</option>
+        <option value="minute">分钟</option>
+        <option value="second">秒</option>
+      </select>
+    </div>
+    <div class="kv-list">
+      <div class="kv">
+        <span class="k">结果</span>
+        <span class="v num" id="addOut" style="font-size:15px">—</span>
+      </div>
+    </div>
+    <div class="kv-list" id="addExtra"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const pad = (n, w) => String(n).padStart(w || 2, "0");
+  const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
+  const MS = { second: 1000, minute: 60000, hour: 3600000, day: 86400000 };
+
+  /* ============================================================
+     格式化与解析
+     ============================================================ */
+
+  /* 统一输出格式：2026-10-10 15:52:17.000 */
+  function fmt(d) {
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())
+         + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())
+         + "." + pad(d.getMilliseconds(), 3);
+  }
+  /* 只到秒，给需要短格式的地方用 */
+  function fmtSec(d) {
+    return fmt(d).slice(0, 19);
+  }
+  function fmtDate(d) {
+    return fmt(d).slice(0, 10);
+  }
+  function week(d) { return "星期" + WEEK[d.getDay()]; }
+
+  /* UTC 版本（末尾标 Z，避免被误读成本地时间） */
+  function fmtUTC(d) {
+    return d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate())
+         + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds())
+         + "." + pad(d.getUTCMilliseconds(), 3);
+  }
+
+  const NUM = s => String(s).replace(/,/g, "");
+
+  /* 从年月日时分秒（可缺省）构造本地时间，并做合法性校验 ——
+     不能直接 new Date(...) 后不管：2026-02-30 会被静默滚动成 3-02 */
+  function build(Y, M, D, h, mi, se, msStr) {
+    Y = +Y; M = +M; D = +D;
+    h = h == null || h === "" ? 0 : +h;
+    mi = mi == null || mi === "" ? 0 : +mi;
+    se = se == null || se === "" ? 0 : +se;
+    if (!(Y >= 1 && Y <= 9999) || !(M >= 1 && M <= 12) || !(D >= 1 && D <= 31)) return null;
+    if (h > 23 || mi > 59 || se > 59) return null;
+    // 毫秒：".5" 按 500ms 理解，".12" 按 120ms
+    let ms = 0;
+    if (msStr != null && msStr !== "") ms = +String(msStr).padEnd(3, "0").slice(0, 3);
+    const d = new Date(Y, M - 1, D, h, mi, se, ms);
+    if (d.getFullYear() !== Y || d.getMonth() !== M - 1 || d.getDate() !== D) return null;
+    return d;
+  }
+
+  /* 解析用户输入的日期字符串，返回 { date, utc } 或 null。
+     支持：2026-10-10 15:52:17.000 / 2026-10-10 / 2026/10/10 15:52 /
+           2026-10-10T15:52:17Z / 2026-10-10T15:52:17+08:00 /
+           2026年10月10日 15:52:17 / 20261010 / 20261010155217 */
+  function parseDate(raw) {
+    const s = String(raw == null ? "" : raw).trim();
+    if (!s) return null;
+
+    // 纯数字的紧凑写法
+    if (/^\d+$/.test(s)) {
+      if (s.length === 8)  return { date: build(s.slice(0, 4), s.slice(4, 6), s.slice(6, 8)), utc: false };
+      if (s.length === 14) return { date: build(s.slice(0, 4), s.slice(4, 6), s.slice(6, 8), s.slice(8, 10), s.slice(10, 12), s.slice(12, 14)), utc: false };
+      return null;
+    }
+
+    // 带时区标识的交给原生解析（Z / +08:00 / -05:00）
+    if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s) && /[T\s]/.test(s)) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return { date: d, utc: /[zZ]$/.test(s) };
+    }
+
+    // 中文写法
+    const cn = s.match(/^(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?(?:\s*(\d{1,2})\s*[:时]\s*(\d{1,2})(?:\s*[:分]\s*(\d{1,2}))?(?:\.(\d{1,3}))?\s*秒?)?$/);
+    if (cn) return { date: build(cn[1], cn[2], cn[3], cn[4], cn[5], cn[6], cn[7]), utc: false };
+
+    // 通用：YYYY-M-D [H:m[:s[.ms]]]
+    const m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,3}))?)?)?$/);
+    if (m) return { date: build(m[1], m[2], m[3], m[4], m[5], m[6], m[7]), utc: false };
+
+    return null;
+  }
+
+  /* 解析时间戳字符串，返回 { date, digits, unit } 或 null。
+     位数 ≤ 11 视为「秒」，否则视为「毫秒」。 */
+  function parseTs(raw) {
+    const s = NUM(String(raw == null ? "" : raw).trim());
+    if (!/^-?\d+$/.test(s)) return null;
+    const n = +s;
+    if (!isFinite(n)) return null;
+    const digits = s.replace("-", "").length;
+    const sec = digits <= 11;
+    const ms = sec ? n * 1000 : n;
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return null;
+    return { date: d, digits, unit: sec ? "秒" : "毫秒", tsSec: Math.floor(ms / 1000), tsMs: ms };
+  }
+
+  /* 相对现在的自然语言描述 */
+  function relText(d) {
+    const diff = d.getTime() - Date.now();
+    const abs = Math.abs(diff);
+    const units = [
+      [31536000000, "年"], [2592000000, "个月"], [604800000, "周"],
+      [86400000, "天"], [3600000, "小时"], [60000, "分钟"], [1000, "秒"],
+    ];
+    if (abs < 1000) return "刚刚";
+    for (const [ms, name] of units) {
+      if (abs >= ms) {
+        const n = Math.floor(abs / ms);
+        return (diff < 0 ? "" : "还有 ") + n + " " + name + (diff < 0 ? "前" : "");
+      }
+    }
+    return "刚刚";
+  }
+
+  /* ============================================================
+     相差计算
+     ============================================================ */
+
+  /* 把 a→b 的间隔拆成「年 / 月 / 天 / 时 / 分 / 秒 / 毫秒」。
+     月、天按自然日历借位（借位时用 b 所在月份的上一个月天数），
+     所以 1-31 到 3-01 会得到「1 个月 1 天」而不是「29 天」。 */
+  function diffParts(a, b) {
+    const sign = b < a ? -1 : 1;
+    if (sign < 0) { const t = a; a = b; b = t; }
+    let ms = b.getMilliseconds() - a.getMilliseconds();
+    let s  = b.getSeconds()      - a.getSeconds();
+    let mi = b.getMinutes()      - a.getMinutes();
+    let h  = b.getHours()        - a.getHours();
+    let d  = b.getDate()         - a.getDate();
+    let m  = b.getMonth()        - a.getMonth();
+    let y  = b.getFullYear()     - a.getFullYear();
+    if (ms < 0) { ms += 1000; s--; }
+    if (s  < 0) { s  += 60;  mi--; }
+    if (mi < 0) { mi += 60;  h--; }
+    if (h  < 0) { h  += 24;  d--; }
+    if (d  < 0) {
+      // 借「b 的上一个月」的天数
+      d += new Date(b.getFullYear(), b.getMonth(), 0).getDate();
+      m--;
+    }
+    if (m < 0) { m += 12; y--; }
+    return { y, m, d, h, mi, s, ms, sign };
+  }
+
+  /* ============================================================
+     日期推算（按自然单位加减）
+     ============================================================ */
+
+  function addUnit(date, amount, unit) {
+    const d = new Date(date.getTime());
+    if (unit === "month" || unit === "year") {
+      // 先记下日，把日挪到 1 号再加，最后按目标月的实际天数夹回来 ——
+      // 否则 1-31 加一个月会被 JS 滚动到 3-03
+      const day = d.getDate();
+      const mon = d.getMonth();
+      d.setDate(1);
+      if (unit === "month") d.setMonth(d.getMonth() + amount);
+      else d.setFullYear(d.getFullYear() + amount);
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(day, last));
+      return d;
+    }
+    if (unit === "day")    { d.setDate(d.getDate() + amount); return d; }
+    if (unit === "hour")   { d.setHours(d.getHours() + amount); return d; }
+    if (unit === "minute") { d.setMinutes(d.getMinutes() + amount); return d; }
+    d.setSeconds(d.getSeconds() + amount);
+    return d;
+  }
+
+  const UNIT_CN = { year: "年", month: "个月", day: "天", hour: "小时", minute: "分钟", second: "秒" };
+
+  /* ============================================================
+     渲染工具
+     ============================================================ */
+
+  /* 往容器里渲染一组「标签 / 值 / 复制」行 */
+  function renderKV(box, items) {
+    box.innerHTML = items.map(it => {
+      const cls = it.cls ? " " + it.cls : "";
+      const val = it.html != null ? it.html : escapeHTML(it.v);
+      const btn = it.copy === false ? "" : '<button class="mini" data-copy="' + escapeHTML(it.copy != null ? it.copy : it.v) + '">复制</button>';
+      return '<div class="kv"><span class="k">' + escapeHTML(it.k) + '</span>'
+           + '<span class="v' + cls + '">' + val + '</span>' + btn + '</div>';
+    }).join("");
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+
+  function copy(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  /* file:// 下 clipboard API 不可用，退回 textarea + execCommand */
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     一、当前时间戳
+     ============================================================ */
+
+  let tsLen = 13;         // 13 位（毫秒）/ 10 位（秒）
+  let ticking = true;
+  let pausedAt = 0;
+
+  function currentTs() {
+    return ticking ? Date.now() : pausedAt;
+  }
+
+  function paintNow() {
+    const ms = currentTs();
+    const d = new Date(ms);
+    $("nowTs").textContent = tsLen === 13 ? String(ms) : String(Math.floor(ms / 1000));
+    $("nowText").innerHTML =
+      fmt(d) + "　" + week(d)
+      + '　<span style="color:var(--text-3)">UTC</span> ' + fmtUTC(d)
+      + '　<span style="color:var(--text-3)">时区</span> ' + tzOffsetText();
+  }
+
+  function tzOffsetText() {
+    const off = -new Date().getTimezoneOffset();
+    const sign = off < 0 ? "-" : "+";
+    const a = Math.abs(off);
+    return "UTC" + sign + pad(Math.floor(a / 60)) + ":" + pad(a % 60);
+  }
+
+  function loopNow() {
+    if (ticking) paintNow();
+    requestAnimationFrame(loopNow);
+  }
+
+  $("segLen").addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    tsLen = +b.dataset.v;
+    [...$("segLen").children].forEach(x => x.classList.toggle("on", x === b));
+    paintNow();
+  });
+
+  $("btnPause").addEventListener("click", () => {
+    if (ticking) { pausedAt = Date.now(); ticking = false; $("btnPause").textContent = "继续"; paintNow(); }
+    else { ticking = true; $("btnPause").textContent = "暂停"; }
+  });
+
+  $("nowTs").addEventListener("click", () => {
+    copy($("nowTs").textContent, "已复制时间戳");
+  });
+  $("btnCopyNow").addEventListener("click", () => copy($("nowTs").textContent, "已复制时间戳"));
+
+  /* ============================================================
+     二、日期 → 时间戳
+     ============================================================ */
+
+  function runD2T() {
+    const el = $("d2tIn"), box = $("d2tOut");
+    const raw = el.value.trim();
+    if (!raw) {
+      el.classList.remove("bad");
+      renderKV(box, [{ k: "提示", v: "输入形如 2026-10-10 15:52:17.000 的日期", cls: "muted", copy: false }]);
+      return;
+    }
+    const r = parseDate(raw);
+    if (!r || !r.date) {
+      el.classList.add("bad");
+      renderKV(box, [{ k: "错误", html: '<span class="err-tip">无法识别这个日期</span>', copy: false }]);
+      return;
+    }
+    el.classList.remove("bad");
+    const d = r.date, ms = d.getTime();
+    renderKV(box, [
+      { k: "13 位", v: String(ms), cls: "num" },
+      { k: "10 位", v: String(Math.floor(ms / 1000)), cls: "num" },
+      { k: "解析为", v: fmt(d) + "　" + week(d) + (r.utc ? "（输入含时区，已换算成本地）" : "") },
+      { k: "相对现在", v: relText(d), cls: "muted", copy: false },
+    ]);
+  }
+
+  /* ============================================================
+     三、时间戳 → 日期
+     ============================================================ */
+
+  function runT2D() {
+    const el = $("t2dIn"), box = $("t2dOut");
+    const raw = el.value.trim();
+    if (!raw) {
+      el.classList.remove("bad");
+      renderKV(box, [{ k: "提示", v: "输入 10 位（秒）或 13 位（毫秒）时间戳", cls: "muted", copy: false }]);
+      return;
+    }
+    const r = parseTs(raw);
+    if (!r) {
+      el.classList.add("bad");
+      renderKV(box, [{ k: "错误", html: '<span class="err-tip">不是合法的时间戳</span>', copy: false }]);
+      return;
+    }
+    el.classList.remove("bad");
+    const d = r.date;
+    renderKV(box, [
+      { k: "本地时间", v: fmt(d), cls: "num" },
+      { k: "UTC", v: fmtUTC(d) + "Z" },
+      { k: "日期", v: fmtDate(d) + "　" + week(d), copy: false },
+      { k: "识别为", v: r.digits + " 位 · " + r.unit, cls: "muted", copy: false },
+      { k: "相对现在", v: relText(d), cls: "muted", copy: false },
+    ]);
+  }
+
+  /* ============================================================
+     四、日期相差
+     ============================================================ */
+
+  function runDiff() {
+    const aEl = $("diffA"), bEl = $("diffB"), partsBox = $("diffParts"), totalBox = $("diffTotals");
+    const ra = parseDate(aEl.value.trim()), rb = parseDate(bEl.value.trim());
+    aEl.classList.toggle("bad", !!aEl.value.trim() && (!ra || !ra.date));
+    bEl.classList.toggle("bad", !!bEl.value.trim() && (!rb || !rb.date));
+
+    if (!ra || !ra.date || !rb || !rb.date) {
+      partsBox.innerHTML = '<span class="none">填好开始与结束时间后自动计算</span>';
+      renderKV(totalBox, []);
+      return;
+    }
+
+    const a = ra.date, b = rb.date;
+    const p = diffParts(a, b);
+    const totalMs = Math.abs(b.getTime() - a.getTime());
+
+    // 相差：只显示非零项；全为零时显示「时间相同」
+    const segs = [
+      [p.y, "年"], [p.m, "个月"], [p.d, "天"],
+      [p.h, "小时"], [p.mi, "分钟"], [p.s, "秒"], [p.ms, "毫秒"],
+    ].filter(x => x[0] > 0);
+    partsBox.innerHTML = segs.length
+      ? (p.sign < 0 ? '<span class="u" style="color:var(--text-3)">结束早于开始 · </span>' : "")
+        + segs.map(([n, u]) => '<span class="n">' + n + '</span><span class="u">' + u + "</span>").join("")
+      : '<span class="none">两个时间完全相同</span>';
+
+    const days = totalMs / MS.day;
+    renderKV(totalBox, [
+      { k: "总天数", v: trimNum(days) + " 天", cls: "num" },
+      { k: "总小时", v: trimNum(totalMs / MS.hour) + " 小时" },
+      { k: "总分钟", v: trimNum(totalMs / MS.minute) + " 分钟" },
+      { k: "总秒数", v: String(Math.floor(totalMs / 1000)) + " 秒" },
+      { k: "总毫秒", v: String(totalMs) + " 毫秒" },
+      { k: "总周数", v: trimNum(totalMs / (7 * MS.day)) + " 周", cls: "muted" },
+    ]);
+  }
+
+  /* 保留 6 位有效小数，去掉末尾多余的 0 */
+  function trimNum(n) {
+    if (!isFinite(n)) return "—";
+    const r = Math.round(n * 1e6) / 1e6;
+    return String(r);
+  }
+
+  /* ============================================================
+     五、日期推算
+     ============================================================ */
+
+  function runAdd() {
+    const baseEl = $("addBase"), out = $("addOut"), extra = $("addExtra");
+    const r = parseDate(baseEl.value.trim());
+    baseEl.classList.toggle("bad", !!baseEl.value.trim() && (!r || !r.date));
+    if (!r || !r.date) {
+      out.textContent = "—";
+      renderKV(extra, [{ k: "提示", v: "填入基准时间后自动推算", cls: "muted", copy: false }]);
+      return;
+    }
+    const n = Math.abs(+$("addN").value || 0);
+    const dir = +$("addDir").value;
+    const unit = $("addUnit").value;
+    const res = addUnit(r.date, n * dir, unit);
+
+    out.textContent = fmt(res);
+    renderKV(extra, [
+      { k: "说明", v: fmtSec(r.date) + " 的 " + n + " " + UNIT_CN[unit] + (dir < 0 ? "前" : "后") + "是 " + fmtSec(res), cls: "muted", copy: false },
+      { k: "星期", v: week(res), copy: false },
+      { k: "13 位", v: String(res.getTime()), cls: "num" },
+      { k: "10 位", v: String(Math.floor(res.getTime() / 1000)), cls: "num" },
+    ]);
+  }
+
+  /* ============================================================
+     交互绑定
+     ============================================================ */
+
+  $("d2tIn").addEventListener("input", runD2T);
+  $("t2dIn").addEventListener("input", runT2D);
+  $("diffA").addEventListener("input", runDiff);
+  $("diffB").addEventListener("input", runDiff);
+  $("addBase").addEventListener("input", runAdd);
+  $("addN").addEventListener("input", runAdd);
+  $("addDir").addEventListener("change", runAdd);
+  $("addUnit").addEventListener("change", runAdd);
+
+  /* 「现在」按钮：把对应输入框填成当前时间 */
+  document.addEventListener("click", e => {
+    const fill = e.target.closest("[data-fill]");
+    if (fill) {
+      const id = fill.dataset.fill;
+      $(id).value = id === "t2dIn" ? String(Date.now()) : fmt(new Date());
+      $(id).dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+    const cp = e.target.closest("[data-copy]");
+    if (cp) { copy(cp.dataset.copy); return; }
+  });
+
+  $("btnSwap").addEventListener("click", () => {
+    const a = $("diffA").value;
+    $("diffA").value = $("diffB").value;
+    $("diffB").value = a;
+    runDiff();
+  });
+
+  /* 「重置」= 恢复成打开页面时的初始状态。
+     注意「相差」卡片刻意不把两端都设成现在（那只会得到「完全相同」），
+     而是回到「今天 00:00 → 现在」这个开箱即用的默认值。 */
+  $("btnNowTop").addEventListener("click", () => {
+    ticking = true; $("btnPause").textContent = "暂停";
+    const now = new Date();
+    $("d2tIn").value = fmt(now);
+    $("t2dIn").value = String(now.getTime());
+    $("diffA").value = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
+    $("diffB").value = fmt(now);
+    $("addBase").value = fmt(now);
+    $("addDir").value = "-1";
+    $("addN").value = "30";
+    $("addUnit").value = "day";
+    runD2T(); runT2D(); runDiff(); runAdd(); paintNow();
+    toast("已重置为当前时间");
+  });
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+
+  const tzName = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "本地时区"; }
+    catch (e) { return "本地时区"; }
+  })();
+  $("tz").innerHTML = "时区 <b>" + escapeHTML(tzName) + "</b> " + tzOffsetText();
+
+  // 相差：默认「今天 00:00:00」→「现在」，开箱就是有意义的结果
+  const now = new Date();
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  $("d2tIn").value = fmt(now);
+  $("t2dIn").value = String(now.getTime());
+  $("diffA").value = fmt(today0);
+  $("diffB").value = fmt(now);
+  $("addBase").value = fmt(now);
+
+  runD2T();
+  runT2D();
+  runDiff();
+  runAdd();
+  paintNow();
+  requestAnimationFrame(loopNow);
+
+  // 顶栏时钟只到秒：它 200ms 才刷一次，显示毫秒会显得卡顿；
+  // 需要看毫秒跳动的话上面的大号时间戳就是。
+  setInterval(() => {
+    const d = new Date();
+    $("clock").textContent = ticking ? fmtSec(d) + "　" + week(d) : "已暂停";
+  }, 200);
+})();
+</script>
+</body>
+</html>
