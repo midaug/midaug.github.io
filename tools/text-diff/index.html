@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>文本对比工具</title>
+<meta name="theme-color" content="#f6f7f9" />
+<style>
+  :root {
+    /* ===== 与「工具首页」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --guide: rgba(15,23,42,.14);
+
+    /* ===== 语义色（与 JSON 工具同一套）===== */
+    --key: #2f52c9;
+    --str: #0d7a52;
+    --num: #b25e09;
+    --bool: #7a3fd4;
+    --null: #94a0b0;
+    --err: #d1242f;
+    --ok: #0d7a52;
+
+    /* ===== diff 语义色 =====
+       删除 = 红、新增 = 绿。这是 git / diff 的通行约定，表示「这段文字被移除 /
+       被加入」，与股市的「红涨绿跌」无关，两套语义不要混。
+       底纹一律用**实色**而不是半透明：高亮层与输入层是两层叠加，
+       半透明色叠两次会偏深，而且行号列也跟着变色时会更明显。 */
+    --del-line: #fbeced;   /* 整行被删 */
+    --ins-line: #e8f2ef;   /* 整行新增 */
+    --del-mark: #f6c9cc;   /* 行内被删的字符 / 词（比整行底色深一档才看得出边界） */
+    --ins-mark: #bfdccf;   /* 行内新增的字符 / 词 */
+    --del-fg: #b31d29;
+    --ins-fg: #0a6644;
+
+    /* 行高。刻意与 JSON 工具取同一个值（--row = 18px）：
+       13px 等宽字体墨迹高约 12.3px，上下各留约 3px、相邻行墨迹间隙 4px；
+       比 24px 每屏多约 34% 内容。
+       **输入框与高亮层必须共用这一个值**，否则两层的行位置会逐行累积错位。 */
+    --row: 18px;
+    /* 行号列宽，JS 会按最大行号的位数覆写 */
+    --ln-w: 26px;
+    /* 文本区内边距，输入层与高亮层共用 */
+    --pad-y: 8px;
+    --pad-x: 12px;
+    /* textarea 滚动条占用的宽度，JS 实测覆写（macOS 覆盖式滚动条为 0）。
+       高亮层要按它缩窄，否则两层的可用文本宽度不同、折行位置对不上。 */
+    --sb-w: 0px;
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+  }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ===== 顶栏 ===== */
+  /* 空间不够时**换行**，不隐藏任何控件 —— 早期是 hide-lg / hide-md / hide-sm
+     三级断点直接 display:none，页面一放大（zoom 会缩窄 CSS 像素视口）或窗口
+     一窄，按钮就凭空消失（用户反馈的 bug）。
+     不能留 overflow: hidden：折叠面板是 header 内的绝对定位浮层，会被裁掉。 */
+  header {
+    display: flex; align-items: center; gap: 10px; row-gap: 6px; flex-wrap: wrap;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; flex: none; }
+  .brand span { color: var(--accent); }
+  button, select {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit;
+    transition: background .15s, border-color .15s, color .15s;
+    /* 顶栏在窄屏会被压：flex 默认允许收缩，按钮一旦变窄，中文标签就折成
+       两行、行高从 30px 涨到 50px+。nowrap + flex:none 让它保持固有宽度，
+       空间不够时由 header 换行或隐藏次要控件来让位。 */
+    white-space: nowrap; flex: none;
+  }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  button.mini { padding: 3px 8px; font-size: 12px; }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  /* 顶栏里的常驻小控件：不换行、不被压窄 */
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; display: flex; align-items: center; gap: 6px; }
+  select { padding: 4px 6px; }
+  /* 性能统计：贴在顶栏行尾，单行，空间不足时省略号截断 */
+  .stat.perf {
+    margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums;
+    flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    display: block; color: var(--text-3);
+  }
+  /* 差异统计 + 导航（原来在结果区标题栏里，现在结果区没了，挪到顶栏） */
+  .diffstat { display: flex; align-items: center; gap: 10px; flex: none; font-variant-numeric: tabular-nums; }
+  .diffstat i { font-style: normal; font-weight: 600; }
+  .diffstat .s-ins { color: var(--ins-fg); }
+  .diffstat .s-del { color: var(--del-fg); }
+  .diffstat .s-mod { color: var(--num); }
+  .diffstat .s-sim { color: var(--text-3); font-weight: 400; }
+  .navpos { font-variant-numeric: tabular-nums; color: var(--text-3); min-width: 40px; text-align: center; }
+  .navbtn { padding: 2px 7px; font-size: 12px; line-height: 1.2; }
+
+  /* ---- 折叠面板：把低频控件收进 summary + 浮层，任何宽度都能展开 ----
+     用它替代了早期「窄屏直接 display:none 藏掉」的做法。原生 <details>
+     自带开合语义与键盘支持（Enter / Space），这里只补「点面板外收起」。 */
+  .pop { position: relative; flex: none; }
+  .pop > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 5px;
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .pop > summary::-webkit-details-marker { display: none; }   /* Safari 的小三角 */
+  .pop > summary::after { content: "▾"; font-size: 9px; opacity: .5; }
+  .pop > summary:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  .pop[open] > summary { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  /* 已经生效的忽略项数量：不展开也知道有没有勾上 */
+  .pop-n {
+    min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* 必须显式写：上面那条 display: inline-flex 会盖掉 [hidden] 的 display: none */
+  .pop-n[hidden] { display: none; }
+  /* 浮层：绝对定位、脱离流，展开时不会把顶栏撑高 */
+  .pop-body {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+    min-width: 172px; max-width: calc(100vw - 16px); padding: 6px;
+    display: flex; flex-direction: column; gap: 1px;
+    background: var(--panel); border: 1px solid var(--border-2); border-radius: 8px;
+    box-shadow: 0 10px 28px -10px rgba(15,23,42,.35);
+    animation: popIn .12s ease-out;
+  }
+  /* ★ 按钮与浮层之间那 6px 是「悬停死区」：鼠标穿过去时既不在按钮上、也不在
+     浮层上，悬停判定会瞬间断掉、面板一闪就没了 —— 就是「收得太快、点不到」。
+     用伪元素把这段桥接成浮层自己的一部分：鼠标走在桥上时算在 .pop-body 上。
+     （JS 侧另有一道 POP_GRACE 延迟兜底，两层保险。） */
+  .pop-body::before {
+    content: ""; position: absolute; left: 0; right: 0; top: -8px; height: 8px;
+  }
+  @keyframes popIn { from { opacity: 0; transform: translateY(-4px); } }
+  .pop-body label {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 6px 8px; border-radius: 6px; font-size: 12px; color: var(--text-2);
+    white-space: nowrap;
+  }
+  .pop-body label:hover { background: var(--hover); color: var(--text); }
+  .pop-body input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+  .pop-body .pop-row { justify-content: space-between; gap: 14px; }
+  .pop-body .pop-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+  .pop-body button { width: 100%; text-align: left; }
+
+  /* 顶栏已改成「放不下就换行」，这里只在更窄时把性能统计整行让出去。
+     不再有 hide-lg / hide-md / hide-sm 的 display:none —— 控件永远不会消失。 */
+  @media (max-width: 1060px) {
+    .stat.perf { flex: 1 1 100%; margin-left: 0; padding-left: 0; }
+  }
+  @media (max-width: 900px) {
+    header { gap: 8px; row-gap: 6px; }
+  }
+
+  /* ===== 主体：左右两块，就是原始文本 / 修改文本本身 =====
+     没有独立的「对比结果」板块 —— 差异直接高亮在文本里。
+     中间那根窄列 #gut 是「接缝」，每一处差异在上面各挂一对同步按钮。 */
+  main { flex: 1; display: flex; min-height: 0; position: relative; }
+  main > .pane {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+    background: var(--panel);
+  }
+  .pane-head {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-2); flex: none; overflow: hidden;
+  }
+  .pane-head b { color: var(--text); font-weight: 600; flex: none; white-space: nowrap; }
+  .pane-head .meta { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pane-head .acts { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+
+  /* ===== 编辑区：高亮层在下、透明 textarea 在上 =====
+     两层必须逐像素对齐，所以下面这一组属性两边完全一致：
+       font-size / line-height / font-family / tab-size
+       padding（上下）、可用文本宽度
+       white-space: pre-wrap + overflow-wrap: break-word（折行位置一致）
+     任何一条两边不同，行位置就会从某一行开始整体错位 —— 这是这个方案唯一的
+     命门，改样式时必须两边一起改。 */
+  .ed { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  .ed-hl { position: absolute; inset: 0; overflow: hidden; pointer-events: none; user-select: none; }
+  .ed-hl-in {
+    position: absolute; left: 0; top: 0;
+    /* 缩掉滚动条占的宽度，可用文本宽度才与 textarea 的 clientWidth 对齐 */
+    width: calc(100% - var(--sb-w));
+    padding: var(--pad-y) 0;
+    font-size: 13px; line-height: var(--row); font-family: var(--mono);
+    tab-size: 4;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    /* 提升为合成层：滚动时只做合成器平移，不必重绘整层文字 */
+    will-change: transform;
+  }
+  /* 一层里的「一行」。文字透明 —— 真正显示的是上层 textarea 里的文字，
+     这一层只负责铺背景色，所以它必须**占位但不显字**。 */
+  .bl {
+    position: relative;
+    min-height: var(--row); line-height: var(--row);
+    padding-left: calc(var(--pad-x) + var(--ln-w));
+    padding-right: var(--pad-x);
+    white-space: pre-wrap; overflow-wrap: break-word;
+    color: transparent;
+    border-radius: 3px;
+  }
+  /* 虚拟窗口：只把视口附近的行留在渲染树里。
+     实测 5 万个 .bl 全在树里时滚动 40 ms/帧（每帧一个 65 ms 的长任务），
+     只留几百个就回到 14 ms。开关用 data-on 属性而不是 .on 类 ——
+     .bl 的 class 是有语义的（c-del / c-ins / c-mod / cur），
+     再往里塞一个纯布局用的标记，外面按 className 判断差异类型的代码就得跟着改。 */
+  .ed-hl-in.win .bl { display: none; }
+  .ed-hl-in.win .bl[data-on] { display: block; }
+  /* 被移走的行腾出的高度由 #hlL 自己的上下 padding 补回来，滚动条长度才不变。
+     早先试过「真元素 spacer」和「::before/::after + CSS 变量」两种写法，后者
+     反而慢一倍（32 ms/帧）：自定义属性默认会继承，改一次值就把整棵 5 万节点的
+     子树标成 style dirty。用 padding 就没这个问题 —— 它是元素自己的属性，
+     而且顺带保住了「#hlL.children 一个孩子一行」这个口径。
+     行号绝对定位，不参与排版；top:0 / bottom:0 让它的底色铺满整个逻辑行
+     （含折出来的续行），但行号数字只落在第一视觉行 —— 与编辑器一致。
+     列宽刻意贴着实测的字符宽度给（见 layout()），不留大段空白：
+     2 位数行号只需 26px，早期写成 46px 时左侧一整条都是空的。 */
+  .bl > .ln {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: calc(var(--pad-x) + var(--ln-w));
+    padding-right: 8px;
+    text-align: right; color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .bl.c-del { background: var(--del-line); }
+  .bl.c-ins { background: var(--ins-line); }
+  .bl.c-del > .ln { color: var(--del-fg); }
+  .bl.c-ins > .ln { color: var(--ins-fg); }
+  /* 行内高亮：只给底色，不设文字色 —— 文字由上层 textarea 渲染，
+     这一层设了 color 也看不见，反而容易让人误以为「高亮没生效」。 */
+  .bl i { font-style: normal; border-radius: 2px; }
+  .bl i.dm { background: var(--del-mark); }
+  .bl i.im { background: var(--ins-mark); }
+  /* 当前导航到的差异行 */
+  .bl.cur { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .ed textarea {
+    position: absolute; inset: 0; display: block;
+    width: 100%; height: 100%; margin: 0; resize: none; border: 0; outline: 0;
+    padding: var(--pad-y) var(--pad-x);
+    /* 左侧空出行号列。高亮层的 .bl 用的是同一个量，两边文字起点因此一致。 */
+    padding-left: calc(var(--pad-x) + var(--ln-w));
+    background: transparent; color: var(--text); caret-color: var(--text);
+    font-size: 13px; line-height: var(--row); font-family: var(--mono);
+    tab-size: 4;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    overflow: auto;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  .ed textarea::placeholder { color: var(--text-3); }
+  .ed textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+  .ed textarea::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  .ed textarea::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  .ed textarea::-webkit-scrollbar-track { background: transparent; }
+  .ed textarea::-webkit-scrollbar-corner { background: transparent; }
+  /* 拖入文件时整块高亮 */
+  main > .pane.drop { background: var(--accent-soft); }
+  main > .pane.drop textarea { background: var(--accent-soft); }
+
+  /* ===== 接缝：每一处差异各挂一对同步按钮 =====
+     #gut 是一根真实的窄列，不是浮层 —— 按钮要落在两块中间且不遮正文。
+     #gutIn 与高亮层用同一套办法跟随滚动：只做 translateY，所以 .hk 的
+     top 写的是「内容坐标」（高亮层里那一行的 offsetTop），滚动时不必重算。 */
+  #gut {
+    flex: 0 0 42px; position: relative; overflow: hidden;
+    background: var(--panel-2);
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  }
+  #gutIn {
+    position: absolute; left: 0; right: 0; top: var(--head-h, 31px);
+    will-change: transform;
+  }
+  /* 一处差异 = 一条「连接带」：左边缘贴着左侧那几行、右边缘贴着右侧那几行，
+     中间用两条三次曲线接起来（path 的 d 由 JS 按实测行高算）。
+     两侧行数不等时带子自然收成楔形 —— 滚动时一眼就能看出左右两段差异
+     是怎么对应的，光靠两条各画各的矩形是看不出来的。 */
+  #gutDefs { position: absolute; width: 0; height: 0; }
+  .gut-g0 { stop-color: var(--del-mark); }
+  .gut-g1 { stop-color: var(--ins-mark); }
+  /* top 固定为 0，纵向位置一律走 transform：改 top 属于布局属性，
+     滚动时每帧写 200 个元素的 top 会让主线程一直在重排；
+     transform 只影响绘制，而且同一帧内多次写不会互相打断。
+     height 仍要写（带子的高度 = 这处差异覆盖的行范围），但 .hk 是绝对定位、
+     不参与父级布局，改它不会波及兄弟节点。 */
+  .hk { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
+  .hk-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  .hk-svg path { fill: url(#gutGrad); }
+  /* 按钮贴顶、左右各一个（不是居中）：长块居中后按钮会飘到离视线很远的地方。 */
+  .hk-btn {
+    position: absolute; top: 0; width: 17px; height: 16px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto;
+    background: transparent; border: 0; border-radius: 4px; box-shadow: none;
+  }
+  .hk-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor;
+                stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* 左边 ◀ 把右侧的差异搬到左侧（红），右边 ▶ 反之（绿）——
+     箭头方向与它作用的「去向」一致，颜色也跟两侧的差异底色对上。 */
+  .hk-l { left: 2px; color: var(--del-fg); }
+  .hk-r { right: 2px; color: var(--ins-fg); }
+  .hk-l:hover { background: var(--del-mark); color: var(--del-fg); border: 0; }
+  .hk-r:hover { background: var(--ins-mark); color: var(--ins-fg); border: 0; }
+  /* 撤回按钮：有东西可撤时才亮起来 */
+  #btnUndo:not(:disabled) { color: var(--accent); border-color: var(--accent-soft); }
+
+  /* ===== toast ===== */
+  #toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 10px);
+    background: rgba(15,23,42,.9); color: #fff; padding: 7px 14px; border-radius: 8px;
+    font-size: 12.5px; opacity: 0; pointer-events: none;
+    transition: opacity .18s, transform .18s; z-index: 99;
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ===== 窄屏 ===== */
+  @media (max-width: 760px) {
+    /* 两块并排时每块只剩 180px，正文一行放不下几个字；改成上下叠。
+       上下叠了就没有「接缝」可用，同步按钮改成浮在底部中间的一颗胶囊，
+       一次只显示当前那一处（.hk.on，由 JS 标记）。 */
+    main { flex-direction: column; }
+    #paneR { border-top: 1px solid var(--border); }
+    .brand { margin-right: 0; }
+    #gut {
+      position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+      flex: none; width: auto; height: auto; overflow: visible;
+      padding: 4px; border: 1px solid var(--border-2); border-radius: 999px;
+      background: var(--panel); box-shadow: 0 2px 12px -3px rgba(15,23,42,.35);
+      z-index: 7;
+    }
+    /* 没有差异时整颗胶囊收掉（这里是浮层，不会引起布局跳动） */
+    #gut.off { display: none; }
+    #gutIn { position: static; top: auto; transform: none !important; }
+    .hk { position: static; left: auto; right: auto; top: auto !important;
+          height: auto !important; display: none; }
+    .hk.on { display: flex; gap: 2px; }
+    .hk-svg { display: none; }   /* 上下叠了就没有「连接」可言 */
+    .hk-btn { position: static; width: 28px; height: 28px; }
+    .hk-l { left: auto; }
+    .hk-r { right: auto; }
+    .hk-btn svg { width: 14px; height: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="brand">文本<span>对比</span></span>
+    <span class="sep"></span>
+    <button id="btnSample" title="填入一段示例文本">示例</button>
+    <button id="btnSwap" title="交换左右两侧">⇄ 交换</button>
+    <button id="btnClear" title="清空两侧">清空</button>
+    <button id="btnUndo" title="撤回上一次「同步差异」（⌘Z / Ctrl+Z）"
+            aria-label="撤回上一次同步" disabled>↶</button>
+    <span class="sep"></span>
+
+    <!-- 对比选项：行内粒度 + 四个忽略规则。都是低频设置，收进折叠面板后
+         顶栏少 5 个控件、约 400px，任何窗口宽度都能展开（不再被断点藏掉）。 -->
+    <details class="pop" id="popOpts">
+      <summary title="对比选项：行内粒度与忽略规则">选项<span class="pop-n" id="optN" hidden>0</span></summary>
+      <div class="pop-body">
+        <label title="比较前把两侧都转成小写"><input type="checkbox" id="optCase">忽略大小写</label>
+        <label title="把连续空格 / 制表符压成一个空格，并去掉首尾空白"><input type="checkbox" id="optWs">忽略空白</label>
+        <label title="只忽略行尾的空格与制表符"><input type="checkbox" id="optTrail">忽略行尾</label>
+        <label title="空白行互相视为相同，不计入差异"><input type="checkbox" id="optBlank">忽略空行</label>
+        <div class="pop-sep"></div>
+        <label class="pop-row" title="行内差异按什么粒度切分">
+          <span>行内</span>
+          <select id="granSel">
+            <option value="word">按词</option>
+            <option value="char">按字符</option>
+            <option value="line">不细分</option>
+          </select>
+        </label>
+      </div>
+    </details>
+
+    <button class="primary" id="btnDiff" title="立即对比（Ctrl / ⌘ + Enter）">对比</button>
+    <span class="sep"></span>
+
+    <span class="diffstat" id="stat">
+      <i class="s-ins" id="nIns">+0</i>
+      <i class="s-del" id="nDel">−0</i>
+      <i class="s-mod" id="nMod">~0</i>
+      <i class="s-sim" id="nSim">100.0% 相同</i>
+    </span>
+    <span class="stat">
+      <button class="mini navbtn" id="btnPrev" title="上一个差异（Alt + ↑）">↑</button>
+      <button class="mini navbtn" id="btnNext" title="下一个差异（Alt + ↓）">↓</button>
+      <span class="navpos" id="navPos">0 / 0</span>
+    </span>
+
+    <!-- 导出：两个低频动作，同样收进折叠面板 -->
+    <details class="pop" id="popExport">
+      <summary title="导出对比结果">导出</summary>
+      <div class="pop-body">
+        <button class="mini" id="btnCopy" title="复制统一 diff 格式的文本">复制 diff</button>
+        <button class="mini" id="btnDl" title="下载 .diff 文件">下载 .diff</button>
+      </div>
+    </details>
+
+    <span class="stat perf" id="perf"></span>
+  </header>
+
+  <!-- 接缝栏连接带的渐变：每处差异的 path 都引用它。
+       颜色写在 CSS 里（stop-color 支持 var()），这样改配色不用动 JS。 -->
+  <svg id="gutDefs" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="gutGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop class="gut-g0" offset="0" />
+        <stop class="gut-g1" offset="1" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <main>
+    <section class="pane" id="paneL">
+      <div class="pane-head">
+        <b>原始文本</b>
+        <span class="meta" id="metaL">0 行</span>
+        <span class="acts">
+          <button class="mini" id="btnUpL" title="从本地读取一个文本文件">打开文件</button>
+          <button class="mini" id="btnClrL">清空</button>
+        </span>
+      </div>
+      <div class="ed">
+        <div class="ed-hl"><div class="ed-hl-in" id="hlL"></div></div>
+        <textarea id="taL" spellcheck="false" autocomplete="off" autocapitalize="off"
+          placeholder="在此粘贴「原始」文本，或把文件拖进来…"></textarea>
+      </div>
+    </section>
+
+    <!-- 接缝：每一处差异各挂一对同步按钮，由 JS 按差异的行范围生成。
+         ◀ 把右侧这处差异搬到左侧，▶ 反之；按住 Shift 点击 = 整份覆盖。 -->
+    <div id="gut"><div id="gutIn"></div></div>
+
+    <section class="pane" id="paneR">
+      <div class="pane-head">
+        <b>修改文本</b>
+        <span class="meta" id="metaR">0 行</span>
+        <span class="acts">
+          <button class="mini" id="btnUpR" title="从本地读取一个文本文件">打开文件</button>
+          <button class="mini" id="btnClrR">清空</button>
+        </span>
+      </div>
+      <div class="ed">
+        <div class="ed-hl"><div class="ed-hl-in" id="hlR"></div></div>
+        <textarea id="taR" spellcheck="false" autocomplete="off" autocapitalize="off"
+          placeholder="在此粘贴「修改后」文本，或把文件拖进来…"></textarea>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<input type="file" id="fileL" accept=".txt,.md,.json,.js,.ts,.css,.html,.htm,.xml,.csv,.tsv,.log,.yml,.yaml,.ini,.conf,.sh,.py,.go,.java,.c,.cpp,.sql,.diff,.patch,text/*" hidden />
+<input type="file" id="fileR" accept=".txt,.md,.json,.js,.ts,.css,.html,.htm,.xml,.csv,.tsv,.log,.yml,.yaml,.ini,.conf,.sh,.py,.go,.java,.c,.cpp,.sql,.diff,.patch,text/*" hidden />
+<div id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     0. 基础工具
+     ============================================================ */
+  function $(id) { return document.getElementById(id); }
+
+  /* 高亮层是把 HTML 字符串拼进 innerHTML 的，正文必须转义。
+     只处理 & < > —— 这些片段永远不出现在属性位置，引号无需转义。 */
+  function esc(s) {
+    if (s.indexOf("&") >= 0 || s.indexOf("<") >= 0 || s.indexOf(">") >= 0) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    return s;
+  }
+
+  function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(2) + " MB";
+  }
+
+  var toastTmr = 0;
+  function toast(msg) {
+    var el = $("toast");
+    el.textContent = msg;
+    el.classList.add("on");
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(function () { el.classList.remove("on"); }, 1900);
+  }
+
+  function setPerf(s) { $("perf").textContent = s; }
+
+  /* ============================================================
+     1. Myers 差分算法
+     ------------------------------------------------------------
+     Myers 1986「An O(ND) Difference Algorithm」的贪心实现：
+       D = 编辑距离，k = x - y 为对角线编号，
+       每轮 D 只沿 k ∈ [-D, D] 的奇偶一致对角线推进，
+       能走对角线（元素相等）就一路走到底（这条路径叫 snake）。
+       找到 (N, M) 时的 D 即最短编辑脚本长度。
+
+     工程上的三处必要处理：
+     1) 先裁掉公共前后缀。真实文本的差异通常集中在少数几行，
+         裁完之后 N、M 可能只有原来的百分之几，这是最划算的优化。
+     2) 回溯要每轮的 V 快照。完整 V 是 O(D × (N+M))，N=M=5000、D=3000
+         时是 3000 × 20001 × 4B ≈ 240MB，会直接吃爆内存。
+         实际只需 k ∈ [-d, d] 这一段（越界项在原始算法里恒为 0），
+         于是总内存降到 O(D²) ≈ 36MB。
+     3) 给 D 设上限。两个毫无关系的文本 D = N + M，没有上限就会卡死。
+         超限时把这段整体判为「全删 + 全增」——结果不如精确解，
+         但能保证有限时间内出结果，且这种输入本来也没什么可对比的。
+     ============================================================ */
+
+  var MAX_D_LINE = 2000;   /* 行级：D 上限。超出则整块判为删 + 增 */
+  var MAX_D_TOK = 900;     /* 行内 token 级：单行内差异不会太大，收紧到 900 */
+  var MAX_INLINE_LEN = 3000; /* 单行超过这个长度就跳过行内细分，整行标色 */
+
+  /* 从窗口数组里安全取值：窗口只覆盖 k ∈ [-d, d]，
+     越界即「该对角线在那一轮尚未被写过」，按原始算法的约定取 0。 */
+  function winGet(win, d, k) {
+    var i = k + d;
+    return (i >= 0 && i < win.length) ? win[i] : 0;
+  }
+
+  function myersCore(a, a0, a1, b, b0, b1, eq, maxD, isLine) {
+    var N = a1 - a0, M = b1 - b0;
+    var off = maxD + 1;
+    var v = new Int32Array(2 * maxD + 3);
+    var trace = [];
+    var D = -1, d, k;
+
+    for (d = 0; d <= maxD; d++) {
+      for (k = -d; k <= d; k += 2) {
+        var x;
+        if (k === -d || (k !== d && v[off + k - 1] < v[off + k + 1])) {
+          x = v[off + k + 1];        /* 向下：插入 b 的一个元素 */
+        } else {
+          x = v[off + k - 1] + 1;    /* 向右：删除 a 的一个元素 */
+        }
+        var y = x - k;
+        while (x < N && y < M && eq(a[a0 + x], b[b0 + y])) { x++; y++; }
+        v[off + k] = x;
+        if (x >= N && y >= M) { D = d; break; }
+      }
+      /* 只存 k ∈ [-d, d] 这一窗。回溯时用 trace[dd-1] 访问 prevK = kk ± 1，
+         而 kk ∈ [-dd, dd] ⇒ prevK ∈ [-dd-1, dd+1]；其中 ±(dd+1) 只在
+         kk = ∓dd 时出现，那种情况下分支会短路掉，不会真的去读。 */
+      var win = new Int32Array(2 * d + 1);
+      for (var t = -d; t <= d; t++) win[t + d] = v[off + t];
+      trace.push(win);
+      if (D >= 0) break;
+    }
+
+    /* 没能在 maxD 步内收敛：只能整段判为「全删 + 全增」。
+       行级这一档要记下来，让顶栏如实说明结果偏粗（行内那档不影响大局）。 */
+    if (D < 0) {
+      if (isLine) diffCoarse = true;
+      return [{ t: "del", n: N }, { t: "ins", n: M }];
+    }
+
+    /* 反向回溯：从 (N, M) 退回 (0, 0)，逐段收集后反转 */
+    var segs = [];
+    var x = N, y = M;
+    for (var dd = D; dd > 0; dd--) {
+      var prev = trace[dd - 1];
+      var pd = dd - 1;
+      var kk = x - y;
+      var prevK;
+      if (kk === -dd || (kk !== dd && winGet(prev, pd, kk - 1) < winGet(prev, pd, kk + 1))) {
+        prevK = kk + 1;
+      } else {
+        prevK = kk - 1;
+      }
+      var prevX = winGet(prev, pd, prevK);
+      var prevY = prevX - prevK;
+      var midX, midY;
+      if (prevK > kk) { midX = prevX; midY = prevY + 1; }  /* 插入 */
+      else { midX = prevX + 1; midY = prevY; }             /* 删除 */
+      if (x - midX > 0) segs.push({ t: "eq", n: x - midX });
+      segs.push({ t: prevK > kk ? "ins" : "del", n: 1 });
+      x = prevX; y = prevY;
+    }
+    if (x > 0) segs.push({ t: "eq", n: x });
+
+    segs.reverse();
+    var res = [];
+    for (var i = 0; i < segs.length; i++) {
+      var last = res[res.length - 1];
+      if (last && last.t === segs[i].t) last.n += segs[i].n;
+      else res.push({ t: segs[i].t, n: segs[i].n });
+    }
+    return res;
+  }
+
+  /* ---- 锚点切分（patience / histogram diff 的思路）----
+     动机：D 超过 maxD 时 myersCore 的兜底是「整段判为全删 + 全增」，
+     三千多行会并成**一个**巨大差异块 —— 完全没法看（用户报的
+     「三千多行合成一个差异了」）。真实来源有两类：
+       ① 两侧顺序被重排（同一份 schema 的条目换了次序）→ LCS 很短、D ≈ N+M；
+       ② 系统性隐形差异（行尾空格 / Tab vs 空格 / CRLF 残留）→ 每行都不等。
+     这两类都不该退化成一块。
+
+     做法：先找「两侧都恰好出现一次」的行当锚点，取它们的最长递增子序列
+     （保证锚点在两侧先后一致），用锚点把大区间切成若干小区间，各自再跑。
+     锚点行是**精确相等**的，所以切出来的每一段都是可信的。找不到锚点
+     （例如上面第 ② 类）时退回原逻辑 —— 那种情况该用「忽略行尾 / 忽略空白」
+     选项，不是切分能救的。 */
+  var ANCHOR_MIN = 400;   /* 区间小于这个长度就不折腾锚点了，直接进 myersCore */
+  var ANCHOR_DEPTH = 8;   /* 递归层数上限 */
+  var diffCoarse = false; /* 本次对比是否触发过 D 上限兜底（顶栏要如实说明） */
+
+  function anchorSplit(a, a0, a1, b, b0, b1) {
+    var i, k;
+    var ca = new Map(), cb = new Map();
+    for (i = a0; i < a1; i++) { k = a[i]; ca.set(k, (ca.get(k) || 0) + 1); }
+    for (i = b0; i < b1; i++) { k = b[i]; cb.set(k, (cb.get(k) || 0) + 1); }
+    /* 只在 b 里唯一的那些 key 建「key → 位置」索引，省内存 */
+    var posB = new Map();
+    for (i = b0; i < b1; i++) { k = b[i]; if (cb.get(k) === 1) posB.set(k, i - b0); }
+    var pairs = [];
+    for (i = a0; i < a1; i++) {
+      k = a[i];
+      if (ca.get(k) === 1 && posB.has(k)) pairs.push({ x: i - a0, y: posB.get(k) });
+    }
+    if (!pairs.length) return null;
+    /* 按 y 求最长递增子序列（O(n log n)），保住锚点在两侧的先后一致 */
+    var tails = [], tailIdx = [], prev = new Array(pairs.length);
+    for (i = 0; i < pairs.length; i++) {
+      var v = pairs[i].y, lo = 0, hi = tails.length;
+      while (lo < hi) {
+        var mid = (lo + hi) >> 1;
+        if (tails[mid] < v) lo = mid + 1; else hi = mid;
+      }
+      tails[lo] = v; tailIdx[lo] = i;
+      prev[i] = lo > 0 ? tailIdx[lo - 1] : -1;
+    }
+    var out = [], t = tails.length ? tailIdx[tails.length - 1] : -1;
+    while (t >= 0) { out.push(pairs[t]); t = prev[t]; }
+    out.reverse();
+    return out;
+  }
+
+  /* 追加一段 op，并合并相邻同类型（保证「按序拼接可还原两侧」） */
+  function pushOp(out, t, n) {
+    if (!n) return;
+    var last = out[out.length - 1];
+    if (last && last.t === t) last.n += n;
+    else out.push({ t: t, n: n });
+  }
+
+  /* 把 [a0,a1) × [b0,b1) 的差异追加进 out。
+     eq 为空表示用 ===；**只有这种默认口径才允许走锚点切分** ——
+     锚点用 Map 做等值索引，和自定义 eq 的口径未必一致。 */
+  function diffRange(a, a0, a1, b, b0, b1, eq, maxD, out, depth, isLine) {
+    var same = eq || sameEq;
+    var N = a1 - a0, M = b1 - b0;
+    if (!N && !M) return;
+    if (!N) { pushOp(out, "ins", M); return; }
+    if (!M) { pushOp(out, "del", N); return; }
+
+    /* 裁公共前缀 / 后缀 */
+    var lo = 0;
+    while (lo < N && lo < M && same(a[a0 + lo], b[b0 + lo])) lo++;
+    var ea = N, eb = M;
+    while (ea > lo && eb > lo && same(a[a0 + ea - 1], b[b0 + eb - 1])) { ea--; eb--; }
+    if (lo) pushOp(out, "eq", lo);
+
+    var na = ea - lo, nb = eb - lo;
+    if (na && nb) {
+      var anchors = (!eq && depth < ANCHOR_DEPTH && na + nb >= ANCHOR_MIN)
+        ? anchorSplit(a, a0 + lo, a0 + ea, b, b0 + lo, b0 + eb) : null;
+      if (anchors) {
+        var pa = a0 + lo, pb = b0 + lo;
+        for (var i = 0; i < anchors.length; i++) {
+          var an = anchors[i];
+          diffRange(a, pa, a0 + lo + an.x, b, pb, b0 + lo + an.y, eq, maxD, out, depth + 1, isLine);
+          pushOp(out, "eq", 1);          /* 锚点行本身相等 */
+          pa = a0 + lo + an.x + 1; pb = b0 + lo + an.y + 1;
+        }
+        diffRange(a, pa, a0 + ea, b, pb, b0 + eb, eq, maxD, out, depth + 1, isLine);
+      } else {
+        var mid = myersCore(a, a0 + lo, a0 + ea, b, b0 + lo, b0 + eb, same,
+                            Math.min(na + nb, maxD), isLine);
+        for (var j = 0; j < mid.length; j++) pushOp(out, mid[j].t, mid[j].n);
+      }
+    } else if (na) {
+      pushOp(out, "del", na);
+    } else if (nb) {
+      pushOp(out, "ins", nb);
+    }
+
+    var tail = N - ea;
+    if (tail) pushOp(out, "eq", tail);
+  }
+
+  function sameEq(x, y) { return x === y; }
+
+  /* 通用入口：a、b 是「可比较项」数组（字符串数组、token 数组、字符数组皆可）。
+     返回 [{t:'eq'|'del'|'ins', n:长度}]，按序拼接即可还原两侧。
+     eq 省略时用 === 比较。 */
+  function myers(a, b, eq, maxD, isLine) {
+    if (maxD == null) maxD = MAX_D_LINE;
+    if (isLine) diffCoarse = false;
+    var out = [];
+    diffRange(a, 0, a.length, b, 0, b.length, eq, maxD, out, 0, isLine);
+    return out;
+  }
+
+  /* ============================================================
+     2. 文本规范化与分词
+     ============================================================ */
+
+  var optCase = false, optWs = false, optTrail = false, optBlank = false;
+  /* 用户显式勾过 / 取消过的选项。退化兜底不许覆盖这些选择。 */
+  var optUserSet = {};
+
+  /* 比较用的行 key。注意这一步只影响「两行算不算相同」，
+     渲染时永远用原始文本 —— 否则用户会看到被改过的内容。 */
+  function keyOf(s) {
+    var t = s;
+    if (optTrail) t = t.replace(/[ \t]+$/, "");
+    if (optWs) t = t.replace(/[ \t]+/g, " ").replace(/^ | $/g, "");
+    /* 「忽略空行」的做法是让所有只含空白的行共享同一个 key，于是它们
+       两两相等、互相抵消，不产生删 / 增。
+       判据必须是 /^[ \t]*$/ 而不是 t === ""：在没勾「忽略空白」时，
+       一个空格行的 t 仍是 " "，用全等判断会漏掉它，
+       于是「空格行」和「空行」被当成不同的行，开关看起来没生效。 */
+    if (optBlank && /^[ \t]*$/.test(t)) return "\u0000";
+    if (optCase) t = t.toLowerCase();
+    return t;
+  }
+
+  /* 文本 → 行数组，用于对比。末尾的换行符是「行终止符」而不是「空行」，
+     所以 "a\nb\n" 是 2 行而不是 3 行 —— 与 git、编辑器的口径一致。 */
+  function toLines(s) {
+    if (s === "") return [];
+    var a = s.split("\n");
+    if (a.length && a[a.length - 1] === "") a.pop();
+    return a;
+  }
+
+  /* 文本 → 高亮层的行数组。这里**不能**去掉末尾空串：
+     textarea 里 "a\nb\n" 会多出一个可以落光标的空行，
+     高亮层若少一行，最后一行之后就少了一行的位置。 */
+  function splitLines(s) {
+    if (s === "") return [];
+    return s.split("\n");
+  }
+
+  /* 只有 ASCII 字母数字下划线算「词内字符」。
+     CJK 刻意不算 —— 它落到 tokenize 的 else 分支，每个字单独成 token。
+     若在这里把 CJK 也判成词内字符，连续汉字会被合并成一个 token，
+     「第二行」和「第二行改」就变成两个完全不同的 token、相似度为 0，
+     于是整行标色，行内高亮失效。 */
+  function isWordChar(c) {
+    return (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+  }
+  function isSpaceCh(c) { return c === 32 || c === 9; }
+
+  /* 分词：连续字母数字下划线为一个 token，连续空白为一个 token，
+     其余（标点、CJK 单字）各自成 token。
+     按 token 做行内 diff 的好处是差异边界天然落在词边界上，
+     不会出现「wor|ld」这种半个单词被高亮的读感灾难。 */
+  function tokenize(s) {
+    var out = [], i = 0, n = s.length;
+    while (i < n) {
+      var c = s.charCodeAt(i), j = i;
+      if (isWordChar(c)) { while (j < n && isWordChar(s.charCodeAt(j))) j++; }
+      else if (isSpaceCh(c)) { while (j < n && isSpaceCh(s.charCodeAt(j))) j++; }
+      else { j = i + 1; }
+      out.push(s.slice(i, j));
+      i = j;
+    }
+    return out;
+  }
+
+  /* ============================================================
+     3. 行内差异
+     ============================================================ */
+
+  var gran = "word";
+
+  function joinToks(toks, from, n) {
+    var s = "";
+    for (var i = 0; i < n; i++) s += toks[from + i];
+    return s;
+  }
+
+  /* 对一对「被改的行」做行内 diff，返回左右两侧各自的 HTML，
+     以及**真正变化的字符数** dc / ic（供相似度使用）。
+     两行差异过大时（相似度 < 25%）放弃细分、整行标色：
+     把两个毫不相干的句子逐词拆开高亮，满屏红绿碎块，反而看不出改了什么。 */
+  function inlinePair(l, r) {
+    if (gran === "line" || l === r) return { l: esc(l), r: esc(r), dc: 0, ic: 0 };
+    if (l.length > MAX_INLINE_LEN || r.length > MAX_INLINE_LEN) {
+      return { l: esc(l), r: esc(r), dc: l.length, ic: r.length };
+    }
+
+    var A, B;
+    if (gran === "char") {
+      A = l.split(""); B = r.split("");
+    } else {
+      A = tokenize(l); B = tokenize(r);
+    }
+
+    var ops = myers(A, B, null, MAX_D_TOK);
+
+    /* 先量一遍相似度再决定要不要用这份结果 */
+    var eqLen = 0, i;
+    for (i = 0; i < ops.length; i++) if (ops[i].t === "eq") eqLen += ops[i].n;
+    var denom = Math.max(A.length, B.length) || 1;
+    if (eqLen / denom < 0.25) return { l: esc(l), r: esc(r), dc: l.length, ic: r.length };
+
+    var ia = 0, ib = 0, hl = "", hr = "", dc = 0, ic = 0;
+    for (i = 0; i < ops.length; i++) {
+      var o = ops[i], s;
+      if (o.t === "eq") {
+        s = joinToks(A, ia, o.n); ia += o.n; ib += o.n;
+        hl += esc(s); hr += esc(s);
+      } else if (o.t === "del") {
+        s = joinToks(A, ia, o.n); ia += o.n;
+        dc += s.length;
+        hl += '<i class="dm">' + esc(s) + "</i>";
+      } else {
+        s = joinToks(B, ib, o.n); ib += o.n;
+        ic += s.length;
+        hr += '<i class="im">' + esc(s) + "</i>";
+      }
+    }
+    return { l: hl, r: hr, dc: dc, ic: ic };
+  }
+
+  /* ============================================================
+     4. 把 diff 结果铺到「两侧的每一行」上
+     ------------------------------------------------------------
+     与旧版（先摊平成渲染行、再逐行输出）最大的不同：
+     这里不再产出「渲染行」，而是给**两侧各自的原始行**分别挂一个装饰。
+     左栏的第 i 行永远就是用户输入的原始文本第 i 行，高亮只是叠上去的
+     一层颜色 —— 这样文本区才能既当输入框又当结果区。
+     ============================================================ */
+
+  var aDeco = [], bDeco = [];       /* 行号 → { cls, html }；相同行存 null */
+  var pairOfA = [], pairOfB = [];   /* 行号 → 对侧配对行号，-1 表示没有配对行 */
+
+  function buildDeco(ops, aLines, bLines) {
+    var nA = aLines.length, nB = bLines.length;
+    aDeco = new Array(nA); bDeco = new Array(nB);
+    pairOfA = new Array(nA); pairOfB = new Array(nB);
+    for (var z = 0; z < nA; z++) pairOfA[z] = -1;
+    for (var z2 = 0; z2 < nB; z2++) pairOfB[z2] = -1;
+
+    var ai = 0, bi = 0, i = 0;
+    var delChars = 0, insChars = 0, modN = 0, dN = 0, iN = 0;
+    var navList = [];
+
+    while (i < ops.length) {
+      var op = ops[i];
+
+      if (op.t === "eq") {
+        for (var k = 0; k < op.n; k++) {
+          aDeco[ai] = null; bDeco[bi] = null;
+          pairOfA[ai] = bi; pairOfB[bi] = ai;
+          ai++; bi++;
+        }
+        i++;
+        continue;
+      }
+
+      /* 收集这一段连续的非 eq 区域（del / ins 交错出现，全部算作一块） */
+      var delN = 0, insN = 0;
+      while (i < ops.length && ops[i].t !== "eq") {
+        if (ops[i].t === "del") delN += ops[i].n; else insN += ops[i].n;
+        i++;
+      }
+
+      /* 导航要跳到「这一块的入口」：删除块从左侧第一行进，新增块从右侧第一行进。
+         ai / bi 是块在两栏里的起始行号（纯删或纯增时另一侧仍然有位置，
+         就是「插在这儿」），applyHunk 靠它们做整块替换。 */
+      navList.push({ a: delN ? ai : -1, b: insN ? bi : -1,
+                     ai: ai, bi: bi, delN: delN, insN: insN });
+
+      /* 删除行与新增行按顺序一一配对成「修改行」，多出来的才是纯删 / 纯增。
+         这是 CodeMirror merge、diff-match-patch 的 lineMode 通用做法：
+         配对的那些行才有机会做行内高亮。 */
+      var pair = Math.min(delN, insN);
+      for (var p = 0; p < pair; p++) {
+        var h = inlinePair(aLines[ai], bLines[bi]);
+        delChars += h.dc; insChars += h.ic;
+        aDeco[ai] = { cls: "c-del", html: h.l };
+        bDeco[bi] = { cls: "c-ins", html: h.r };
+        pairOfA[ai] = bi; pairOfB[bi] = ai;
+        ai++; bi++; modN++;
+      }
+      for (var d = pair; d < delN; d++) {
+        delChars += aLines[ai].length;
+        aDeco[ai] = { cls: "c-del", html: esc(aLines[ai]) };
+        ai++; dN++;
+      }
+      for (var s = pair; s < insN; s++) {
+        insChars += bLines[bi].length;
+        bDeco[bi] = { cls: "c-ins", html: esc(bLines[bi]) };
+        bi++; iN++;
+      }
+    }
+
+    /* 没有配对行的（纯删 / 纯增）先向后找最近的配对点，找不到再向前退。
+       效果：删掉一块时另一侧停在删除点，而不是跳到文件头。 */
+    for (i = nA - 1; i >= 0; i--) if (pairOfA[i] < 0) pairOfA[i] = i + 1 < nA ? pairOfA[i + 1] : -1;
+    for (i = 0; i < nA; i++) if (pairOfA[i] < 0) pairOfA[i] = i > 0 ? pairOfA[i - 1] : 0;
+    for (i = nB - 1; i >= 0; i--) if (pairOfB[i] < 0) pairOfB[i] = i + 1 < nB ? pairOfB[i + 1] : -1;
+    for (i = 0; i < nB; i++) if (pairOfB[i] < 0) pairOfB[i] = i > 0 ? pairOfB[i - 1] : 0;
+
+    return { delChars: delChars, insChars: insChars, modN: modN, dN: dN, iN: iN, navs: navList };
+  }
+
+  /* ============================================================
+     5. 高亮层渲染与同步
+     ============================================================ */
+
+  var lastA = [], lastB = [];
+  var navs = [], navIdx = -1;
+  var ROW_H = 18;
+  var CHAR_W = 7.8;         /* 等宽字符宽度，启动时实测一次，用于算行号列宽 */
+  var HL_MAX_LINES = 20000; /* 超过这个行数就不再画高亮（只对比、不铺底色） */
+
+  function hlIn(side) { return $(side === "L" ? "hlL" : "hlR"); }
+  function taOf(side) { return $(side === "L" ? "taL" : "taR"); }
+
+  /* 高亮层跟着 textarea 的滚动平移。
+     用 transform 而不是 scrollTop：这一层是 overflow: hidden 的，
+     直接改 scrollTop 要经过一次布局，而 transform 走合成器，滚动时不掉帧。
+
+     加一层「值没变就不写」的判断：联动时对侧那一层每帧都会被 syncFromTa
+     顺带同步一次，其实绝大多数帧它的位置根本没动，白写一次就是一次样式失效。 */
+  function syncHl(side) {
+    var ta = taOf(side), el = hlIn(side);
+    applyWindow(side);   /* 先把「哪些行留在渲染树里」摆好（内部有缓存，多数帧直接返回） */
+    var x = -Math.round(ta.scrollLeft), y = -Math.round(ta.scrollTop);
+    if (el.__x === x && el.__y === y) return;
+    el.__x = x; el.__y = y;
+    el.style.transform = "translate(" + x + "px," + y + "px)";
+  }
+
+  /* ---- 行号 → 像素位置的位置表 ----
+     两个来源可选：读 .bl 的 offsetTop，或者查这张表。精度一样（表就是量出来的），
+     但读 DOM 会强制同步布局 —— 5 万行时实测每帧 3.3 ms 直接开销、外加十几毫秒
+     的重排，而表只在 renderPane 之后量一次。
+     注意 offsetTop 只在**布局变化**时才变（文本改、窗口尺寸改、折行改），
+     滚动不会改它，所以这份表可以跨滚动位置一直用。 */
+  var lineTop = { L: null, R: null };   /* Float64Array：每行的 offsetTop */
+  var lineHt = { L: null, R: null };    /* Float64Array：每行的 offsetHeight */
+
+  function measureLines(side) {
+    var els = blList[side], n = els ? els.length : 0;
+    if (!n) { lineTop[side] = null; lineHt[side] = null; return; }
+    var top = new Float64Array(n), ht = new Float64Array(n);
+    /* 只读 offsetTop，行高用「下一行 top 减本行 top」推 ——
+       .bl 之间没有 margin，两者必然相等，省掉一半的强制布局。 */
+    for (var i = 0; i < n; i++) top[i] = els[i].offsetTop;
+    for (var j = 0; j < n - 1; j++) ht[j] = top[j + 1] - top[j];
+    ht[n - 1] = els[n - 1].offsetHeight;
+    lineTop[side] = top; lineHt[side] = ht;
+  }
+
+  /* 某一行的像素范围。越界返回 null（调用方各自兜底）。 */
+  function lineRange(side, line) {
+    var top = lineTop[side], ht = lineHt[side];
+    if (!top || line < 0 || line >= top.length) return null;
+    return { top: top[line], bot: top[line] + ht[line] };
+  }
+
+  /* 像素位置 → 行号（该位置落在哪一行） */
+  function lineAt(side, y) {
+    var top = lineTop[side];
+    if (!top || !top.length) return 0;
+    var lo = 0, hi = top.length - 1, ans = 0;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      if (top[mid] <= y) { ans = mid; lo = mid + 1; }
+      else hi = mid - 1;
+    }
+    return ans;
+  }
+
+  /* ---- 只把视口附近的行留在渲染树里 ----
+     实测（3.4 MB / 5 万行）：5 万个 .bl 全在渲染树里时滚动 40 ms/帧、
+     每帧一个 65 ms 的长任务；同样的文本、同样 91.3 万 px 的层高，
+     只留 200 个 .bl 就回到 14 ms。所以屏幕外的行必须**移出渲染树** ——
+     用 display:none。试过 visibility:hidden（保留布局）几乎没用，
+     也试过 contain / 去定位 / 去行号，全都无效：成本就是渲染树的节点数。
+     被移走的高度用上下两个 spacer 补回来，滚动条长度才不会变。
+     行映射与接缝栏都不受影响 —— 位置早在 measureLines 里量进表了。 */
+  var blList = { L: null, R: null };   /* 静态 NodeList，避开每帧 querySelectorAll */
+  var rowWin = { L: null, R: null };   /* { lo, hi } 当前留在树里的行区间 */
+
+  function applyWindow(side) {
+    var els = blList[side], top = lineTop[side], ht = lineHt[side];
+    var n = els ? els.length : 0;
+    if (!n) { rowWin[side] = null; return; }
+    var ta = taOf(side), st = ta.scrollTop, ch = ta.clientHeight;
+    /* 往上留一屏、往下留三屏：窗口重建时只动边界那几行 */
+    var lo = Math.max(0, lineAt(side, st - ch));
+    var hi = Math.min(n - 1, lineAt(side, st + ch * 3));
+    var w = rowWin[side];
+    if (w && w.lo === lo && w.hi === hi) return;
+    var box = hlIn(side);
+    /* 开窗（.win 一挂上，屏幕外的行就整批 display:none，由 CSS 负责）。
+       首次开窗没有 .on 要撤，所以下面那圈只在 w 存在时才跑。 */
+    if (!box.__win) { box.classList.add("win"); box.__win = 1; }
+    var a = w ? w.lo : 0, b = w ? w.hi : n - 1, i;
+    if (w) for (i = a; i <= b; i++) if (i < lo || i > hi) els[i].removeAttribute("data-on");
+    for (i = lo; i <= hi; i++) if (!w || i < a || i > b) els[i].setAttribute("data-on", "");
+    /* 占位高度按「被移走的行本来占多少」给，直接写 #hlL 自己的上下 padding：
+       上 padding = 首个可见行的位置（第一行的位置就是原始 pad-y，所以 lo=0 时
+       正好退回默认值）；下 padding = 总内容高 - 到 hi 行底为止的高度。
+       ht[i] = top[i+1] - top[i]，所以 [lo, hi] 这几行的总高正好是
+       top[hi] + ht[hi] - top[lo]，展开后就是下面第二个式子。 */
+    box.style.paddingTop = top[lo] + "px";
+    box.style.paddingBottom =
+      Math.max(0, top[n - 1] + ht[n - 1] + (top[0] || 0) - top[hi] - ht[hi]) + "px";
+    rowWin[side] = { lo: lo, hi: hi };
+  }
+
+  function renderPane(side) {
+    var lines = splitLines(taOf(side).value);
+    var deco = side === "L" ? aDeco : bDeco;
+    var over = lines.length > HL_MAX_LINES;
+    var buf = [];
+    for (var i = 0; i < lines.length; i++) {
+      var d = over ? null : deco[i];
+      var cls = d && d.cls ? d.cls : "";
+      var html = (d && d.html != null) ? d.html : esc(lines[i]);
+      buf.push('<div class="bl' + (cls ? " " + cls : "") + '">' +
+               '<span class="ln">' + (i + 1) + "</span>" + html + "</div>");
+    }
+    var box = hlIn(side);
+    /* 量位置之前必须把窗口状态整个复位：
+       ① 摘掉 .win —— 挂着它时屏幕外的行是 display:none，offsetTop 全读成 0；
+       ② 清掉内联的上下 padding —— 那是上一轮窗口留下的占位，
+          不清的话量出来的位置整体偏移。
+       复位 → 量完 → applyWindow 再重新开窗，中间不产生渲染。 */
+    box.classList.remove("win");
+    box.__win = 0;
+    box.style.paddingTop = "";
+    box.style.paddingBottom = "";
+    box.innerHTML = buf.join("");
+    blList[side] = box.querySelectorAll(".bl");
+    rowWin[side] = null;
+    measureLines(side);
+    syncHl(side);   /* 里面的 applyWindow 会重新挂上 .win 并只留下窗口内的行 */
+  }
+
+  /* 行号列宽 + 滚动条宽度。放在 layout 里而不是 render 里：
+     窗口 resize 只需要重设这两个 CSS 变量，不必重建 DOM。 */
+  function layout() {
+    var maxLn = Math.max(lastA.length, lastB.length);
+    /* 列宽只按「最宽的那几个数字」给：位数 × 实测字符宽 + 8px 右内边距 + 2px 余量。
+       早期写成「位数 × 字符宽 + 18」再兜底 46px，2 位数行号也占 46px，
+       左侧一整条空白，用户反馈太宽。 */
+    var lnW = Math.max(26, Math.ceil(String(Math.max(maxLn, 1)).length * CHAR_W) + 10);
+
+    /* textarea 的 offsetWidth 比 clientWidth 多出来的就是滚动条占的宽度。
+       macOS 用覆盖式滚动条时是 0，Windows / Linux 上约 10px。
+       高亮层必须按这个值缩窄 —— 否则两层的可用文本宽度差一个滚动条，
+       折行位置会从第一处长行开始整体错开。 */
+    var ta = $("taL");
+    var sbW = Math.max(0, ta.offsetWidth - ta.clientWidth);
+
+    /* 接缝栏的原点要落在 .ed 的顶边，而不是 main 的顶边 ——
+       高亮层里那一行的 offsetTop 是从 .ed 顶边算起的，
+       #gutIn 必须减去上面那条 .pane-head 的高度才能对上。 */
+    var headH = $("paneL").querySelector(".pane-head").offsetHeight;
+
+    var st = document.documentElement.style;
+    st.setProperty("--ln-w", lnW + "px");
+    st.setProperty("--sb-w", sbW + "px");
+    if (headH > 0) st.setProperty("--head-h", headH + "px");
+  }
+
+  /* ============================================================
+     5.5 接缝栏：每一处差异各挂一对同步按钮
+     ------------------------------------------------------------
+     每处差异在 #gutIn 里有一个 .hk：带子的高度 = 这处差异覆盖的行范围，
+     所以「差异有多大」是看得见的，不用去数高亮了几行。
+     带子里两个按钮：◀ 把右侧这处搬到左侧（红）、▶ 反之（绿）。
+
+     .hk 的 top 用的是**内容坐标**（高亮层里那一行的 offsetTop），
+     因为 #gutIn 会跟着 scrollTop 做 translateY，和高亮层是同一套办法。
+
+     两块会「脱钩」的情况：一侧文本明显短、先滚到底，另一侧还在继续滚。
+     这时按最后被用户滚动的那一侧（gutAnchor）定位，保证按钮始终跟着
+     用户正在看的那一栏。锚点只在用户自己滚动时切换，程序化联动不算。
+     ============================================================ */
+  var gutAnchor = "L";
+
+  /* 窄屏（≤760px）下接缝栏换成浮在底部的胶囊：位置由 CSS 排，不做视口裁剪。
+     缓存 matchMedia 的结果 —— 每帧查一次媒体查询也是浪费。 */
+  var mqNarrow = window.matchMedia("(max-width: 760px)");
+  var gutNarrow = mqNarrow.matches;
+  function onNarrowChange() {
+    gutNarrow = mqNarrow.matches;
+    /* 清掉 paintGut 写下的内联样式：窄屏胶囊靠 .hk.on 显示，
+       内联的 display:none 会盖掉它；切回宽屏时重画一遍即可。 */
+    var hs = $("gutIn").children;
+    for (var i = 0; i < hs.length; i++) {
+      hs[i].style.display = ""; hs[i].style.transform = ""; hs[i].style.height = "";
+      hs[i].style.visibility = "";
+      /* -1 / null = 状态未知，逼下一次 paintGut 把每一项都重写一遍 ——
+         内联样式刚被清空，缓存值不能留（留着就会「值没变、跳过写入」，
+         高度和 path 就再也回不来了）。 */
+      hs[i].__on = -1; hs[i].__h = -1; hs[i].__t = -1; hs[i].__d = null;
+    }
+    layoutGut();
+  }
+  if (mqNarrow.addEventListener) mqNarrow.addEventListener("change", onNarrowChange);
+  else if (mqNarrow.addListener) mqNarrow.addListener(onNarrowChange);
+
+  /* 两块滚动位置之差。两块正常联动时它是常数，只有一侧先滚到底（两块脱钩）
+     时才会变 —— 一变右侧那半条带子就整体错位，必须重新量一遍。 */
+  function gutDelta() {
+    return Math.round(taOf("R").scrollTop) - Math.round(taOf("L").scrollTop);
+  }
+
+  /* 某一侧 [start, start+n) 这段行，换算到**左侧内容坐标**。
+     #gutIn 的原点与左侧高亮层重合，所以右侧要减掉两块的滚动差。
+     位置一律走 lineRange（读位置表），不碰 DOM。 */
+  function rangeInL(side, start, n, d) {
+    if (n <= 0 || start < 0) return null;
+    var a = lineRange(side, start), b = lineRange(side, start + n - 1);
+    if (!a || !b) return null;
+    var off = side === "R" ? d : 0;
+    return { top: a.top - off, bot: b.bot - off };
+  }
+
+  /* 某一侧本来就没有对应行（纯删 / 纯增）时，退到映射出来的那一行 ——
+     带子在那里收成一个小方块，正好表达「这里是插入 / 删除点」。 */
+  function fallbackRange(side, otherLine, otherSide, d) {
+    var m = otherSide === "L" ? pairOfA[otherLine] : pairOfB[otherLine];
+    var r = lineRange(side, m);
+    if (!r) return null;
+    var off = side === "R" ? d : 0;
+    return { top: r.top - off, bot: r.bot - off };
+  }
+
+  /* 一处差异在接缝上的形状：**左边缘**用左侧那几行的范围、**右边缘**用右侧的。
+     lt / lb 是左边缘的上下端，rt / rb 是右边缘的 —— 两侧行数不等时
+     两者对不上，曲线就把这段错位画出来。
+
+     返回的是**各自坐标系**里的原始位置：右侧那几个数还没有减去两块的滚动差。
+     那个差值随滚动位置一直在变（两块是按行映射联动的，不是按像素），
+     所以只把「与滚动无关」的这部分缓存下来，滚动时再减 —— 见 measureGut。 */
+  function hunkGeo(nv) {
+    var rl = rangeInL("L", nv.ai, nv.delN, 0) || fallbackRange("L", nv.bi, "R", 0);
+    var rr = rangeInL("R", nv.bi, nv.insN, 0) || fallbackRange("R", nv.ai, "L", 0);
+    return {
+      lt: rl ? rl.top : 0, lb: rl ? rl.bot : ROW_H,
+      rt: rr ? rr.top : 0, rb: rr ? rr.bot : ROW_H
+    };
+  }
+
+  /* 连接带的 path：上边从 (0, yl) 弯到 (w, yr)，下边从 (w, ybr) 弯回 (0, ybl)。
+     控制点取 42% / 58%，曲线短、收得干净；两侧范围一样高时自然退化成矩形。 */
+  function gutPath(w, r) {
+    var c1 = w * 0.42, c2 = w * 0.58;
+    return "M0 " + r.yl +
+      "C" + c1 + " " + r.yl + " " + c2 + " " + r.yr + " " + w + " " + r.yr +
+      "L" + w + " " + r.ybr +
+      "C" + c2 + " " + r.ybr + " " + c1 + " " + r.ybl + " 0 " + r.ybl + "Z";
+  }
+
+  function buildGut() {
+    var gut = $("gut"), inner = $("gutIn");
+    if (!navs.length) {
+      inner.innerHTML = "";
+      gut.classList.add("off");
+      return;
+    }
+    gut.classList.remove("off");
+    var buf = [];
+    for (var i = 0; i < navs.length; i++) {
+      buf.push('<div class="hk" data-i="' + i + '">' +
+        '<svg class="hk-svg" aria-hidden="true"><path d=""/></svg>' +
+        '<button type="button" class="hk-btn hk-l" aria-label="把这处差异同步到左侧" ' +
+          'title="把右侧这处差异同步到左侧（按住 Shift：整份右 → 左）">' +
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H4"/><path d="M7.4 4.6 4 8l3.4 3.4"/></svg>' +
+        "</button>" +
+        '<button type="button" class="hk-btn hk-r" aria-label="把这处差异同步到右侧" ' +
+          'title="把左侧这处差异同步到右侧（按住 Shift：整份左 → 右）">' +
+          '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9"/><path d="M8.6 4.6 12 8l-3.4 3.4"/></svg>' +
+        "</button>" +
+      "</div>");
+    }
+    inner.innerHTML = buf.join("");
+    layoutGut();
+  }
+
+  /* 窄屏下接缝栏变成一颗只显示当前那一处的胶囊，靠 .on 挑出来。
+     没导航过时默认显示第一处，否则窄屏上永远看不到按钮。 */
+  function markGut() {
+    var hs = $("gutIn").children;
+    var cur = navIdx < 0 ? 0 : navIdx;
+    for (var i = 0; i < hs.length; i++) {
+      if (i === cur) hs[i].classList.add("on");
+      else hs[i].classList.remove("on");
+    }
+  }
+
+  /* ---- 量一次，滚一路 ----
+     关键认识：offsetTop 只在**布局变化**时才变（文本改、窗口尺寸改、折行
+     位置改），**滚动不会改它**。所以每处差异的几何量一次就够，滚动时只做算术。
+
+     早期版本把「读 offsetTop」和「写 style」放在同一个函数里、每帧都跑：
+     5 万行 / 200 处差异下，每帧要读 400 次 offsetTop（每次都强制同步布局）
+     再写 800 次属性，而写属性又会把布局标脏、让下一次读再强制一次 ——
+     实测单帧 65 ms，滚动掉到 15 fps。这才是卡顿的真凶，不是渲染量。 */
+  var gutGeo = null;   /* [{lt, lb, rt, rb}]：左右两侧各自的原始 offsetTop 范围 */
+  var gutGeoW = 0;     /* 量的时候 #gutIn 的宽度，宽度变了 path 要重画 */
+
+  function measureGut() {
+    var inner = $("gutIn"), n = inner.children.length;
+    if (!n) { gutGeo = null; return; }
+    gutGeoW = Math.max(8, inner.clientWidth);
+    var geo = new Array(n);
+    for (var i = 0; i < n; i++) geo[i] = hunkGeo(navs[i]);
+    gutGeo = geo;
+  }
+
+  /* 只画视口附近的带子：一屏最多十几处差异，屏幕外的既看不见
+     （#gut 本身 overflow: hidden），也没必要每帧给它们重写 path。
+     实测 200 处 → 5 处上下，单帧成本从 65 ms 掉到 1 ms 以内。 */
+  function paintGut(d) {
+    var hs = $("gutIn").children, n = hs.length;
+    if (!n || !gutGeo) return;
+    var w = gutGeoW;
+    var ta = taOf(gutAnchor);
+    /* 上下各留一屏：带子比一屏还高时，不至于在边缘「跳」出来 */
+    var vis0 = ta.scrollTop - ta.clientHeight;
+    var vis1 = ta.scrollTop + 2 * ta.clientHeight;
+    /* 带子的坐标基准是**左侧内容坐标**（hunkGeo 量的就是它），而 #gutIn 的
+       translateY 跟的是 gutAnchor 那一侧。锚切到右侧时整条带子要补一个 d，
+       否则左右边缘会一起错 d（实测滚右侧时 6~8px）。锚在左侧时 off 为 0。 */
+    var off = gutAnchor === "R" ? d : 0;
+    for (var i = 0; i < n; i++) {
+      var g = gutGeo[i];
+      /* 左边缘：左侧坐标系；右边缘：右侧坐标系减去两块的滚动差，
+         再一起抬到 gutAnchor 的坐标系上 */
+      var lt = g.lt + off, lb = g.lb + off;
+      var rt = g.rt - d + off, rb = g.rb - d + off;
+      var top = Math.min(lt, rt), bot = Math.max(lb, rb);
+      /* 至少一个行高，否则单行差异的带子会被压成一条线 */
+      if (bot - top < ROW_H) bot = top + ROW_H;
+      if (bot < vis0 || top > vis1) {
+        /* 屏幕外用 visibility 而不是 display。display 增删元素会改动布局树
+           （#gutIn 下这一批绝对定位子节点的列表要重建），一改布局，下一帧
+           读 offsetTop 时就得同步重排整棵树；visibility 只影响绘制，
+           布局树原地不动。这是滚动卡不卡的分水岭。
+           判据是「不等于 0」而不是真值：__on 初值 undefined（刚 buildGut
+           出来的新元素），要当成「还没写过」。写成真值判断的话，屏幕外的
+           带子永远等不到那一次隐藏，200 个 SVG 全留在渲染树里。 */
+        if (hs[i].__on !== 0) { hs[i].style.visibility = "hidden"; hs[i].__on = 0; }
+        continue;
+      }
+      if (hs[i].__on !== 1) { hs[i].style.visibility = ""; hs[i].__on = 1; }
+      var topR = Math.round(top), h = Math.round(bot) - topR;
+      var svg = hs[i].firstChild;
+      /* 值没变就不写：滚动时大多数带子的几何是稳定的（锚那一侧的坐标
+         本来就不动），少写一次就少一次样式失效与重绘。 */
+      if (hs[i].__h !== h) {
+        hs[i].style.height = h + "px";
+        /* viewBox 与元素同尺寸（w × h），坐标 1:1 对应，没有缩放误差 */
+        svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+        hs[i].__h = h;
+      }
+      if (hs[i].__t !== topR) {
+        hs[i].style.transform = "translateY(" + topR + "px)";
+        hs[i].__t = topR;
+      }
+      var dstr = gutPath(w, {
+        yl: lt - topR, ybl: lb - topR, yr: rt - topR, ybr: rb - topR
+      });
+      if (hs[i].__d !== dstr) {
+        svg.firstChild.setAttribute("d", dstr);
+        hs[i].__d = dstr;
+      }
+    }
+  }
+
+  /* 只在「布局可能变了」时调用：新对比结果、窗口 resize、宽窄屏切换。 */
+  function layoutGut() {
+    var inner = $("gutIn");
+    if (!inner || !inner.children.length) return;
+    markGut();
+    /* 窄屏下接缝栏是浮在底部的胶囊、位置由 CSS 排（.hk 是 static），
+       既不用量也不用画。 */
+    if (gutNarrow) return;
+    measureGut();
+    syncGut();
+  }
+
+  function syncGut() {
+    var inner = $("gutIn");
+    if (!inner || !inner.children.length) return;
+    /* 窄屏胶囊：CSS 里 transform: none !important 已经把平移压掉了，
+       这里再 return —— 否则 paintGut 写的内联 display:none 会盖掉
+       .hk.on 的 display:flex，胶囊里就空了。 */
+    if (gutNarrow) return;
+    inner.style.transform =
+      "translateY(" + (-Math.round(taOf(gutAnchor).scrollTop)) + "px)";
+    paintGut(gutDelta());
+  }
+
+  /* 用户自己滚动某一侧时切换锚点。程序化联动（另一侧被带过去）不算，
+     否则两侧会互相抢锚点、接缝栏抖个不停。
+     锚点只影响 translateY —— 连接带的位置两侧都要用，与锚点无关。 */
+  function noteGutScroll(side, own) {
+    if (own || gutAnchor === side) return;
+    gutAnchor = side;
+  }
+
+  /* ============================================================
+     5.6 撤回：只记「同步差异」这一步
+     ------------------------------------------------------------
+     快照式：每次同步前把两侧文本各存一份，撤回就是还原。
+     **手工编辑会让整摞快照失效** —— 否则撤回会把用户刚敲进去的字
+     一起吃掉。示例 / 交换 / 清空 / 打开文件同理。
+     ============================================================ */
+  var undoStack = [], UNDO_MAX = 20;
+
+  function pushUndo() {
+    undoStack.push({ l: $("taL").value, r: $("taR").value });
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    syncUndo();
+  }
+  function clearUndo() {
+    if (!undoStack.length) return;
+    undoStack.length = 0;
+    syncUndo();
+  }
+  function syncUndo() { $("btnUndo").disabled = !undoStack.length; }
+
+  function undoLast() {
+    if (!undoStack.length) { toast("没有可撤回的同步操作"); return; }
+    var s = undoStack.pop();
+    $("taL").value = s.l;
+    $("taR").value = s.r;
+    runDiff(true);
+    syncUndo();
+    toast("已撤回上一次同步");
+  }
+
+  /* ============================================================
+     6. 主流程
+     ============================================================ */
+
+  var autoTmr = 0;
+  /* 自动对比的行数上限。实测 runDiff 同步耗时（含铺高亮层）约 25 ms/千行：
+     3 千行 83 ms、5 千行 127 ms、1 万行 244 ms、2 万行 500 ms、5 万行 1242 ms。
+     取 20000（最坏约 0.5 s）—— 正好与 HL_MAX_LINES 同界，语义也顺：
+     「还在铺高亮的规模内就自动对比，超出就交给用户按 Ctrl+Enter」。
+     早期是 3000，导致 3400 行的文本粘进来不自动对比（用户报的第二个问题）。 */
+  var AUTO_MAX_LINES = 20000;
+  var AUTO_QUICK = 5000;   /* 超过这个行数就把防抖拉长，见 scheduleDiff */
+  var HARD_MAX_LINES = 60000;
+  /* 点接缝栏按钮时焦点在按钮上，runDiff 会默认以左侧为锚、把右侧拽到左边
+     的顶行；但用户刚改的是右侧，该稳住的是右侧。所以由 applyHunk 指定一次。 */
+  var forceAnchor = null;
+
+  function measureCharW() {
+    var mono = getComputedStyle(document.documentElement).getPropertyValue("--mono").trim();
+    var p = document.createElement("span");
+    p.textContent = "0".repeat(60);
+    p.style.cssText = "position:absolute;left:-9999px;top:0;white-space:pre;visibility:hidden;font:13px " + mono;
+    document.body.appendChild(p);
+    var w = p.getBoundingClientRect().width / 60;
+    p.remove();
+    return w > 1 ? w : 7.8;
+  }
+
+  function setStat(ins, del, mod, sim) {
+    $("nIns").textContent = "+" + fmtNum(ins);
+    $("nDel").textContent = "−" + fmtNum(del);
+    $("nMod").textContent = "~" + fmtNum(mod);
+    $("nSim").textContent = (sim * 100).toFixed(1) + "% 相同";
+  }
+
+  /* 还没对比过（或结果刚被作废）时的统计位。
+     不能借用 setStat(0, 0, 0, 1)：那会显示「100.0% 相同」，
+     而此刻的事实是「不知道」—— 大文本进来还没按 Ctrl+Enter 时就是这种状态。 */
+  function setStatIdle() {
+    $("nIns").textContent = "+—";
+    $("nDel").textContent = "−—";
+    $("nMod").textContent = "~—";
+    $("nSim").textContent = "待对比";
+  }
+
+  /* ============================================================
+     6.5 滚动联动：原始文本 ↔ 修改文本
+     ------------------------------------------------------------
+     锚点是「行号」而不是滚动比例：一侧的第 N 行通过 pairOfA / pairOfB
+     映射到另一侧的第 M 行，纯删除行映射到「删除点之后的那一行」。
+     这样即使两侧行数不同、中间夹着整段增删，两块看的也始终是同一段内容。
+
+     行号 → 像素位置不用「行号 × 行高」算：文本折行后一行可能占好几个
+     视觉行，乘法会随滚动位置漂移（看起来就像在按比例滚）。
+     直接读高亮层里那一行元素的 offsetTop 才是准的。
+
+     防回环：程序化滚动前把目标位置记到 __syncTo，它自己触发的那次 scroll
+     事件会被 isOwnScroll() 识别并忽略。判断依据是「当前位置与目标位置相差
+     不到 2px」，所以用户手轮的滚动（位移通常远大于 2px）不会被误吞。 */
+  function setScroll(el, top) {
+    var max = el.scrollHeight - el.clientHeight;
+    if (top > max) top = max;
+    if (top < 0) top = 0;
+    if (Math.abs(el.scrollTop - top) < 0.5) return;
+    el.__syncTo = top;
+    el.scrollTop = top;
+  }
+  function isOwnScroll(el) {
+    var own = el.__syncTo !== undefined && Math.abs(el.scrollTop - el.__syncTo) < 2;
+    el.__syncTo = undefined;
+    return own;
+  }
+
+  /* 某一侧当前顶行的行号。二分而不是线性扫 —— 6 万行时线性会卡。
+     查的是位置表（Float64Array），不是 DOM：读 DOM 的 offsetTop 会强制
+     同步布局，5 万行时这一项单独就要 3.3 ms/帧。 */
+  function topLine(side) {
+    return lineAt(side, taOf(side).scrollTop);
+  }
+
+  /* 把某一侧滚到第 line 行。frac 是「目标行落在视口上方的比例」：
+     联动用 0（行贴顶，两侧才对得齐），导航用 1/3（差异别贴着边缘）。 */
+  function taToLine(side, line, frac) {
+    var ta = taOf(side), top = lineTop[side];
+    if (!top || !top.length) return;
+    if (line < 0) line = 0;
+    if (line >= top.length) line = top.length - 1;
+    setScroll(ta, top[line] - (frac || 0) * ta.clientHeight);
+  }
+
+  function syncFromTa(side) {
+    if (!lastA.length && !lastB.length) return;
+    var isL = side === "L";
+    var line = topLine(side);
+    /* ★ 行号映射只在「两侧都还是上次对比的那份文本」时才有意义。
+       映射表取不到值时**宁可不动**，绝不能退回 0 行 —— 旧版写的是
+       `if (oLine == null || oLine < 0) oLine = 0;`，一旦映射表比高亮层短
+       （文本改过但没重新对比），对侧就被直接拽到文件头，
+       用户看到的是「一边滑到空白行号时另外一边跳到顶端」。 */
+    var map = isL ? pairOfA : pairOfB;
+    if (line >= map.length) return;
+    var oLine = map[line];
+    if (oLine == null || oLine < 0) return;
+    taToLine(isL ? "R" : "L", oLine, 0);
+    syncHl(isL ? "R" : "L");
+  }
+
+  /* 行级比较用的 key 数组（口径由「忽略…」四个选项决定）。
+     选项一变就得重算，所以单独抽出来。 */
+  function lineKeys(lines) {
+    var k = new Array(lines.length);
+    for (var i = 0; i < lines.length; i++) k[i] = keyOf(lines[i]);
+    return k;
+  }
+
+  /* 结果是否「退化」：只有一个差异块，而且它几乎覆盖了整份文本。
+     长度门槛（>200 行）是防止小文本被误判 —— 两行完全不同本来就该是一块。 */
+  function isDegenerate(built, aLines, bLines) {
+    if (built.navs.length !== 1) return false;
+    var nv = built.navs[0];
+    var tot = Math.max(aLines.length, bLines.length);
+    if (tot <= 200) return false;
+    return Math.max(nv.delN, nv.insN) > tot * 0.8;
+  }
+
+  /* 用户是否显式调过任何一个「忽略…」选项。调过之后退化兜底就彻底关掉 ——
+     只跳过被取消的那一个是不够的：用户取消「忽略行尾」是为了看原始结果，
+     兜底会立刻改用更激进的「忽略空白」把它顶回来，等于关不掉。 */
+  function optLocked() {
+    return !!(optUserSet.optCase || optUserSet.optWs || optUserSet.optTrail || optUserSet.optBlank);
+  }
+
+  /* 依次试「忽略行尾」「忽略空白」，哪个能把退化结果拆开就用哪个。
+     用上了就把对应复选框勾上 —— 用户看得见、也能自己取消，不做暗改。
+     用户动过选项就整个不试（optLocked）。 */
+  function tryIgnoreWhitespace(aLines, bLines) {
+    if (optLocked()) return null;
+    var tries = [];
+    if (!optTrail) tries.push({ id: "optTrail", note: "已忽略行尾空白" });
+    if (!optWs) tries.push({ id: "optWs", note: "已忽略空白差异" });
+    for (var i = 0; i < tries.length; i++) {
+      var prevT = optTrail, prevW = optWs;
+      if (tries[i].id === "optTrail") optTrail = true; else optWs = true;
+      var ops2 = myers(lineKeys(aLines), lineKeys(bLines), null, MAX_D_LINE, true);
+      var built2 = buildDeco(ops2, aLines, bLines);
+      if (!isDegenerate(built2, aLines, bLines)) {
+        $(tries[i].id).checked = true;
+        return { ops: ops2, built: built2, note: tries[i].note };
+      }
+      optTrail = prevT; optWs = prevW;   /* 没救回来就把口径还原 */
+    }
+    return null;
+  }
+
+  function runDiff(silent) {
+    clearTimeout(autoTmr);
+    var t0 = (window.performance || Date).now();
+
+    /* 输入区的「N 行 · N B」必须在这里刷新。
+       只挂在 scheduleDiff 里会漏掉所有直接改 textarea.value 的路径
+       （示例 / 交换 / 拖入文件 / 清空），表现为左边明明有内容、统计却写着 0 行。 */
+    updateMeta();
+
+    var L = $("taL").value, R = $("taR").value;
+    var aLines = toLines(L), bLines = toLines(R);
+
+    if (aLines.length > HARD_MAX_LINES || bLines.length > HARD_MAX_LINES) {
+      toast("文本超过 " + fmtNum(HARD_MAX_LINES) + " 行，请先分段对比");
+      /* 同上：拒绝对比不等于可以留着上一份的高亮层 ——
+         高亮层与位置表必须对应 textarea 里的当前文本。 */
+      dropDiff();
+      return;
+    }
+
+    if (!aLines.length && !bLines.length) {
+      aDeco = []; bDeco = []; pairOfA = []; pairOfB = [];
+      lastA = []; lastB = []; navs = []; navIdx = -1;
+      $("navPos").textContent = "0 / 0";
+      layout();
+      renderPane("L"); renderPane("R");
+      buildGut();
+      setStat(0, 0, 0, 1);
+      setPerf("");
+      return;
+    }
+
+    /* --- 行级 diff --- */
+    var ops = myers(lineKeys(aLines), lineKeys(bLines), null, MAX_D_LINE, true);
+    var built = buildDeco(ops, aLines, bLines);
+    var autoNote = "";
+
+    /* ★ 兜底：结果退化成一个巨大差异块时，多半不是「真有一处覆盖全篇的差异」，
+       而是两侧口径不一致 —— 最常见的成因是**系统性隐形差异**（行尾空格、
+       Tab vs 空格、CRLF 残留），此时每一行都不等，编辑距离直接爆到 N+M，
+       锚点切分也救不了（没有精确相等的行可锚）。
+       换个口径再比一次，明显更好就采用，并**把选项在界面上勾上** ——
+       用户看得见、也能自己取消，不做暗改。 */
+    if (isDegenerate(built, aLines, bLines)) {
+      var alt = tryIgnoreWhitespace(aLines, bLines);
+      if (alt) {
+        ops = alt.ops; built = alt.built; autoNote = alt.note;
+        $("navPos").textContent = built.navs.length ? "0 / " + built.navs.length : "0 / 0";
+      } else {
+        built = buildDeco(ops, aLines, bLines);   /* 还原：试完不好就回到原结果 */
+      }
+    }
+
+    navs = built.navs;
+    navIdx = -1;
+    lastA = aLines; lastB = bLines;
+    $("navPos").textContent = navs.length ? "0 / " + navs.length : "0 / 0";
+
+    /* 相似度的分子是「行内字符数」（不含换行符），分母必须同口径 ——
+       直接拿 L.length / R.length 会多算每行一个换行符，
+       空 vs 两行的输入会算出 33% 而不是 0%。 */
+    var totalL = 0, totalR = 0;
+    for (var q1 = 0; q1 < aLines.length; q1++) totalL += aLines[q1].length;
+    for (var q2 = 0; q2 < bLines.length; q2++) totalR += bLines[q2].length;
+    var sim = (totalL + totalR) === 0 ? 1 : 1 - (built.delChars + built.insChars) / (totalL + totalR);
+    if (sim < 0) sim = 0;
+    if (sim > 1) sim = 1;
+
+    layout();
+    renderPane("L"); renderPane("R");
+    /* 新结果出来后对齐一次。锚取「用户当前正在输入的那一侧」：
+       在右边打字就以右锚，避免正在编辑的那块被拽走；
+       点示例 / 交换 / 清空时焦点在按钮上，退回以左侧为锚。
+       接缝栏用同一个锚点，两块的位置才对得上。 */
+    var anchor = forceAnchor || (document.activeElement === $("taR") ? "R" : "L");
+    forceAnchor = null;
+    gutAnchor = anchor;
+    buildGut();
+    syncFromTa(anchor);
+    setStat(built.iN, built.dN, built.modN, sim);
+
+    var ms = ((window.performance || Date).now()) - t0;
+    var over = Math.max(aLines.length, bLines.length) > HL_MAX_LINES;
+    /* 顶栏在 1280px 下已经很挤，性能串只留最要紧的两项，别被省略号吃掉 */
+    setPerf(fmtNum(aLines.length) + "→" + fmtNum(bLines.length) + " 行 · " +
+            ms.toFixed(0) + " ms" + (over ? " · 行数过多，已暂停高亮" : "") +
+            (diffCoarse ? " · 结果偏粗" : "") + (autoNote ? " · " + autoNote : ""));
+
+    if (!silent) {
+      if (!navs.length) toast("两侧完全一致");
+      else if (autoNote) toast(autoNote + "（已自动勾选对应选项，可取消）");
+      /* 结果偏粗时给一句可执行的建议。最常见的成因是系统性隐形差异
+         （行尾空格 / Tab vs 空格 / CRLF 残留），「忽略行尾」能直接救回来。 */
+      else if (diffCoarse && !optLocked()) toast("差异过大，结果偏粗 —— 可试勾选「忽略空白」或「忽略行尾」");
+    }
+
+    /* 徽标跟着走：兜底可能在上面自动勾了「忽略行尾」/「忽略空白」，
+       不刷的话「选项」按钮上的数字还停在旧值。 */
+    syncOptN();
+  }
+
+  /* ============================================================
+     7. 交互
+     ============================================================ */
+
+  /* 行数口径必须与 toLines 一致：末尾的换行符是「行终止符」而不是「空行」。
+     不扣掉它的话，"a\nb\n" 会显示 3 行，而对比按 2 行做，
+     用户会看到「输入区 16 行、最后一行是 15」这种对不上的数字。 */
+  function countLines(s) {
+    if (s === "") return 0;
+    var n = 1;
+    for (var i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) n++;
+    if (s.charCodeAt(s.length - 1) === 10) n--;
+    return n;
+  }
+
+  function updateMeta() {
+    var l = $("taL").value, r = $("taR").value;
+    $("metaL").textContent = fmtNum(countLines(l)) + " 行 · " + fmtBytes(l.length);
+    $("metaR").textContent = fmtNum(countLines(r)) + " 行 · " + fmtBytes(r.length);
+  }
+
+  /* ★ 文本改了但**不自动对比**（超过 AUTO_MAX_LINES）时，必须把上一份结果整个丢掉
+     并重铺高亮层 —— 高亮层是「按当前文本重铺」的，行号、折行位置、位置表
+     lineTop/lineHt、滚动联动全以它为准。旧结果留着不丢，就会和高亮层一起
+     停在上一份文本上，而 textarea 里已经是新文本了。
+
+     踩过的坑（用户报的 bug）：粘贴 3403 行（> 3000）时 scheduleDiff 直接 return，
+     顶栏的「3,403 行」是对的（updateMeta 单独刷新），高亮层却还是**内置示例的
+     61 行** —— 于是行号停在 61、后面没有对比色、lineAt 被夹在 60 上，
+     一侧滚到空白区时对侧被映射回第 0 行（跳回顶端）。
+     症状里的「61 / 59」正是 SAMPLE_A / SAMPLE_B 的行数，可以直接当指纹用。 */
+  function dropDiff() {
+    aDeco = []; bDeco = [];
+    navs = []; navIdx = -1;
+    $("navPos").textContent = "0 / 0";
+    setStatIdle();
+    /* lastA / lastB 有两个用途：layout() 算行号列宽、syncFromTa 判「有没有内容」。
+       必须按**当前文本**填，不能清空 —— 4 位行号挤在 26px 的列里会溢出。 */
+    lastA = toLines($("taL").value);
+    lastB = toLines($("taR").value);
+    /* 没有差异可映射时退回「同行号对同行号」：两块仍然按行联动，只是不做增删对齐。
+       留空数组的话 syncFromTa 会整段跳过，两块直接脱钩。 */
+    var nA = lastA.length, nB = lastB.length;
+    pairOfA = new Array(nA); pairOfB = new Array(nB);
+    for (var i = 0; i < nA; i++) pairOfA[i] = nB ? Math.min(i, nB - 1) : 0;
+    for (var j = 0; j < nB; j++) pairOfB[j] = nA ? Math.min(j, nA - 1) : 0;
+    layout();
+    renderPane("L"); renderPane("R");
+    buildGut();
+  }
+
+  function scheduleDiff() {
+    updateMeta();
+    clearTimeout(autoTmr);
+    var nl = Math.max(countLines($("taL").value), countLines($("taR").value));
+    if (nl > AUTO_MAX_LINES) {
+      setPerf("文本较大，按 Ctrl / ⌘ + Enter 或点「对比」执行");
+      /* 旧结果立刻作废。防抖 120ms 是为了在超大文本里连打时不至于每敲一下
+         重铺几千行；粘贴是一次性的，120ms 后就是对的。 */
+      autoTmr = setTimeout(dropDiff, 120);
+      return;
+    }
+    /* 文本越大防抖越长：让「停下打字」与「开始对比」隔开一点，
+       免得刚敲两下就被一次几百毫秒的同步对比打断。 */
+    autoTmr = setTimeout(function () { runDiff(true); }, nl > AUTO_QUICK ? 600 : 280);
+  }
+
+  /* --- 差异导航 --- */
+  /* 跳到第 k 处差异（取模，负值也能用）。定位 + 高亮 + 记 navIdx。 */
+  function jumpTo(k) {
+    if (!navs.length) return;
+    navIdx = ((k % navs.length) + navs.length) % navs.length;
+    var nv = navs[navIdx];
+
+    var prev = document.querySelectorAll(".bl.cur");
+    for (var k2 = 0; k2 < prev.length; k2++) prev[k2].classList.remove("cur");
+
+    /* 差异块入口：删除侧滚到它的第一行，新增侧滚到它的第一行；
+       只有一侧有时，另一侧按映射跟过去。 */
+    var la = nv.a >= 0 ? nv.a : (nv.b >= 0 ? pairOfB[nv.b] : -1);
+    var lb = nv.b >= 0 ? nv.b : (nv.a >= 0 ? pairOfA[nv.a] : -1);
+    if (la >= 0) taToLine("L", la, 1 / 3);
+    if (lb >= 0) taToLine("R", lb, 1 / 3);
+
+    /* 行元素按行号取（blList 是 .bl 的静态列表，不含上下两个占位块）。
+       目标行此刻可能正被窗口移出渲染树（display:none）—— 加 class 不受影响，
+       滚动到位后 applyWindow 会把它放回来，class 还在。 */
+    var eL = blList.L && blList.L[nv.a], eR = blList.R && blList.R[nv.b];
+    if (eL) eL.classList.add("cur");
+    if (eR) eR.classList.add("cur");
+
+    syncHl("L"); syncHl("R");
+    markGut();          /* 窄屏胶囊要跟着切到当前那一处 */
+    $("navPos").textContent = (navIdx + 1) + " / " + navs.length;
+  }
+
+  function goNav(dir) {
+    if (!navs.length) { toast("两侧没有差异"); return; }
+    jumpTo(navIdx + dir);
+  }
+
+  /* --- 把差异整块搬到另一侧 ---
+     dir = "LR"：用左侧的删除行替换右侧的新增行；"RL" 反之。
+     all = true 时不做逐块替换，直接把一侧的整份内容覆盖到另一侧 ——
+     把所有块依次应用过去的净效果就是这个，等价但快得多。
+     纯删 / 纯增块也走同一条路径：此时另一侧的 delN 或 insN 为 0，
+     splice 的「替换 0 行」自然退化成「插入」或「删除」。
+
+     at 是要应用的那一处差异的下标；接缝栏上每个按钮都带自己的下标，
+     不传则退回「当前导航到的那一处」。 */
+  function applyHunk(dir, all, at) {
+    var toR = dir === "LR";
+    var dst = toR ? "R" : "L";
+
+    if (all) {
+      var src = toR ? $("taL").value : $("taR").value;
+      if ($(toR ? "taR" : "taL").value === src) { toast("两侧已经一致"); return; }
+      pushUndo();
+      $(toR ? "taR" : "taL").value = src;
+      forceAnchor = dst;
+      runDiff(true);
+      toast(toR ? "已把左侧整份同步到右侧" : "已把右侧整份同步到左侧");
+      return;
+    }
+
+    if (!navs.length) { toast("两侧没有差异"); return; }
+    var k = (at == null || at < 0) ? (navIdx < 0 ? 0 : navIdx) : at;
+    if (k >= navs.length) k = navs.length - 1;
+    var nv = navs[k];
+
+    /* lastA / lastB 是当前 diff 的行数组，复制一份再改，别污染现场 */
+    var lines = (toR ? lastB : lastA).slice();
+    var from = (toR ? lastA : lastB).slice(
+      toR ? nv.ai : nv.bi, (toR ? nv.ai + nv.delN : nv.bi + nv.insN));
+    var at = toR ? nv.bi : nv.ai;
+    var delCnt = toR ? nv.insN : nv.delN;
+
+    lines.splice.apply(lines, [at, delCnt].concat(from));
+
+    /* 末尾的换行符是「行终止符」，toLines 会把它去掉，写回时得补上，
+       否则每应用一次差异，文件末尾就少一个换行。 */
+    var s = lines.join("\n");
+    if (taOf(dst).value.slice(-1) === "\n") s += "\n";
+    pushUndo();
+    taOf(dst).value = s;
+
+    /* 刻意不 jumpTo：这一处刚被抹平，差异列表就重排了，
+       此时再跳会把视图甩到另一处去，而用户正盯着刚才那一块。
+       锚点也定在被改的那一侧 —— 它是用户此刻在看的那一栏。 */
+    forceAnchor = dst;
+    runDiff(true);
+    toast(toR ? "已应用这处差异到右侧" : "已应用这处差异到左侧");
+  }
+
+  /* --- 导出统一 diff（git / patch 能直接吃）--- */
+  function toUnified(ctx) {
+    if (!lastA.length && !lastB.length) return "";
+    var head = "--- 原始文本\n+++ 修改文本\n";
+
+    /* 先把两侧摊平成逐行记录，同时标出差异行 */
+    var recs = [], ai = 0, bi = 0, i, j;
+    var nA = lastA.length, nB = lastB.length;
+    while (ai < nA || bi < nB) {
+      var isDiffA = ai < nA && aDeco[ai] != null;
+      var isDiffB = bi < nB && bDeco[bi] != null;
+      if (!isDiffA && !isDiffB) {
+        if (ai < nA && bi < nB) {
+          recs.push({ s: " ", txt: lastA[ai], a: ai, b: bi, diff: false }); ai++; bi++;
+        } else if (ai < nA) {
+          recs.push({ s: "-", txt: lastA[ai], a: ai, b: -1, diff: true }); ai++;
+        } else {
+          recs.push({ s: "+", txt: lastB[bi], a: -1, b: bi, diff: true }); bi++;
+        }
+      } else {
+        if (isDiffA) { recs.push({ s: "-", txt: lastA[ai], a: ai, b: -1, diff: true }); ai++; }
+        if (isDiffB) { recs.push({ s: "+", txt: lastB[bi], a: -1, b: bi, diff: true }); bi++; }
+      }
+    }
+    if (!recs.length) return "";
+
+    /* 每个差异行向两侧扩 ctx 行，重叠的合并成同一个 hunk */
+    var marks = [];
+    for (i = 0; i < recs.length; i++) if (recs[i].diff) marks.push(i);
+    if (!marks.length) return "";
+
+    var hunks = [], cur = null;
+    for (i = 0; i < marks.length; i++) {
+      var from = Math.max(0, marks[i] - ctx);
+      var to = Math.min(recs.length - 1, marks[i] + ctx);
+      if (cur && from <= cur.to + 1) { if (to > cur.to) cur.to = to; }
+      else { cur = { from: from, to: to }; hunks.push(cur); }
+    }
+
+    var out = [head];
+    for (i = 0; i < hunks.length; i++) {
+      var h = hunks[i];
+      var aStart = 1, bStart = 1, aCnt = 0, bCnt = 0;
+      for (j = 0; j < h.from; j++) {
+        if (recs[j].a >= 0) aStart++;
+        if (recs[j].b >= 0) bStart++;
+      }
+      var body = "";
+      for (j = h.from; j <= h.to; j++) {
+        var rr = recs[j];
+        if (rr.a >= 0) aCnt++;
+        if (rr.b >= 0) bCnt++;
+        body += rr.s + rr.txt + "\n";
+      }
+      out.push("@@ -" + aStart + "," + aCnt + " +" + bStart + "," + bCnt + " @@\n" + body);
+    }
+    return out.join("");
+  }
+
+  function copyText(s) {
+    if (!s) { toast("没有可复制的内容"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(s).then(function () { toast("已复制统一 diff"); },
+        function () { fallbackCopy(s); });
+    } else {
+      fallbackCopy(s);
+    }
+  }
+  function fallbackCopy(s) {
+    var ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;left:-9999px;top:0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("已复制统一 diff"); }
+    catch (e) { toast("复制失败，请手动选择"); }
+    ta.remove();
+  }
+
+  function download(s) {
+    if (!s) { toast("两侧没有差异，无需导出"); return; }
+    var blob = new Blob([s], { type: "text/x-diff;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "text-diff-" + new Date().toISOString().slice(0, 10) + ".diff";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast("已导出 .diff");
+  }
+
+  /* --- 读文件 --- */
+  function readFile(file, ta, pane) {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast("文件超过 8 MB，请先拆分"); return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      clearUndo();
+      ta.value = String(fr.result).replace(/\r\n?/g, "\n");
+      pane.classList.remove("drop");
+      scheduleDiff();
+      toast("已载入 " + file.name + "（" + fmtBytes(file.size) + "）");
+    };
+    fr.onerror = function () { toast("读取失败：" + file.name); };
+    fr.readAsText(file, "utf-8");
+  }
+
+  function bindDrop(pane, ta) {
+    ["dragenter", "dragover"].forEach(function (ev) {
+      pane.addEventListener(ev, function (e) { e.preventDefault(); pane.classList.add("drop"); });
+    });
+    ["dragleave", "dragend"].forEach(function (ev) {
+      pane.addEventListener(ev, function (e) {
+        if (e.target === pane || !pane.contains(e.relatedTarget)) pane.classList.remove("drop");
+      });
+    });
+    pane.addEventListener("drop", function (e) {
+      e.preventDefault();
+      pane.classList.remove("drop");
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      readFile(f, ta, pane);
+    });
+  }
+
+  /* ============================================================
+     8. 事件绑定
+     ============================================================ */
+
+  /* 手工编辑 → 撤回栈作废（否则撤回会把刚敲进去的字一起吃掉） */
+  function onEdit() { clearUndo(); scheduleDiff(); }
+  $("taL").addEventListener("input", onEdit);
+  $("taR").addEventListener("input", onEdit);
+
+  $("btnDiff").addEventListener("click", function () { runDiff(false); });
+
+  $("btnUndo").addEventListener("click", undoLast);
+
+  $("btnSample").addEventListener("click", function () {
+    clearUndo();
+    $("taL").value = SAMPLE_A;
+    $("taR").value = SAMPLE_B;
+    runDiff(false);
+    toast("已填入示例");
+  });
+
+  $("btnSwap").addEventListener("click", function () {
+    clearUndo();
+    var t = $("taL").value;
+    $("taL").value = $("taR").value;
+    $("taR").value = t;
+    runDiff(true);
+    toast("已交换左右");
+  });
+
+  $("btnClear").addEventListener("click", function () {
+    clearUndo();
+    $("taL").value = "";
+    $("taR").value = "";
+    runDiff(true);
+    setPerf("");
+    toast("已清空");
+  });
+
+  $("btnClrL").addEventListener("click", function () {
+    clearUndo();
+    $("taL").value = ""; scheduleDiff();
+  });
+  $("btnClrR").addEventListener("click", function () {
+    clearUndo();
+    $("taR").value = ""; scheduleDiff();
+  });
+
+  $("btnUpL").addEventListener("click", function () { $("fileL").click(); });
+  $("btnUpR").addEventListener("click", function () { $("fileR").click(); });
+  $("fileL").addEventListener("change", function () { readFile(this.files[0], $("taL"), $("paneL")); this.value = ""; });
+  $("fileR").addEventListener("change", function () { readFile(this.files[0], $("taR"), $("paneR")); this.value = ""; });
+
+  /* ---- 折叠面板（选项 / 导出）：鼠标**悬停即展开、移开即收起** ----
+     为什么不用纯 CSS :hover：
+       ① summary 与浮层之间有 6px 间隙，鼠标穿过去时 :hover 会瞬间失效，
+          面板一闪就没了、根本点不到（用户特别提醒的「收得太快点不到」）；
+       ② <details> 的开合只有 open 属性，靠 CSS 覆盖 UA 样式不可靠。
+     做法：离开时**延迟** POP_GRACE 再收，鼠标进入浮层立刻取消 ——
+     配合 CSS 里那段 ::before 桥接，构成两层保险。
+     键盘 Enter / Space 与触屏点击仍走 <details> 原生开合。 */
+  var POP_GRACE = 180;   /* ms：够慢速鼠标穿过 6px 间隙，又不至于显得拖沓 */
+  var POPS = [$("popOpts"), $("popExport")];
+
+  /* 触摸屏没有真正的 hover：触摸后浏览器会补一对合成的 enter / leave，
+     会把刚点开的面板立刻收掉。用最近一次 touchstart 的时间戳挡掉它们。 */
+  var lastTouch = 0;
+  document.addEventListener("touchstart", function () { lastTouch = Date.now(); }, { passive: true });
+
+  POPS.forEach(function (d) {
+    var tmr = 0;
+    /* 浮层默认从按钮左边缘向右铺。顶栏右侧的「导出」在窄窗口下会顶出视口 ——
+       每次打开量一次，要溢出就翻成右对齐（量之前先把上一次的翻转清掉）。 */
+    function place() {
+      var body = d.querySelector(".pop-body");
+      body.style.left = ""; body.style.right = "";
+      if (body.getBoundingClientRect().right > document.documentElement.clientWidth - 8) {
+        body.style.left = "auto"; body.style.right = "0";
+      }
+    }
+    function show() { clearTimeout(tmr); tmr = 0; d.open = true; place(); }
+    function hide() {
+      if (Date.now() - lastTouch < 900) return;   /* 合成的，忽略 */
+      clearTimeout(tmr);
+      tmr = setTimeout(function () { d.open = false; tmr = 0; }, POP_GRACE);
+    }
+    d.addEventListener("mouseenter", show);
+    d.addEventListener("mouseleave", hide);
+    var body = d.querySelector(".pop-body");
+    body.addEventListener("mouseenter", show);
+    body.addEventListener("mouseleave", hide);
+    /* 鼠标点 summary 时面板本来就因悬停开着，原生 toggle 会把它关掉 —— 拦掉。
+       detail === 0 是键盘 Enter / Space 触发的 click，保留原生开合。 */
+    d.querySelector("summary").addEventListener("click", function (e) {
+      if (e.detail > 0) e.preventDefault();
+    });
+  });
+
+  function closePops() {
+    for (var i = 0; i < POPS.length; i++) POPS[i].open = false;
+  }
+  /* 点面板外、Esc 也收起（鼠标移开的路径由上面的定时器负责）。 */
+  document.addEventListener("click", function (e) {
+    for (var i = 0; i < POPS.length; i++) {
+      /* 点在面板自己身上（含 summary）不算「外面」—— 否则刚点开就被这条关掉 */
+      if (POPS[i].open && !POPS[i].contains(e.target)) POPS[i].open = false;
+    }
+  });
+
+  /* 「选项」按钮上的数字徽标：当前有几个忽略项生效。除了用户自己勾，
+     退化兜底（tryIgnoreWhitespace）也会自动勾上 —— 所以 runDiff 结尾也调一次。 */
+  function syncOptN() {
+    var n = (optCase ? 1 : 0) + (optWs ? 1 : 0) + (optTrail ? 1 : 0) + (optBlank ? 1 : 0);
+    $("optN").textContent = n;
+    $("optN").hidden = !n;
+  }
+
+  $("granSel").addEventListener("change", function () {
+    gran = this.value;
+    runDiff(true);
+  });
+
+  ["optCase", "optWs", "optTrail", "optBlank"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      optCase = $("optCase").checked;
+      optWs = $("optWs").checked;
+      optTrail = $("optTrail").checked;
+      optBlank = $("optBlank").checked;
+      /* 用户显式动过的选项记下来：退化兜底（tryIgnoreWhitespace）不许再自动
+         覆盖它 —— 否则用户取消勾选后会被兜底立刻勾回去，永远关不掉。 */
+      optUserSet[id] = true;
+      syncOptN();
+      runDiff(true);
+    });
+  });
+
+  $("btnPrev").addEventListener("click", function () { goNav(-1); });
+  $("btnNext").addEventListener("click", function () { goNav(1); });
+  /* 接缝栏的按钮是每次对比后重建的，所以用事件委托而不是逐个绑定。
+     下标从 data-i 读 —— 按钮自己知道它对应哪一处差异，不依赖 navIdx。 */
+  $("gutIn").addEventListener("click", function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest(".hk-btn") : null;
+    if (!btn) return;
+    var hk = btn.closest(".hk");
+    var i = hk ? parseInt(hk.getAttribute("data-i"), 10) : -1;
+    if (isNaN(i)) i = -1;
+    applyHunk(btn.classList.contains("hk-l") ? "RL" : "LR", e.shiftKey, i);
+  });
+  $("btnCopy").addEventListener("click", function () { copyText(toUnified(3)); closePops(); });
+  $("btnDl").addEventListener("click", function () { download(toUnified(3)); closePops(); });
+
+  /* --- 滚动：先同步自己的高亮层与接缝栏，再按行号把另一侧带过去 --- */
+  /* 顺序要紧：**先联动对侧、再摆接缝栏**。
+     syncFromTa 会程序化改对侧的 scrollTop，而接缝栏右侧那半条带子的位置
+     要用两块的滚动差（gutDelta）来算。先摆接缝栏的话，这一帧用的还是联动
+     之前的差值，右侧带子就会和右侧文本错开一小段 —— 这正是滚动时看着
+     「带子跟不上、会飘」的原因。 */
+  $("taL").addEventListener("scroll", function () {
+    var own = isOwnScroll(this);
+    syncHl("L"); noteGutScroll("L", own);
+    if (!own) syncFromTa("L");
+    syncGut();
+  });
+  $("taR").addEventListener("scroll", function () {
+    var own = isOwnScroll(this);
+    syncHl("R"); noteGutScroll("R", own);
+    if (!own) syncFromTa("R");
+    syncGut();
+  });
+
+  bindDrop($("paneL"), $("taL"));
+  bindDrop($("paneR"), $("taR"));
+
+  /* 窗口尺寸变化：滚动条宽度和行号列宽都要重算。
+     这两个值一变，两层的折行位置就可能变，高亮层得整体重铺。 */
+  var rzTmr = 0;
+  window.addEventListener("resize", function () {
+    clearTimeout(rzTmr);
+    rzTmr = setTimeout(function () {
+      layout();
+      renderPane("L"); renderPane("R");
+      layoutGut();      /* 列宽一变折行位置就变，带子的上下边界要重新量 */
+    }, 90);
+  });
+
+  /* 快捷键 */
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      runDiff(false);
+      return;
+    }
+    if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      goNav(e.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+    /* ⌘Z / Ctrl+Z 撤回同步操作。焦点在输入框里时让给原生撤销 ——
+       那才是用户此刻想要撤销的东西。 */
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey &&
+        (e.key === "z" || e.key === "Z")) {
+      var t = document.activeElement;
+      if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT")) return;
+      if (!undoStack.length) return;
+      e.preventDefault();
+      undoLast();
+      return;
+    }
+    /* Esc 收起展开的折叠面板（选项 / 导出） */
+    if (e.key === "Escape") closePops();
+  });
+
+  /* ============================================================
+     9. 示例数据
+     ============================================================ */
+
+  /* 示例要够长（远超一屏，方便试滚动联动），并且必须带一条**会折行的超长值**
+     （endpoints.gateway）—— 折行后一行占多个视觉行，接缝栏的连接带、
+     行号只落在第一视觉行这些地方都只有折行时才看得出对不对。 */
+  var SAMPLE_A =
+'{\n' +
+'  "name": "text-diff",\n' +
+'  "version": "1.0.0",\n' +
+'  "description": "在线文本对比工具",\n' +
+'  "keywords": ["diff", "compare", "text"],\n' +
+'  "author": "MidAug",\n' +
+'  "license": "MIT",\n' +
+'  "homepage": "https://example.com",\n' +
+'  "engines": {\n' +
+'    "node": ">=18"\n' +
+'  },\n' +
+'  "dependencies": {\n' +
+'    "chalk": "^5.3.0",\n' +
+'    "dayjs": "^1.11.10",\n' +
+'    "lru-cache": "^10.2.0"\n' +
+'  },\n' +
+'  "devDependencies": {\n' +
+'    "rollup": "^4.9.6",\n' +
+'    "eslint": "^8.56.0"\n' +
+'  },\n' +
+'  "scripts": {\n' +
+'    "dev": "rollup -c -w",\n' +
+'    "build": "rollup -c",\n' +
+'    "lint": "eslint src",\n' +
+'    "test": "node test.js"\n' +
+'  },\n' +
+'  "repository": {\n' +
+'    "type": "git",\n' +
+'    "url": "https://github.com/midaug/text-diff.git"\n' +
+'  },\n' +
+'  "endpoints": {\n' +
+'    "gateway": "https://api.example.com/v2/gateway/execute-intent?tenant=midaug&region=cn-north-1&trace=1&timeout=30000&signature=abc123def456&lang=zh-CN&unit=ms",\n' +
+'    "fallback": "https://api-backup.example.com/v2/gateway"\n' +
+'  },\n' +
+'  "features": {\n' +
+'    "autoSave": false,\n' +
+'    "maxLines": 60000,\n' +
+'    "theme": "light",\n' +
+'    "historyLimit": 20\n' +
+'  },\n' +
+'  "logging": {\n' +
+'    "level": "info",\n' +
+'    "pretty": true,\n' +
+'    "redact": ["token", "secret"]\n' +
+'  },\n' +
+'  "notifications": {\n' +
+'    "enabled": true,\n' +
+'    "channels": ["email", "webhook"],\n' +
+'    "retry": 2\n' +
+'  },\n' +
+'  "cache": {\n' +
+'    "driver": "memory",\n' +
+'    "ttl": 300\n' +
+'  },\n' +
+'  "exclude": [\n' +
+'    "node_modules",\n' +
+'    "dist",\n' +
+'    "coverage"\n' +
+'  ]\n' +
+'}\n';
+
+  var SAMPLE_B =
+'{\n' +
+'  "name": "text-diff",\n' +
+'  "version": "1.2.0",\n' +
+'  "description": "纯前端的在线文本对比工具",\n' +
+'  "keywords": ["diff", "compare", "text", "merge"],\n' +
+'  "author": "MidAug",\n' +
+'  "license": "MIT",\n' +
+'  "funding": "https://github.com/sponsors/midaug",\n' +
+'  "homepage": "https://example.com",\n' +
+'  "engines": {\n' +
+'    "node": ">=20"\n' +
+'  },\n' +
+'  "dependencies": {\n' +
+'    "chalk": "^5.4.1",\n' +
+'    "dayjs": "^1.11.10"\n' +
+'  },\n' +
+'  "devDependencies": {\n' +
+'    "rollup": "^4.9.6",\n' +
+'    "eslint": "^9.17.0"\n' +
+'  },\n' +
+'  "scripts": {\n' +
+'    "dev": "rollup -c -w",\n' +
+'    "build": "rollup -c",\n' +
+'    "lint": "eslint src",\n' +
+'    "test": "node --test test.js"\n' +
+'  },\n' +
+'  "repository": {\n' +
+'    "type": "git",\n' +
+'    "url": "https://github.com/midaug/text-diff.git"\n' +
+'  },\n' +
+'  "endpoints": {\n' +
+'    "gateway": "https://api.example.com/v2/gateway/execute-intent?tenant=midaug&region=cn-north-1&trace=1&retry=3&timeout=60000&signature=abc123def456&lang=zh-CN&unit=ms",\n' +
+'    "fallback": "https://api-backup.example.com/v2/gateway"\n' +
+'  },\n' +
+'  "features": {\n' +
+'    "autoSave": false,\n' +
+'    "maxLines": 120000,\n' +
+'    "theme": "light",\n' +
+'    "historyLimit": 50\n' +
+'  },\n' +
+'  "logging": {\n' +
+'    "level": "debug",\n' +
+'    "pretty": true\n' +
+'  },\n' +
+'  "notifications": {\n' +
+'    "enabled": true,\n' +
+'    "channels": ["email", "webhook"],\n' +
+'    "retry": 5\n' +
+'  },\n' +
+'  "cache": {\n' +
+'    "driver": "redis",\n' +
+'    "ttl": 600\n' +
+'  },\n' +
+'  "exclude": [\n' +
+'    "node_modules",\n' +
+'    "dist"\n' +
+'  ]\n' +
+'}\n';
+
+  /* ============================================================
+     10. 启动
+     ============================================================ */
+
+  ROW_H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row")) || 18;
+  CHAR_W = measureCharW();
+  optCase = $("optCase").checked;
+  optWs = $("optWs").checked;
+  optTrail = $("optTrail").checked;
+  optBlank = $("optBlank").checked;
+  gran = $("granSel").value;
+
+  updateMeta();
+  runDiff(true);
+})();
+</script>
+</body>
+</html>
