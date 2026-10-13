@@ -849,8 +849,16 @@
     const need = Math.max(0, last - first);
 
     for (let i = 0; i < need; i++) getRow(i);
-    for (let i = need; i < pool.length; i++) pool[i].style.display = "none";
-    for (let i = 0; i < need; i++) pool[i].style.display = "";
+    // display 值没变就不再写：fullMode（4000 行）退回虚拟滚动后，
+    // 每次滚动循环 4000 次写 style 是纯浪费
+    for (let i = need; i < pool.length; i++) {
+      const el = pool[i];
+      if (el._shown !== false) { el.style.display = "none"; el._shown = false; }
+    }
+    for (let i = 0; i < need; i++) {
+      const el = pool[i];
+      if (el._shown !== true) { el.style.display = ""; el._shown = true; }
+    }
 
     // 先把这一屏全部写进 DOM，再统一读回尺寸：避免每行触发一次强制布局
     for (let i = 0; i < need; i++) {
@@ -1061,13 +1069,20 @@
   });
 
   function select(n) {
+    const prev = selected;
     selected = n;
     pathBox.textContent = pathOf(n);
     statusText.textContent = isObj(n.raw)
       ? (Array.isArray(n.raw) ? "array" : "object") + " · " + childCount(n.raw) + " 项"
       : (n.raw === null ? "null" : typeof n.raw);
     statusText.className = "";
-    render();
+    // fullMode 下整篇已在 DOM，选中态只需更新受影响行的类名，
+    // 不必为了一个高亮全量重绘 4000 行并重读尺寸
+    if (fullMode) {
+      for (const el of pool) {
+        if (el._n === prev || el._n === n) el.classList.toggle("sel", el._n === n);
+      }
+    } else render();
   }
 
   function toggle(n) {
@@ -1195,7 +1210,8 @@
   }
   const fmtBytes = n => n < 1024 ? n + " B"
     : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB"
-    : (n / 1048576).toFixed(2) + " MB";
+    : n < 1073741824 ? (n / 1048576).toFixed(2) + " MB"
+    : (n / 1073741824).toFixed(2) + " GB";
   const fmtMs = ms => (ms < 10 ? ms.toFixed(1) : Math.round(ms)) + "ms";
 
   function setStatus(msg, isErr) { statusText.textContent = msg; statusText.className = isErr ? "err" : ""; }

@@ -754,6 +754,10 @@
      渲染时永远用原始文本 —— 否则用户会看到被改过的内容。 */
   function keyOf(s) {
     var t = s;
+    /* 与 readFile 的 CRLF 归一化对齐：粘贴路径不做归一化，
+       Windows 来源的每行末尾会残留 \r，与 LF 侧对比时每行都不等，
+       D 直接爆到 N+M 且两个「忽略空白」选项的正则都不匹配 \r，救不回来。 */
+    if (t.charCodeAt(t.length - 1) === 13) t = t.slice(0, -1);
     if (optTrail) t = t.replace(/[ \t]+$/, "");
     if (optWs) t = t.replace(/[ \t]+/g, " ").replace(/^ | $/g, "");
     /* 「忽略空行」的做法是让所有只含空白的行共享同一个 key，于是它们
@@ -803,6 +807,7 @@
       var c = s.charCodeAt(i), j = i;
       if (isWordChar(c)) { while (j < n && isWordChar(s.charCodeAt(j))) j++; }
       else if (isSpaceCh(c)) { while (j < n && isSpaceCh(s.charCodeAt(j))) j++; }
+      else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < n) { j = i + 2; } /* emoji 等增补平面字符是代理对，不能拆开 */
       else { j = i + 1; }
       out.push(s.slice(i, j));
       i = j;
@@ -834,7 +839,7 @@
 
     var A, B;
     if (gran === "char") {
-      A = l.split(""); B = r.split("");
+      A = Array.from(l); B = Array.from(r); /* 按码点切分，emoji 不被代理对拆开 */
     } else {
       A = tokenize(l); B = tokenize(r);
     }
@@ -1065,6 +1070,11 @@
     for (var i = 0; i < lines.length; i++) {
       var d = over ? null : deco[i];
       var cls = d && d.cls ? d.cls : "";
+      /* ★ 这里**不能**为了省时间把超长行截断显示。高亮层的高度必须与 textarea
+         逐像素一致（行号位置、位置表 lineTop/lineHt、接缝带、滚动联动全建立在
+         它上面）；截断会让这一行变矮，其后所有行整体上移 —— 实测 3000 行里夹
+         一行 20 万字符，高亮层比 textarea 矮 25704px，行号与正文彻底错位。
+         真正挡住「超大文本」的是上面的 HARD_MAX_BYTES 字节守卫，不是这里。 */
       var html = (d && d.html != null) ? d.html : esc(lines[i]);
       buf.push('<div class="bl' + (cls ? " " + cls : "") + '">' +
                '<span class="ln">' + (i + 1) + "</span>" + html + "</div>");
@@ -1524,6 +1534,8 @@
     var tries = [];
     if (!optTrail) tries.push({ id: "optTrail", note: "已忽略行尾空白" });
     if (!optWs) tries.push({ id: "optWs", note: "已忽略空白差异" });
+    var savedCoarse = diffCoarse;   /* myers(isLine=true) 会把 diffCoarse 清掉，
+                                       全部尝试失败还原口径时要把原标志带回来 */
     for (var i = 0; i < tries.length; i++) {
       var prevT = optTrail, prevW = optWs;
       if (tries[i].id === "optTrail") optTrail = true; else optWs = true;
@@ -1535,8 +1547,15 @@
       }
       optTrail = prevT; optWs = prevW;   /* 没救回来就把口径还原 */
     }
+    diffCoarse = savedCoarse;
     return null;
   }
+
+  /* 超长单行（minified JS / base64 等）行数为 1，能绕过行数守卫，
+     但 esc() 多次正则复制 + innerHTML 解析会冻结页面，必须按字节兜底。
+     ★ 只做「拒绝」，不做「截断显示」—— 截断会破坏高亮层与 textarea 的高度一致
+     （见 renderPane 里的说明）。 */
+  var HARD_MAX_BYTES = 32 * 1024 * 1024;   /* 两侧合计 32 MB */
 
   function runDiff(silent) {
     clearTimeout(autoTmr);
@@ -1554,6 +1573,12 @@
       toast("文本超过 " + fmtNum(HARD_MAX_LINES) + " 行，请先分段对比");
       /* 同上：拒绝对比不等于可以留着上一份的高亮层 ——
          高亮层与位置表必须对应 textarea 里的当前文本。 */
+      dropDiff();
+      return;
+    }
+
+    if (L.length + R.length > HARD_MAX_BYTES) {
+      toast("文本过大（合计超过 " + Math.round(HARD_MAX_BYTES / 1048576) + " MB），请先分段对比");
       dropDiff();
       return;
     }
@@ -1878,7 +1903,12 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "text-diff-" + new Date().toISOString().slice(0, 10) + ".diff";
+    /* 用本地日期命名；toISOString 是 UTC，UTC+8 晚 8 点后日期会少一天 */
+    var d = new Date();
+    var ymd = d.getFullYear() + "-" +
+              ("0" + (d.getMonth() + 1)).slice(-2) + "-" +
+              ("0" + d.getDate()).slice(-2);
+    a.download = "text-diff-" + ymd + ".diff";
     document.body.appendChild(a);
     a.click();
     a.remove();

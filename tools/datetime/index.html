@@ -391,7 +391,8 @@
     // 带时区标识的交给原生解析（Z / +08:00 / -05:00）
     if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s) && /[T\s]/.test(s)) {
       const d = new Date(s);
-      if (!isNaN(d.getTime())) return { date: d, utc: /[zZ]$/.test(s) };
+      // +08:00 这类偏移量输入同样已按其时区换算，也要给「已换算」提示
+      if (!isNaN(d.getTime())) return { date: d, utc: /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s) };
     }
 
     // 中文写法
@@ -443,29 +444,49 @@
      ============================================================ */
 
   /* 把 a→b 的间隔拆成「年 / 月 / 天 / 时 / 分 / 秒 / 毫秒」。
-     月、天按自然日历借位（借位时用 b 所在月份的上一个月天数），
-     所以 1-31 到 3-01 会得到「1 个月 1 天」而不是「29 天」。 */
+     月、天按自然日历借位，口径与 addUnit 一致：a 加整月后按目标月实际天数夹紧
+     （如 1-31 加一个月是 2-28），所以 1-31 到 3-01 会得到「1 个月 1 天」。
+     早期实现按「b 上月天数」单次借位，借到 2 月时仍会得到负天数
+     （如 -30 + 28 = -2），负值被渲染处过滤后天数直接偏少。 */
   function diffParts(a, b) {
     const sign = b < a ? -1 : 1;
     if (sign < 0) { const t = a; a = b; b = t; }
+
+    /* a 所在「日」夹到 a.year / a.month + m 那个月的锚点日期 */
+    const aDay = a.getDate();
+    const anchorOf = m => {
+      const y = a.getFullYear(), mo = a.getMonth() + m;
+      const last = new Date(y, mo + 1, 0).getDate();
+      return new Date(y, mo, Math.min(aDay, last));
+    };
+    /* 两个日历日期之间的自然日数（各自去掉时分秒；跨夏令时四舍五入到整日） */
+    const dayDiff = (x, y) => Math.round(
+      (new Date(y.getFullYear(), y.getMonth(), y.getDate())
+     - new Date(x.getFullYear(), x.getMonth(), x.getDate())) / 86400000);
+
+    /* 余下的钟面差：时 / 分 / 秒 / 毫秒逐级借位，小时的借位会吃掉一天 */
     let ms = b.getMilliseconds() - a.getMilliseconds();
     let s  = b.getSeconds()      - a.getSeconds();
     let mi = b.getMinutes()      - a.getMinutes();
     let h  = b.getHours()        - a.getHours();
-    let d  = b.getDate()         - a.getDate();
-    let m  = b.getMonth()        - a.getMonth();
-    let y  = b.getFullYear()     - a.getFullYear();
     if (ms < 0) { ms += 1000; s--; }
     if (s  < 0) { s  += 60;  mi--; }
     if (mi < 0) { mi += 60;  h--; }
-    if (h  < 0) { h  += 24;  d--; }
-    if (d  < 0) {
-      // 借「b 的上一个月」的天数
-      d += new Date(b.getFullYear(), b.getMonth(), 0).getDate();
+    const hNeg = h < 0;                     // b 的钟面早于 a：日差要再减一
+    if (hNeg) h += 24;
+
+    let m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+    while (m > 0 && anchorOf(m) > b) m--;   // 锚点超过 b 就退一个月（月末夹紧场景）
+    let d = dayDiff(anchorOf(m), b);
+    if (hNeg) d--;
+    if (d < 0 && m > 0) {                   // 小时借位把日差借成负 → 月退一步重算
       m--;
+      d = dayDiff(anchorOf(m), b);
+      if (hNeg) d--;
     }
-    if (m < 0) { m += 12; y--; }
-    return { y, m, d, h, mi, s, ms, sign };
+    if (d < 0) d = 0;
+    const y = Math.floor(m / 12);
+    return { y, m: m % 12, d, h, mi, s, ms, sign };
   }
 
   /* ============================================================
@@ -557,14 +578,25 @@
     return ticking ? Date.now() : pausedAt;
   }
 
+  let nowTextBuilt = false;
   function paintNow() {
     const ms = currentTs();
     const d = new Date(ms);
     $("nowTs").textContent = tsLen === 13 ? String(ms) : String(Math.floor(ms / 1000));
-    $("nowText").innerHTML =
-      fmt(d) + "　" + week(d)
-      + '　<span style="color:var(--text-3)">UTC</span> ' + fmtUTC(d)
-      + '　<span style="color:var(--text-3)">时区</span> ' + tzOffsetText();
+    /* 每帧重建 innerHTML 会带来每秒约 60 次 HTML 解析 + 全量 DOM 替换；
+       改为首次搭好骨架，之后只更新文本节点，视觉输出完全一致。 */
+    const box = $("nowText");
+    if (!nowTextBuilt) {
+      box.innerHTML = '<span class="nt-main"></span>　<span class="nt-week"></span>'
+        + '　<span style="color:var(--text-3)">UTC</span> <span class="nt-utc"></span>'
+        + '　<span style="color:var(--text-3)">时区</span> <span class="nt-tz"></span>';
+      nowTextBuilt = true;
+    }
+    const c = box.children;
+    c[0].textContent = fmt(d);
+    c[1].textContent = week(d);
+    c[3].textContent = fmtUTC(d);
+    c[5].textContent = tzOffsetText();
   }
 
   function tzOffsetText() {

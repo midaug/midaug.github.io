@@ -424,20 +424,7 @@
                     ji: [],
                     desc: ''
                 };
-                day.month = d.getMonth()
-                day.day = d.getDay()
-                day.lunarMonth = lunar.getMonthInChinese()
-                day.lunarDay = lunar.getDayInChinese()
-                day.yearGanZhi = lunar.getYearInGanZhi()
-                day.yearShengXiao = lunar.getYearShengXiao()
-                day.monthGanZhi = lunar.getMonthInGanZhi()
-                day.dayGanZhi = lunar.getDayInGanZhi()
-                day.ymd = ymd
-                day.isToday = ymd == now.toYmd()
                 day.isSelected = ymd == state.selected.ymd
-                if (day.isToday && state.selected.day === 0) {
-                    state.selected = day
-                }
                 let jr = [];
                 const solarFestivals = d.getFestivals()
                 solarFestivals.forEach(f => {
@@ -558,7 +545,9 @@
                         li.click(() => {
                             state.selected = day;
                             $('#calendarBody li').removeClass('selected');
-                            $("#" + state.selected.ymd).addClass('selected');
+                            // 直接用闭包里的 li 引用；ymd 以数字开头，
+                            // 拼 "#2026-10-10" 这类选择器在原生 querySelector 下是非法的
+                            li.addClass('selected');
                             updateSelectedUI();
                         });
                         ol.append(li);
@@ -596,7 +585,9 @@
                 render();
             });
             $('#yearInput').on('change', function () {
-                state.year = parseInt($(this).val());
+                const y = parseInt($(this).val(), 10);
+                if (isNaN(y)) { $(this).val(state.year); return; } // 清空输入时回弹，避免 NaN 传给渲染
+                state.year = y;
                 render();
             });
             $('#monthSelect').on('change', function () {

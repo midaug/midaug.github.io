@@ -496,17 +496,20 @@
     if (sec == null || !isFinite(sec) || sec < 0) return "—";
     if (sec === 0) return "0 秒";
     if (sec < 1) return fmtNum(sec * 1000, 3) + " 毫秒";
+    // 先按输出精度量化再拆分：sec 来自浮点除法，3599.995 之类若先拆后四舍五入
+    // 会出现 "59 分 60 秒"；先取整则自然进位成 "1 小时"
+    sec = sec < 60 ? Math.round(sec * 100) / 100 : Math.round(sec);
     const d = Math.floor(sec / 86400);
     const h = Math.floor((sec % 86400) / 3600);
     const m = Math.floor((sec % 3600) / 60);
     const s = sec % 60;
     const out = [];
-    if (d) out.push(d + " 天");
+    if (d) out.push(group(String(d)) + " 天");
     if (h) out.push(h + " 小时");
     if (m) out.push(m + " 分");
     if (out.length < 3) {
       // 已经有「天 / 小时 / 分」时秒取整；只有秒时才保留两位小数
-      const sv = out.length === 0 ? +s.toFixed(2) : Math.round(s);
+      const sv = out.length === 0 ? s : Math.round(s);
       if (sv || out.length === 0) out.push(sv + " 秒");
     }
     return out.join(" ");
@@ -520,6 +523,7 @@
   function readNum(el) {
     const raw = el.value.trim().replace(/[,\s_]/g, "");
     if (!raw) return null;
+    if (/^0[xbo]/i.test(raw)) return NaN;  // Number() 会把 0x1F/0b101 当合法值，多半是误输入
     const v = Number(raw);
     return isFinite(v) ? v : NaN;
   }

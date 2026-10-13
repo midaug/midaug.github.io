@@ -681,7 +681,8 @@
 
   /* ================= 麦克风：采集 + 电平 + 波形 ================= */
 
-  var micStream = null, micAC = null, micAn = null, micSrc = null;
+  var micStream = null, micAC = null, micAn = null, micSrc = null, micMute = null;
+  var micGen = 0;   /* 与 camGen 对称：权限弹窗期间的并发开启只让最后一个生效 */
   var micRaf = 0, micBuf = null;   /* micBuf：波形用的时域样本缓冲，与录音计时器无关 */
 
   function micOpen() {
@@ -692,11 +693,23 @@
     }
     var dev = $("micSel").value;
     var want = dev ? { audio: { deviceId: { exact: dev } } } : { audio: true };
-    return navigator.mediaDevices.getUserMedia(want).catch(function () {
-      /* 指定设备可能已被拔掉，退回默认设备再试一次 */
-      $("micSel").value = "";
-      return navigator.mediaDevices.getUserMedia({ audio: true });
+    var gen = ++micGen;   /* 弹权限框期间的第二次调用使本续体作废 */
+    return navigator.mediaDevices.getUserMedia(want).catch(function (e) {
+      /* 指定设备可能已被拔掉，退回默认设备再试一次。
+         只对「设备不存在 / 不满足约束」类错误重试；
+         用户拒绝授权（NotAllowedError）时再弹一次只会更烦。 */
+      if (e && (e.name === "NotFoundError" || e.name === "OverconstrainedError" || e.name === "NotReadableError")) {
+        $("micSel").value = "";
+        return navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      throw e;
     }).then(function (stream) {
+      /* 两次 gUM 都 resolve 时后到的会覆盖 micStream；先到的流若不主动
+         stop，麦克风会一直占着（指示灯常亮），音频节点对也会泄漏 */
+      if (gen !== micGen) {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        return false;
+      }
       micStream = stream;
       var AC = window.AudioContext || window.webkitAudioContext;
       if (AC) {
@@ -710,11 +723,11 @@
           micSrc.connect(micAn);
           /* 必须给 analyser 一条通往 destination 的路径，否则部分浏览器不驱动它算数据。
              但直接连 destination 会把麦克风原声放出来形成啸叫，所以中间串一个 0 增益。 */
-          var mute = micAC.createGain();
-          mute.gain.value = 0;
-          micAn.connect(mute);
-          mute.connect(micAC.destination);
-        } catch (e) { micAn = null; }
+          micMute = micAC.createGain();
+          micMute.gain.value = 0;
+          micAn.connect(micMute);
+          micMute.connect(micAC.destination);
+        } catch (e) { micAn = null; micMute = null; }
       }
       $("micDot").className = "dot live";
       drawWave();
@@ -726,9 +739,13 @@
   }
 
   function micClose() {
+    micGen++;   /* 让还在路上的 getUserMedia 续体作废，避免关闭后流又挂回来 */
     if (micRaf) { cancelAnimationFrame(micRaf); micRaf = 0; }
     if (micSrc) { try { micSrc.disconnect(); } catch (e) {} micSrc = null; }
-    micAn = null;
+    /* analyser 与 mute 节点已连进音频图（直达 destination），不 disconnect 的话
+       会被音频图持有、无法 GC —— 每开/关一次麦克风就泄漏一对节点 */
+    if (micAn) { try { micAn.disconnect(); } catch (e) {} micAn = null; }
+    if (micMute) { try { micMute.disconnect(); } catch (e) {} micMute = null; }
     if (micStream) {
       micStream.getTracks().forEach(function (t) { t.stop(); });
       micStream = null;
@@ -749,11 +766,13 @@
   }
 
   /* 波形 + 电平：一帧内同时算时域波形与 RMS，避免跑两遍循环。 */
+  var waveFont = null;   /* 字体不变，缓存起来；每帧 getComputedStyle 会强制样式计算 */
   function drawWave() {
     var cv = $("micWave");
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var w = cv.clientWidth, h = cv.clientHeight;
-    if (!w || !h) { micRaf = 0; return; }
+    /* 画布暂时不可见时不画，但保持 rAF 链不断 —— 否则窗口恢复后波形永久停摆 */
+    if (!w || !h) { micRaf = requestAnimationFrame(drawWave); return; }
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
       cv.width = Math.round(w * dpr);
       cv.height = Math.round(h * dpr);
@@ -762,7 +781,10 @@
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
-    var font = '12px ' + (getComputedStyle(document.body).fontFamily || "monospace");
+    if (waveFont === null) {
+      waveFont = '12px ' + (getComputedStyle(document.body).fontFamily || "monospace");
+    }
+    var font = waveFont;
 
     if (!micAn) {
       g.fillStyle = "#94a0b0";
@@ -849,9 +871,14 @@
 
   function recIsRecording() { return !!mr && mr.state === "recording"; }
 
+  var recGen = 0;   /* 录音会话代号：权限弹窗期间的第二次点击会让旧续体作废 */
   function recStart() {
     if (recIsRecording()) return;
+    var gen = ++recGen;
     micOpen().then(function (ok) {
+      /* 弹权限框期间可能又被点了一次：旧续体直接作废，否则会创建两个
+         MediaRecorder，后者覆盖前者，旧的成为孤儿 */
+      if (gen !== recGen) return;
       if (!ok) return;
       if (!window.MediaRecorder) { toast("当前浏览器不支持录音（MediaRecorder 不可用）"); return; }
       mrMime = pickMime();
@@ -941,8 +968,15 @@
   function recFallbackAudio() {
     if (!recBlob) return;
     renderRecMeta(null);   /* 拿不到采样率/声道，但格式与大小仍可显示 */
+    /* 旧的回退 Audio 与它的 blob URL 先回收，避免反复录音时越积越多 */
+    if (window.__recFallback && window.__recFallback.__url) {
+      try { window.__recFallback.pause(); } catch (e) {}
+      URL.revokeObjectURL(window.__recFallback.__url);
+      window.__recFallback = null;
+    }
     var url = URL.createObjectURL(recBlob);
     var a = new Audio(url);
+    a.__url = url;
     window.__recFallback = a;
     $("btnPlay").disabled = false;
     $("recSeek").disabled = true;
@@ -1066,7 +1100,7 @@
 
   /* ================= 摄像头 ================= */
 
-  var camStream = null, camFacing = "user";
+  var camStream = null, camFacing = "user", camGen = 0;
 
   function camOpen() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1074,6 +1108,7 @@
       return Promise.resolve(false);
     }
     camClose();
+    var gen = ++camGen;   /* 权限弹窗期间的第二次点击使本续体作废 */
     var dev = $("camSel").value;
     var v = { width: { ideal: 1280 }, height: { ideal: 720 } };
     if (dev) v.deviceId = { exact: dev };
@@ -1086,6 +1121,12 @@
       var v2 = dev ? { deviceId: { exact: dev } } : true;
       return navigator.mediaDevices.getUserMedia({ video: v2, audio: false });
     }).then(function (stream) {
+      /* 两次 gUM 都 resolve 时，后到的会覆盖 camStream；
+         先到的流若不主动 stop，摄像头会一直占着（指示灯常亮） */
+      if (gen !== camGen) {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        return false;
+      }
       camStream = stream;
       var el = $("cam");
       el.srcObject = stream;
@@ -1093,6 +1134,10 @@
       if (p && p.catch) p.catch(function () {});
 
       var track = stream.getVideoTracks()[0];
+      /* 设备被拔出 / 被其它程序抢占时 track 会 ended，同步把 UI 关回去 */
+      if (track) {
+        track.onended = function () { if (camStream === stream) camClose(); };
+      }
       var st = (track && track.getSettings) ? track.getSettings() : {};
       $("camWrap").classList.add("live");
       $("camBadge").hidden = false;
@@ -1119,6 +1164,7 @@
   }
 
   function camClose() {
+    camGen++;   /* 让还在路上的 getUserMedia 续体作废，避免关闭后流又挂回来 */
     if (camStream) {
       camStream.getTracks().forEach(function (t) { t.stop(); });
       camStream = null;

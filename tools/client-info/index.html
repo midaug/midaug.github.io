@@ -1,60 +1,277 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/jquery/3.1.1/jquery.min.js"></script>
-    <style>
-        table td{
-            vertical-align: top;
-        }
-        #ua{
-            width: 1024px;
-            height: 50px;
-        }
-        #meta{
-            width: 1024px;
-            height: 200px;
-        }
-        textarea{
-            font-size: 12px;
-            font-weight: 600;
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>客户端信息查看</title>
+<meta name="theme-color" content="#f6f7f9" />
+<!-- 原来用的是 lf9-cdn-tos.bytecdntp.com 上的 jQuery 3.1.1，该地址已 404
+     （整页静默失效：$ 未定义 → ready 回调抛错 → 什么都不显示）。
+     换成 fastly.jsdelivr.net 的 3.7.1，并把 bootcdn 作为兜底 ——
+     任一 CDN 挂掉都不会再白屏。两个地址 ssq 页已在用。 -->
+<script src="https://fastly.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"><\/script>');</script>
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    /* 数值强调色，与 JSON 工具的语法高亮同一批 */
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 6px;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; }
+  .push { margin-left: auto; }
+
+  /* ===== 控件 ===== */
+  button {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  button:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* ===== 主体 ===== */
+  main {
+    flex: 1; min-height: 0; overflow: auto;
+    padding: 14px; display: grid; gap: 12px; align-content: start;
+    width: 100%; max-width: 1120px; margin: 0 auto;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  textarea {
+    display: block; width: 100%; resize: vertical;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; font: 12px/1.65 var(--mono);
+    outline: 0; cursor: text;
+    transition: border-color .15s, box-shadow .15s;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+  textarea::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel-2); }
+  textarea::-webkit-scrollbar-track { background: transparent; }
+
+  /* 时间戳：本页唯一会跳动的值，给一点强调 */
+  #time {
+    color: var(--accent); font-weight: 700; font-size: 15px;
+    letter-spacing: .5px; font-variant-numeric: tabular-nums;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0; font-size: 13px;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    header { gap: 8px; }
+    .stat { font-size: 11px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px 12px; }
+  }
+</style>
 </head>
-
 <body>
-    <table>
-        <tr>
-            <td>time: </td>
-            <td><textarea id="time"></textarea></td>
-        </tr>
-        <tr>
-            <td>ua: </td>
-            <td><textarea id="ua"></textarea></td>
-        </tr>
-        <tr>
-            <td>meta: </td>
-            <td><textarea id="meta"></textarea></td>
-        </tr>
-    </table>
-</body>
-<script>
-    function start() {
-        $("#time").val(new Date().getTime());
-        $("#ua").val(window.navigator.userAgent);
-        $("#meta").val("");
-        $("meta").each(function (index) {
-            $("#meta").val($("#meta").val() + $(this).prop('outerHTML') + "\n");
-        });
-    }
-    $(document).ready(function () {
-        start();
-        setInterval(function () {
-            start();
-        }, 1000);
 
+<header>
+  <div class="brand">Client<span>Info</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="env">—</span>
+  <button class="mini push" id="btnCopyAll" title="把时间戳 / UA / meta 三段一起复制">复制全部</button>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>
+      时间戳
+      <span class="hint">毫秒，每秒刷新</span>
+      <span class="right"><button class="mini" data-copy="time">复制</button></span>
+    </h2>
+    <textarea id="time" rows="1" readonly spellcheck="false"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>
+      User-Agent
+      <span class="hint">浏览器标识</span>
+      <span class="right"><button class="mini" data-copy="ua">复制</button></span>
+    </h2>
+    <textarea id="ua" rows="3" readonly spellcheck="false"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>
+      页面 meta
+      <span class="hint">当前页面全部 &lt;meta&gt; 标签</span>
+      <span class="right"><button class="mini" data-copy="meta">复制</button></span>
+    </h2>
+    <textarea id="meta" rows="8" readonly spellcheck="false"></textarea>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  /* 两个 CDN 都没拿到时别让页面静默空白 —— 这个页面上一轮就是因为
+     CDN 悄悄 404 而整页失效的（$ 未定义 → ready 回调抛错 → 什么都不显示）。
+     至少把原因写出来，别让人对着空白猜。 */
+  if (!window.jQuery) {
+    document.body.innerHTML =
+      '<p style="font:14px/1.7 -apple-system,BlinkMacSystemFont,sans-serif;'
+      + 'padding:16px;color:#c0392b">jQuery 加载失败（两个 CDN 都不可达）。'
+      + '请检查网络后刷新重试。</p>';
+    return;
+  }
+
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  /* 顶栏那句环境信息：视口 / 像素比 / 时区 —— 调 UA 时最常一起看的三样 */
+  function envText() {
+    var o = -new Date().getTimezoneOffset();
+    var sign = o < 0 ? "-" : "+";
+    o = Math.abs(o);
+    return window.innerWidth + "×" + window.innerHeight
+      + " · DPR " + (window.devicePixelRatio || 1)
+      + " · UTC" + sign + pad2(Math.floor(o / 60)) + ":" + pad2(o % 60);
+  }
+
+  // UA 和 meta 是不变量，只在加载时写一次；
+  // 之前每秒全量重写会清掉用户正在选择的文本，导致无法复制（本页核心用途）
+  function start() {
+    $("#time").val(new Date().getTime());
+    $("#ua").val(window.navigator.userAgent);
+    $("#meta").val("");
+    $("meta").each(function () {
+      $("#meta").val($("#meta").val() + $(this).prop("outerHTML") + "\n");
     });
+    $("#env").text(envText());
+  }
+
+  // 只有时间戳是变量，每秒单独刷新
+  function tick() { $("#time").val(new Date().getTime()); }
+
+  var toastTmr = 0;
+  function toast(msg) {
+    var $t = $("#toast");
+    $t.text(msg).addClass("show");
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(function () { $t.removeClass("show"); }, 1600);
+  }
+
+  function legacyCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择后复制");
+  }
+
+  function copyText(text, label) {
+    var done = function () { toast(label + " 已复制"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { legacyCopy(text, done); });
+    } else {
+      legacyCopy(text, done);
+    }
+  }
+
+  $(function () {
+    start();
+    setInterval(tick, 1000);
+
+    // 顶栏那句环境信息随窗口变化重算
+    $(window).on("resize", function () { $("#env").text(envText()); });
+
+    // 每张卡片右上角的「复制」
+    $("[data-copy]").on("click", function () {
+      var id = $(this).data("copy");
+      var label = { time: "时间戳", ua: "User-Agent", meta: "meta" }[id] || id;
+      copyText($("#" + id).val(), label);
+    });
+
+    // 一次性把三段都带走，格式对齐「标签: 值」
+    $("#btnCopyAll").on("click", function () {
+      var all = "time: " + $("#time").val() + "\n"
+              + "ua: " + $("#ua").val() + "\n"
+              + "meta:\n" + $("#meta").val();
+      copyText(all, "全部信息");
+    });
+  });
+})();
 </script>
 
+</body>
 </html>

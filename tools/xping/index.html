@@ -10,10 +10,25 @@
     <button onclick="directDownload()">直接下载</button>
     <button onclick="openInNewTab()">新标签页打开</button>
     <button onclick="tryMultipleMirrors()">尝试多个镜像</button>
+    <p id="mirrorTip" style="color:#666"></p>
     
     <script>
         function directDownload() {
-            window.location.href = "https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh";
+            // jsdelivr 对 .sh 返回 text/plain，location.href 会"打开"而非"下载"；
+            // 改为 fetch blob 后触发保存
+            fetch("https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh")
+                .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "xping.sh";
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                })
+                .catch(() => { alert("下载失败，请检查网络后重试"); });
         }
         
         function openInNewTab() {
@@ -21,6 +36,7 @@
         }
         
         async function tryMultipleMirrors() {
+            const tip = document.getElementById("mirrorTip");
             const mirrors = [
                 "https://gitee.com/midaug/files/raw/master/shell/xping.sh",
                 "https://cdn.jsdelivr.net/gh/midaug/files/shell/xping.sh",
@@ -30,9 +46,11 @@
             
             for (const url of mirrors) {
                 try {
-                    // 测试连接
-                    const response = await fetch(url, { method: 'HEAD' });
+                    tip.textContent = "正在检测镜像: " + url;
+                    // 加 3 秒超时，避免一个挂起的镜像阻塞整个探测循环
+                    const response = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
                     if (response.ok) {
+                        tip.textContent = "";
                         window.open(url, "_blank");
                         return;
                     }
@@ -40,10 +58,12 @@
                     console.log(`镜像不可用: ${url}`);
                 }
             }
+            tip.textContent = "";
             alert('所有镜像都不可用，请检查网络设置或使用VPN');
         }
 
-        tryMultipleMirrors();
+        // 注意：不能在页面加载时自动执行 —— 无用户手势时 window.open 会被
+        // 浏览器静默拦截，页面表现为"什么都没发生"。只在用户点击按钮时运行。
     </script>
 </body>
 </html>

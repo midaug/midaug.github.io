@@ -272,9 +272,16 @@
     }
 
     // 等待ssq.js加载完成并处理数据
+    var initAppRetries = 0;
     async function initApp() {
         // 检查数据是否已加载
         if (typeof window.ssqData === 'undefined') {
+            if (++initAppRetries > 100) { // 最多等待10秒
+                console.error('开奖数据加载超时');
+                dataContainer.html('<div class="alert alert-warning">开奖数据加载失败，请刷新重试</div>');
+                $('#up-btn').removeAttr('disabled');
+                return;
+            }
             setTimeout(initApp, 100); // 如果还没加载完成，等待100ms后再次检查
             return;
         }
@@ -340,18 +347,51 @@
     $(document).ready(function () {
         initApp();
 
+        var scrollPending = false;
         $(window).scroll(function () {
-            if ($(document).scrollTop() + $(window).height() >= $(document).height() - 50) {
-                loadMore(pageSize);
-            }
+            if (scrollPending) return;
+            scrollPending = true;
+            setTimeout(function () {
+                scrollPending = false;
+                if ($(document).scrollTop() + $(window).height() >= $(document).height() - 50) {
+                    loadMore(pageSize);
+                }
+            }, 200);
         });
     });
 
     function validateNumber(num, min, max) {
         if (isNaN(num)) return false;
-        var intNum = parseInt(num);
+        // 严格校验：必须是纯数字（防止 parseInt 把 "12abc" 解析成 12）
+        var s = String(num);
+        if (!/^\d{1,2}$/.test(s)) return false;
+        var intNum = parseInt(s);
         return intNum >= min && intNum <= max;
     }
+
+    // HTML 转义：OCR 原文等不可信内容进入 innerHTML 前必须转义
+    function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    // 补齐两位号码格式（用于比较时统一两侧格式）
+    function pad2(v) {
+        var s = String(parseInt(v, 10));
+        return s.length < 2 ? ('0' + s) : s;
+    }
+
+    // 计算组合数 C(n, k)
+    function combCount(n, k) {
+        if (k < 0 || k > n) return 0;
+        var r = 1;
+        for (var i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+        return Math.round(r);
+    }
+
+    // 组合数安全上限，防止 OCR 误识别导致的组合爆炸（假死/OOM）
+    var MAX_COMBINATIONS = 20000;
 
     function renderResult(ssqData, fileInfo) {
         var html = '<div class="card shadow-sm"><div class="card-body">';
@@ -615,6 +655,12 @@
             var danRed = redParts[0]; // 胆码红球
             var tuoRed = redParts[1]; // 拖码红球
 
+            // 格式不完整时直接返回空结果，避免 parseNumberString(undefined) 抛 TypeError
+            if (!danRed || !tuoRed) {
+                console.warn('胆拖投注格式不完整:', code);
+                return result;
+            }
+
             // 解析胆码红球
             result.danRedBalls = parseNumberString(danRed, 2);
             result.redBalls = result.danRedBalls.slice(); // 复制数组
@@ -685,6 +731,16 @@
     function getCombinations(arr, size) {
         var result = [];
 
+        // 防止组合爆炸：C(30,6)≈59万，OCR误识别可导致页面假死/OOM
+        var est = combCount(arr.length, size);
+        if (est > MAX_COMBINATIONS) {
+            throw new Error('投注组合数过多(' + est + ')，请检查识别结果是否正确');
+        }
+        // k>n 或 k<0 时组合恒为空，直接返回（否则递归会枚举全部 2^n 个子集）
+        if (size > arr.length || size < 0) {
+            return result;
+        }
+
         function combine(subset, start) {
             if (subset.length === size) {
                 result.push(subset.slice());
@@ -737,16 +793,22 @@
     function checkSingleBetPrize(betResult, redBalls, winningBlue, ssqData) {
         var redMatchCount = 0;
 
+        // 中奖号码统一为两位补零格式后比较，避免 "7" 与 "07" 格式不一致导致漏判
+        var winRed = {};
+        for (var r = 0; r < redBalls.length; r++) {
+            winRed[pad2(redBalls[r])] = true;
+        }
+
         // 检查红球匹配数量
         for (let i = 1; i <= 6; i++) {
-            if (redBalls.indexOf(betResult['red' + i]) !== -1) {
+            if (winRed[pad2(betResult['red' + i])]) {
                 betResult['red' + i + 'f'] = true;
                 redMatchCount++;
             }
         }
 
         // 检查蓝球是否匹配
-        if (betResult.blue1 == winningBlue) {
+        if (pad2(betResult.blue1) === pad2(winningBlue)) {
             betResult.blue1f = true;
         }
 
@@ -762,16 +824,22 @@
     function checkCombinationPrize(comboResult, redBalls, winningBlue, ssqData) {
         var redMatchCount = 0;
 
+        // 中奖号码统一为两位补零格式后比较，避免 "7" 与 "07" 格式不一致导致漏判
+        var winRed = {};
+        for (var r = 0; r < redBalls.length; r++) {
+            winRed[pad2(redBalls[r])] = true;
+        }
+
         // 检查红球匹配数量
         for (let j = 0; j < comboResult.redBalls.length; j++) {
-            if (redBalls.indexOf(comboResult.redBalls[j]) !== -1) {
+            if (winRed[pad2(comboResult.redBalls[j])]) {
                 comboResult['red' + (j + 1) + 'f'] = true;
                 redMatchCount++;
             }
         }
 
         // 检查蓝球是否匹配
-        if (comboResult.blueBall == winningBlue) {
+        if (pad2(comboResult.blueBall) === pad2(winningBlue)) {
             comboResult.blue1f = true;
         }
 
@@ -895,10 +963,11 @@
         var betType = 'single'; // 默认单式
 
         // 检查是否为标准格式的投注代码（包含特殊符号）
-        if (code.includes('*') || code.includes('$')) {
-            betType = 'compound'; // 复式
-        } else if (code.includes('#')) {
+        // 注意：胆拖格式(A#0102$0304...&01)同时包含 # 和 $，必须先判断 # 否则胆拖会被误判为复式
+        if (code.includes('#')) {
             betType = 'drag'; // 胆拖
+        } else if (code.includes('*') || code.includes('$')) {
+            betType = 'compound'; // 复式
         } else if (typeof code === 'string' && code.length > 50) {
             // 如果是长字符串，可能是OCR文本
             betType = 'ocr_text';
@@ -1068,12 +1137,20 @@
         var redNumbers = redMatch[1].match(/\d{1,2}/g) || [];
         var blueNumbers = blueMatch[1].match(/\d{1,2}/g) || [];
 
-        // 转换为两位数格式
-        redNumbers = redNumbers.map(num => String(parseInt(num)).padStart(2, '0'));
-        blueNumbers = blueNumbers.map(num => String(parseInt(num)).padStart(2, '0'));
+        // 转换为两位数格式，并过滤掉不合法的号码（红球01-33、蓝球01-16，同时过滤OCR噪声）
+        redNumbers = redNumbers.map(num => String(parseInt(num)).padStart(2, '0'))
+            .filter(num => parseInt(num) >= 1 && parseInt(num) <= 33);
+        blueNumbers = blueNumbers.map(num => String(parseInt(num)).padStart(2, '0'))
+            .filter(num => parseInt(num) >= 1 && parseInt(num) <= 16);
 
         console.log("提取的红球:", redNumbers);
         console.log("提取的蓝球:", blueNumbers);
+
+        // 防止OCR误识别导致组合爆炸：数量超过正常复式票范围时放弃此解析路径
+        if (redNumbers.length > 20 || blueNumbers.length > 16) {
+            console.warn("红球/蓝球数量异常，放弃OCR复式解析:", redNumbers.length, blueNumbers.length);
+            return null;
+        }
 
         // 判断是否为复式投注（红球超过6个或蓝球超过1个）
         if (redNumbers.length > 6 || blueNumbers.length > 1) {
@@ -1223,7 +1300,7 @@
         var code = parseCode(text);
 
         if (!code) {
-            dataContainer.html('<div class="alert alert-danger">无法识别期号: ' + text + '</div>');
+            dataContainer.html('<div class="alert alert-danger">无法识别期号: ' + esc(text) + '</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1231,7 +1308,7 @@
         var ssqData = dataMap[code];
 
         if (!ssqData) {
-            dataContainer.html('<div class="alert alert-danger">未找到期号 ' + code + ' 的开奖数据</div>');
+            dataContainer.html('<div class="alert alert-danger">未找到期号 ' + esc(code) + ' 的开奖数据</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1551,20 +1628,14 @@
                 try {
                     // 使用Tesseract.js 7.0的新API
                     const worker = await initTesseractWorker();
-                    const result = await worker.recognize(compressedFile, {
-                        // 高级识别选项
-                        textDirection: 'auto', // 自动检测文本方向
-                        regionAnalysis: true, // 自动检测文本区域
-                        confidenceFilter: 0.6, // 过滤置信度低于60%的结果
-                        preprocess: true // 启用图片预处理
-                    });
+                    const result = await worker.recognize(compressedFile);
 
                     fileInfo.recognitionTime = ((window.performance.now() - t3) / 1000).toFixed(3) + '秒';
                     console.log(fileInfo);
                     processOCRResult(result.data.text, fileInfo);
                 } catch (error) {
                     console.error('OCR识别失败:', error);
-                    dataContainer.html('<div class="alert alert-danger">OCR识别失败: ' + error.message + '</div>');
+                    dataContainer.html('<div class="alert alert-danger">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
                     $('#up-btn').removeAttr('disabled');
                 }
             },
@@ -1576,6 +1647,7 @@
     }
 
     $('#input-img').change(function (e) {
+        if (!this.files || !this.files[0]) return; // 用户取消选择时不处理
         handleImage(this.files[0]);
     });
 </script>
