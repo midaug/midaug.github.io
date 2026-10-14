@@ -88,6 +88,10 @@
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  /* 按钮文字绝不折行、也不许被压窄：顶栏是 nowrap flex，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根条（手机 390px 实测「重置」被压成 22×41）。
+     注意不要给 input 加 —— `.row > input` 要靠可收缩来占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
 
   /* 分段控件：10 位 / 13 位 */
   .seg {
@@ -189,6 +193,23 @@
     main { grid-template-columns: minmax(0, 1fr); }
     .hide-sm { display: none; }
     .hero-num { font-size: 28px; }
+  }
+
+  /* ===== 手机适配（≤640px）=====
+     顶栏是 nowrap flex，手机宽度装不下「品牌 + 时区 + 重置 + 时钟」，
+     不处理时 flex 会把「重置」压成竖排（390px 实测 22×41）。
+     改成允许换行 —— 宁可顶栏占两行，也不要压扁任何控件、更不要藏功能。 */
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 10px; }
+    .row > label { width: 56px; }
+    .kv > .k { width: 72px; }
+    .hero-num { font-size: 26px; }
+    /* 触屏：输入框字号提到 16px，否则 iOS 聚焦时会把整页放大 */
+    input[type="text"], input[type="number"] { font-size: 16px; }
   }
 </style>
 </head>

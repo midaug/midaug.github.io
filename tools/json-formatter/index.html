@@ -67,6 +67,10 @@
     background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
     border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit;
     transition: background .15s, border-color .15s, color .15s;
+    /* 按钮文字绝不折行、也不许被压窄：顶栏是 flex 容器，窄屏下不设这两条时
+       flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根条
+       （手机 390px 实测「压缩显示」被压成 34×84）。空间不够请让它换行，不要压扁。 */
+    white-space: nowrap; flex-shrink: 0;
   }
   button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
   button:active { transform: translateY(1px); }
@@ -295,6 +299,29 @@
     padding: 7px 16px; border-radius: 20px; opacity: 0; transition: opacity .25s; pointer-events: none;
   }
   .toast.show { opacity: 1; }
+
+  /* ===== 手机适配（≤640px）=====
+     两处硬伤（2026-10-14 实测 390px）：
+       ① 顶栏控件多，按钮被 flex 压窄后中文逐字竖排（「压缩显示」→ 34×84 竖条）；
+       ② 主体左右分栏 3:7 不折叠，输入区只剩 ~150px，占位文字逐字换行，整页不可用。
+     这里只做「能用」的最小改动：按钮已全局不折行（见上），顶栏靠换行消化，
+     主体改上下堆叠、各占一半高度。
+     ★ 刻意不隐藏任何控件 —— 分册约定 hide-* 断点藏控件已废弃（text-diff 的教训）。 */
+  @media (max-width: 640px) {
+    header { padding: 8px 10px; gap: 6px 8px; }
+    header .brand { font-size: 14px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    .stat { font-size: 12px; }
+
+    /* 左右栏 → 上下堆叠，各占一半高度 */
+    main { flex-direction: column; }
+    .pane, .pane.right { flex: 1 1 0%; }
+    .pane.left { border-right: 0; border-bottom: 1px solid var(--border); }
+    textarea, #viewport { min-height: 0; }
+
+    /* 触屏：输入框字号提到 16px，否则 iOS 聚焦时会把整页放大 */
+    textarea { font-size: 16px; }
+  }
 </style>
 </head>
 <body>
