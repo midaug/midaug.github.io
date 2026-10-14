@@ -54,8 +54,24 @@ body::before{
 a{color:inherit;text-decoration:none}
 .shell{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:64px 22px 80px}
 
-/* ---------- 顶部 ---------- */
-.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px}
+/* ---------- 顶栏（粘性：搜索框永远看得见）---------- */
+/* 列表不再是自己的滚动容器、改用窗口滚动条，搜索框就会跟着滚走；
+   把品牌行 + 搜索框放进 sticky 顶栏，滚列表时它们停在窗口顶部。
+   顶栏底色用 --bg 实色：滚动中的行要完全被盖住，不能透出来。
+   ⚠️ body 上不能有 overflow:hidden，否则 sticky 失效（这里本来也没有）。 */
+.bar{
+  position:sticky;top:0;z-index:5;
+  padding:10px 0 12px;
+  background:var(--bg);
+}
+/* 吸顶后在下沿补一条渐隐：滚动中的内容淡出，而不是被硬切一刀。
+   只在真的吸顶时加（.stuck 由脚本按顶栏位置切换），页顶时加了会糊住面板上缘。 */
+.bar.stuck::after{
+  content:"";position:absolute;left:0;right:0;top:100%;height:18px;
+  pointer-events:none;
+  background:linear-gradient(var(--bg), transparent);
+}
+.bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px}
 .brand{display:flex;align-items:center;gap:9px}
 .mark{
   width:24px;height:24px;border-radius:7px;flex:none;
@@ -66,19 +82,18 @@ a{color:inherit;text-decoration:none}
 }
 .mark svg{width:13px;height:13px}
 .brand h1{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
-.top .meta{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.bar .meta{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
 
-/* ---------- 命令面板 ---------- */
-.panel{
+/* ---------- 搜索框 ---------- */
+.cmd{
+  display:flex;align-items:center;gap:11px;padding:0 15px;height:52px;
   background:var(--panel);
-  border:1px solid var(--border-2);
-  border-radius:14px;
-  overflow:hidden;
+  border:1px solid var(--border-2);border-radius:14px;
   box-shadow:0 1px 0 var(--panel-inset) inset, var(--panel-shadow);
 }
-.cmd{display:flex;align-items:center;gap:11px;padding:0 15px;height:52px;border-bottom:1px solid var(--border)}
 .cmd .ico{flex:none;color:var(--text-3);transition:color .15s}
 .cmd:focus-within .ico{color:var(--accent)}
+.cmd:focus-within{border-color:var(--accent)}
 #q{
   flex:1;min-width:0;height:100%;
   border:0;outline:0;background:transparent;
@@ -95,29 +110,24 @@ kbd{
 .cmd kbd{cursor:pointer}
 .cmd kbd:hover{color:var(--text-2);background:var(--surface-2)}
 
+/* ---------- 列表面板 ---------- */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border-2);
+  border-radius:14px;
+  box-shadow:0 1px 0 var(--panel-inset) inset, var(--panel-shadow);
+}
+
 /* ---------- 列表 ---------- */
-.list-wrap{position:relative}
+/* 列表本身不滚、也没有固定高度：整页高度随内容展开，一律用浏览器窗口的滚动条。
+   定高会让一屏看不全工具，且要额外维护「底部渐隐」这类内部滚动的提示，已去掉。 */
 .list{
-  max-height:min(58vh,520px);
-  overflow-y:auto;
-  overscroll-behavior:contain;
   padding:7px 7px 9px;
-  scrollbar-width:thin;
-  scrollbar-color:rgba(255,255,255,.14) transparent;
 }
-.list::-webkit-scrollbar{width:9px}
-.list::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:9px;border:3px solid var(--panel)}
-.list::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
-.list::-webkit-scrollbar-track{background:transparent}
-.fade{
-  position:absolute;left:0;right:0;bottom:0;height:40px;
-  pointer-events:none;opacity:0;transition:opacity .2s;
-  background:linear-gradient(to top, var(--panel) 18%, transparent);
-}
-.fade.on{opacity:1}
 
 .group-head{display:flex;align-items:center;gap:10px;padding:13px 11px 6px}
-.group-head .gname{font-size:11.5px;font-weight:600;color:var(--text-3);letter-spacing:.04em;white-space:nowrap}
+.group-head .gname{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--text-3);letter-spacing:.04em;white-space:nowrap}
+.group-head .gname svg{width:11px;height:11px;flex:none;color:var(--accent)}
 .group-head .line{flex:1;height:1px;background:var(--border)}
 .group-head .gcount{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
 .group:first-child .group-head{padding-top:7px}
@@ -125,14 +135,42 @@ kbd{
 .row{
   position:relative;
   display:grid;
-  grid-template-columns:26px minmax(0,1fr) auto 14px;
+  grid-template-columns:minmax(0,1fr) 26px;
   align-items:center;
-  gap:11px;
+  gap:2px;
   height:41px;
-  padding:0 9px;
+  padding:0 5px 0 9px;
   border-radius:9px;
   transition:background .12s ease;
 }
+/* 主区是链接，靠 ::after 铺满整行做点击热区；
+   星标按钮用 z-index 浮在热区之上，两者互不干扰。 */
+.row-hit{
+  display:grid;
+  grid-template-columns:26px minmax(0,1fr) auto 14px;
+  align-items:center;
+  gap:11px;
+  min-width:0;
+  height:100%;
+}
+.row-hit::after{content:"";position:absolute;inset:0;border-radius:9px}
+/* 置顶星标：平时隐形，悬停 / 键盘选中 / 已置顶时浮现 */
+.row-pin{
+  position:relative;z-index:1;
+  width:26px;height:26px;flex:none;
+  display:grid;place-items:center;
+  padding:0;border:0;border-radius:7px;
+  background:transparent;color:var(--text-3);
+  cursor:pointer;opacity:0;
+  transition:opacity .14s,color .14s,background .14s;
+}
+.row-pin svg{width:14px;height:14px}
+.row:hover .row-pin,.row:focus-within .row-pin,.row.is-active .row-pin{opacity:1}
+.row-pin.on{opacity:1;color:var(--accent)}
+.row-pin:hover{background:var(--surface-1);color:var(--accent)}
+.row-pin:focus-visible{opacity:1;outline:2px solid var(--accent);outline-offset:1px}
+/* 触屏没有 hover，星标得常驻才点得到 */
+@media (hover:none){ .row-pin:not(.on){opacity:.4} }
 .row::before{
   content:"";position:absolute;left:0;top:50%;
   width:2px;height:17px;border-radius:2px;background:var(--accent);
@@ -190,28 +228,37 @@ kbd{
 
 @media (max-width:600px){
   .shell{padding:38px 14px 60px}
-  .row{grid-template-columns:26px minmax(0,1fr) 14px;gap:10px;height:44px}
+  .row{grid-template-columns:minmax(0,1fr) 28px;height:44px;padding:0 3px 0 8px}
+  .row-hit{grid-template-columns:26px minmax(0,1fr) 14px;gap:10px}
   .row-desc{display:none}
   .row-path{display:none}
-  .list{max-height:none}
-  .panel{border-radius:12px}
+  .panel,.cmd{border-radius:12px}
+  .bar{padding:8px 0 10px}
+  .bar-top{margin-bottom:10px}
+}
+/* 触屏下搜索框字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大，
+   而搜索框现在是粘性的，被放大会很显眼（全站约定，见 MEMORY.md 窄屏第 3 条）。
+   按 `pointer:coarse` 判而不只看宽度 —— 平板竖屏宽度够但同样是触屏。 */
+@media (pointer:coarse),(max-width:600px){
+  #q{font-size:16px}
 }
 </style>
 </head>
 <body>
 <div class="shell">
 
-  <div class="top">
-    <div class="brand">
-      <span class="mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
-      </span>
-      <h1>工具箱</h1>
+  <!-- 品牌 + 搜索框放在 sticky 顶栏里：列表改整页滚动后，搜索框要跟着页面停在顶上 -->
+  <header class="bar">
+    <div class="bar-top">
+      <div class="brand">
+        <span class="mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </span>
+        <h1>工具箱</h1>
+      </div>
+      <div class="meta"><span id="count">0</span> 个工具</div>
     </div>
-    <div class="meta"><span id="count">0</span> 个工具</div>
-  </div>
 
-  <div class="panel">
     <div class="cmd">
       <span class="ico">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -219,11 +266,10 @@ kbd{
       <input id="q" type="search" placeholder="搜索工具…" autocomplete="off" spellcheck="false" autofocus>
       <kbd id="kbd-hint">⌘K</kbd>
     </div>
+  </header>
 
-    <div class="list-wrap">
-      <div class="list" id="list"></div>
-      <div class="fade" id="fade"></div>
-    </div>
+  <div class="panel">
+    <div class="list" id="list"></div>
 
     <div class="empty" id="empty">
       <div class="ei">
@@ -239,6 +285,7 @@ kbd{
       <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
       <span><kbd>↵</kbd> 打开</span>
       <span><kbd>esc</kbd> 清空</span>
+      <span class="pin-hint"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 3.7 2.6 5.3 5.8.84-4.2 4.09 1 5.77L12 16.97 6.8 19.7l1-5.77-4.2-4.09 5.8-.84z"/></svg> 点星标置顶</span>
     </div>
     <div>未挂菜单 · 仅凭链接访问</div>
   </div>
@@ -249,7 +296,6 @@ kbd{
 var ICONS = {
   json:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h1"/><path d="M16 3h1a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-1"/></svg>',
   monitor:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2.2"/><path d="M8 20.5h8M12 17v3.5"/></svg>',
-  download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.5"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M4 20h16"/></svg>',
   calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.4"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>',
   child:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-9a4 4 0 0 1 7-2.6A4 4 0 0 1 19 12c0 4.6-7 9-7 9z"/></svg>',
   chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20V10.5"/><path d="M10 20V4.5"/><path d="M15.5 20v-6.5"/><path d="M21 20H3"/></svg>',
@@ -257,29 +303,71 @@ var ICONS = {
   transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 3.6v13"/><path d="m3.6 12.6 3.9 3.9 3.9-3.9"/><path d="M16.5 20.4v-13"/><path d="m12.6 11.4 3.9-3.9 3.9 3.9"/></svg>',
   av:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.6" width="6" height="11" rx="3"/><path d="M5.6 11.4a6.4 6.4 0 0 0 12.8 0"/><path d="M12 17.8v3.4"/><path d="M8.6 21.2h6.8"/></svg>',
   doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
-  diff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.4"/><circle cx="18" cy="17.5" r="2.4"/><path d="M6 8.9v4.6a3 3 0 0 0 3 3h6.6"/><path d="M18 15.1v-4.6a3 3 0 0 0-3-3H8.4"/></svg>'
+  diff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6.5" r="2.4"/><circle cx="18" cy="17.5" r="2.4"/><path d="M6 8.9v4.6a3 3 0 0 0 3 3h6.6"/><path d="M18 15.1v-4.6a3 3 0 0 0-3-3H8.4"/></svg>',
+  encode:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4"/><path d="m15 8 4 4-4 4"/><path d="M13.2 5.5 10.8 18.5"/></svg>',
+  hash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 3.8 7.6 20.2"/><path d="m16.4 3.8-2 16.4"/><path d="M4.4 9h16"/><path d="M3.6 15h16"/></svg>',
+  regex:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.6" cy="17.8" r="1.7" fill="currentColor" stroke="none"/><path d="M12.4 5.5v11"/><path d="m7.6 8.1 9.6 5.8"/><path d="m17.2 8.1-9.6 5.8"/></svg>',
+  codegen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 4.5c-1.8 0-2.3 1-2.3 2.4v1.8c0 1.3-.6 2.2-2.3 2.8 1.7.6 2.3 1.5 2.3 2.8v1.8c0 1.4.5 2.4 2.3 2.4"/><path d="M15.4 4.5c1.8 0 2.3 1 2.3 2.4v1.8c0 1.3.6 2.2 2.3 2.8-1.7.6-2.3 1.5-2.3 2.8v1.8c0 1.4-.5 2.4-2.3 2.4"/><path d="M9.4 12h4.8"/><path d="m12.2 9.9 2.1 2.1-2.1 2.1"/></svg>',
+  ip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.2 9.5h17.6"/><path d="M3.2 14.5h17.6"/><path d="M12 3c-2.6 2.4-4 5.4-4 9s1.4 6.6 4 9c2.6-2.4 4-5.4 4-9s-1.4-6.6-4-9z"/></svg>',
+  cron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.7 3.6v3.7h-3.7"/><path d="M12 7.6V12l3.2 2"/></svg>',
+  qr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="6" height="6" rx="1.1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1.1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1.1"/><path d="M14.5 14.5h2.6v2.6h-2.6z" fill="currentColor" stroke="none"/><path d="M18.4 14.5h2.1"/><path d="M14.5 18.6v2"/><path d="M18 18.4h2.5v2.1"/></svg>',
+  key:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15.6" r="3.6"/><path d="M10.9 13.3 20 4.2"/><path d="m17.2 4.8 2.3 2.3"/><path d="m14.7 7.2 2.2 2.2"/></svg>',
+  unlock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.2" y="10.6" width="15.6" height="10.2" rx="2.2"/><path d="M8.2 10.6V7.4a3.8 3.8 0 0 1 7.3-1.5"/><circle cx="12" cy="15.7" r="1.35" fill="currentColor" stroke="none"/></svg>',
+  palette:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6a8.4 8.4 0 0 0 0 16.8c1.3 0 2.1-.8 2.1-1.8 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h1.4a5.3 5.3 0 0 0 5.7-5.2c0-2.9-4.1-5.4-10-5.4z"/><circle cx="7.7" cy="10.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="11.2" cy="7.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="15.3" cy="8.4" r="1.05" fill="currentColor" stroke="none"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.4" y="4.6" width="17.2" height="14.8" rx="2.4"/><circle cx="9" cy="10" r="1.6"/><path d="m4.6 17.4 4.6-4.3 3.4 3 2.6-2.3 4.2 3.9"/></svg>'
 };
 
-var GROUPS = ['开发工具','运维调试','生活工具'];
+var GROUPS = ['开发工具','日期时间','网络运维','媒体工具','生活工具'];
 
-/* 新增工具：在这里加一条即可 */
+/* 新增工具：在这里加一条即可。
+   分组按「用途相近」切，组内也按相近度排（如 JSON 格式化 / JSON 转代码相邻、
+   编码转换 / Hash / 密码生成相邻），这样扫列表时同类是一段连续区间。 */
 var TOOLS = [
+  /* --- 开发工具 --- */
   { group:'开发工具', name:'JSON 格式化', path:'json-formatter/', icon:'json',
     desc:'JSON 美化、压缩与校验，支持一键折叠展开、错误定位。', tags:['JSON','格式化'] },
+  { group:'开发工具', name:'JSON 转代码', path:'json2code/', icon:'codegen',
+    desc:'JSON 一键生成 TypeScript / Go / Python / Rust / Java 的结构体与类型定义，自动推导嵌套形状。', tags:['JSON','代码生成','TypeScript','Go','Python'] },
   { group:'开发工具', name:'文本对比', path:'text-diff/', icon:'diff',
     desc:'两段文本逐行对比，并排 / 统一双视图、行内按词高亮、折叠相同行、导出统一 diff，全部本地运行。', tags:['文本对比','diff','差异'] },
-  { group:'开发工具', name:'日期时间工具', path:'datetime/', icon:'clock',
+  { group:'开发工具', name:'正则测试', path:'regex/', icon:'regex',
+    desc:'实时匹配高亮与捕获组明细、替换预览、常用正则速查，性能保护防止灾难性回溯卡死页面。', tags:['正则','RegExp','正则表达式'] },
+  { group:'开发工具', name:'编码转换', path:'encoder/', icon:'encode',
+    desc:'Base64、URL、Unicode 转义、HTML 实体、Hex 字节与任意进制互转，编解码一体、支持中文与 emoji。', tags:['Base64','URL编码','Unicode','进制','编码'] },
+  { group:'开发工具', name:'Hash 校验', path:'hash/', icon:'hash',
+    desc:'MD5、SHA-1/224/256/384/512、CRC32 文本与文件哈希，支持 HMAC 与校验值比对，文件不上传。', tags:['MD5','SHA','HMAC','CRC32','校验'] },
+  { group:'开发工具', name:'密码生成', path:'pwdgen/', icon:'key',
+    desc:'WebCrypto 真随机密码生成，可选字符集与易混淆排除、批量生成、熵值强度检测，全程离线。', tags:['密码','随机','强度','WebCrypto'] },
+  { group:'开发工具', name:'颜色工具', path:'color/', icon:'palette',
+    desc:'HEX / RGB / HSL / HSV / CMYK 互转、WCAG 对比度检查、11 档明暗梯度与一键复制色值。', tags:['颜色','HEX','RGB','HSL','对比度','WCAG'] },
+
+  /* --- 日期时间 --- */
+  { group:'日期时间', name:'日期时间工具', path:'datetime/', icon:'clock',
     desc:'实时时间戳（10/13 位）、日期与时间戳互转、两个日期相差、日期前后推算。', tags:['时间戳','日期计算'] },
-  { group:'开发工具', name:'字节与网速计算', path:'byte-calc/', icon:'transfer',
-    desc:'字节单位换算（1000/1024 双基准）、文件大小与速度算耗时、带宽换算实际速率、码率算体积。', tags:['字节','带宽','网速','换算'] },
-  { group:'运维调试', name:'麦克风 · 音响 · 摄像头', path:'media-test/', icon:'av',
-    desc:'麦克风实时电平与录音回放、HRTF 环绕声试听与左右声道检测、摄像头预览与拍照，全部本地运行。', tags:['麦克风','音响','摄像头','环绕声'] },
-  { group:'运维调试', name:'客户端信息查看', path:'client-info/', icon:'monitor',
-    desc:'实时显示当前时间戳、浏览器 User-Agent 与页面 meta 信息。', tags:['UA','调试'] },
-  { group:'运维调试', name:'xping.sh 下载', path:'xping/', icon:'download',
-    desc:'脚本下载入口，自动探测多个镜像源并选择可用线路。', tags:['Shell','脚本'] },
-  { group:'生活工具', name:'日历', path:'calendar/', icon:'calendar',
+  { group:'日期时间', name:'日历', path:'calendar/', icon:'calendar',
     desc:'带农历、节气的日历视图，适合日常查日期与节气。', tags:['日历','农历'] },
+
+  /* --- 网络运维 --- */
+  { group:'网络运维', name:'IP 子网计算', path:'ipcalc/', icon:'ip',
+    desc:'IPv4/IPv6 网段拆解、子网划分、归属判断与地址转换，含私网/保留段标注与二进制位视图。', tags:['IP','子网','CIDR','IPv6','网络'] },
+  { group:'网络运维', name:'Cron 解析', path:'cron/', icon:'cron',
+    desc:'Cron 表达式翻译成人话、列出未来 10 次执行时间，支持 5/6 段、L、#、月份与星期名、@宏。', tags:['Cron','crontab','定时','表达式'] },
+  { group:'网络运维', name:'字节与网速计算', path:'byte-calc/', icon:'transfer',
+    desc:'字节单位换算（1000/1024 双基准）、文件大小与速度算耗时、带宽换算实际速率、码率算体积。', tags:['字节','带宽','网速','换算'] },
+  { group:'网络运维', name:'客户端信息查看', path:'client-info/', icon:'monitor',
+    desc:'实时显示当前时间戳、浏览器 User-Agent 与页面 meta 信息。', tags:['UA','调试'] },
+  { group:'网络运维', name:'JumpServer 解密', path:'jumpserver/', icon:'unlock',
+    desc:'用 SECRET_KEY 还原堡垒机里存的资产密码与 SSH 私钥，依次尝试 signer、AES-ECB、AES-GCM、SM4-ECB，密文与密钥都不出浏览器。', tags:['JumpServer','堡垒机','解密','AES','SM4','SECRET_KEY'] },
+
+  /* --- 媒体工具 --- */
+  { group:'媒体工具', name:'图片工具', path:'image/', icon:'image',
+    desc:'图片压缩、缩放与 JPEG / WebP / PNG 互转，附带主色提取，全部在本地 canvas 内处理。', tags:['图片','压缩','WebP','主色','取色'] },
+  { group:'媒体工具', name:'二维码', path:'qrcode/', icon:'qr',
+    desc:'二维码生成与识别，支持自定义容错、颜色、透明背景与 SVG/PNG 导出；识别支持拖拽和粘贴截图。', tags:['二维码','QR','扫码'] },
+  { group:'媒体工具', name:'麦克风 · 音响 · 摄像头', path:'media-test/', icon:'av',
+    desc:'麦克风实时电平与录音回放、HRTF 环绕声试听与左右声道检测、摄像头预览与拍照，全部本地运行。', tags:['麦克风','音响','摄像头','环绕声'] },
+
+  /* --- 生活工具 --- */
   { group:'生活工具', name:'儿童生长发育评价', path:'child-growth/', icon:'child',
     desc:'面向 7 岁以下儿童，输入身高体重快速看结论。', tags:['儿童','健康'] },
   { group:'生活工具', name:'奕彩 SSQ', path:'ssq/', icon:'chart',
@@ -290,33 +378,104 @@ function esc(s){
   return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
 }
 
-function rowHTML(t){
+/* ---------- 置顶（存本机浏览器） ---------- */
+var PIN_KEY = 'tools:pin:v1';
+var PIN_GROUP = '__pinned__';
+var STAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.7 2.6 5.3 5.8.84-4.2 4.09 1 5.77L12 16.97 6.8 19.7l1-5.77-4.2-4.09 5.8-.84z"/></svg>';
+var STAR_ON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="m12 3.7 2.6 5.3 5.8.84-4.2 4.09 1 5.77L12 16.97 6.8 19.7l1-5.77-4.2-4.09 5.8-.84z"/></svg>';
+
+/* ★ 第一次打开（本机还没有任何置顶记录）时预置的「常用」5 个，顺序即展示顺序。
+   只在「本机没有记录」时生效；用户动过一次星标后本机就有记录了，之后一律以本机为准。
+   校验口径和读盘一致（工具被删/改名后不留死链），所以这里写的是 path 不是 name。 */
+var DEFAULT_PINS = ['datetime/', 'pwdgen/', 'text-diff/', 'json-formatter/', 'media-test/'];
+
+/* 读盘要做校验：工具被改名/删除后，旧记录不能留在列表里造成死链 */
+function loadPins(){
+  var raw = null;
+  try{ raw = localStorage.getItem(PIN_KEY); }catch(e){}
+  /* raw === null = 本机从来没有记录（换浏览器 / 清过站点数据 / 从没点过星标）→ 首次，用预置。
+     注意「用户把置顶全部取消」存的是 '[]'，不是 null，所以要照旧尊重本机记录，不能回退到预置。 */
+  var firstRun = (raw === null);
+  var src;
+  if(firstRun){
+    src = DEFAULT_PINS;
+  }else{
+    try{ src = JSON.parse(raw); }catch(e){ src = []; }
+  }
+  if(!Array.isArray(src)) src = [];
+  var valid = {}, seen = {};
+  TOOLS.forEach(function(t){ valid[t.path] = 1; });
+  return src.filter(function(p){
+    if(typeof p !== 'string' || !valid[p] || seen[p]) return false;
+    seen[p] = 1; return true;
+  });
+}
+
+/* 隐私模式下 setItem 会抛异常，静默降级，不影响使用 */
+function savePins(){
+  try{ localStorage.setItem(PIN_KEY, JSON.stringify(pins)); }catch(e){}
+}
+
+var pins = loadPins();
+
+function byPath(p){ for(var i=0;i<TOOLS.length;i++){ if(TOOLS[i].path===p) return TOOLS[i]; } return null; }
+
+function pinBtnHTML(t, on){
+  return '<button class="row-pin'+(on?' on':'')+'" type="button" data-path="'+esc(t.path)+'"'+
+    ' aria-pressed="'+(on?'true':'false')+'"'+
+    ' title="'+(on?'取消置顶':'置顶到常用')+'"'+
+    ' aria-label="'+(on?'取消置顶 ':'置顶 ')+esc(t.name)+'">'+
+    (on?STAR_ON:STAR)+'</button>';
+}
+
+function rowHTML(t, on){
   var hay = (t.name+' '+t.desc+' '+t.tags.join(' ')+' '+t.group).toLowerCase();
-  return '<a class="row" href="'+esc(t.path)+'" data-hay="'+esc(hay)+'">'+
-    '<span class="row-ico">'+(ICONS[t.icon]||ICONS.doc)+'</span>'+
-    '<span class="row-main">'+
-      '<span class="row-name">'+esc(t.name)+'</span>'+
-      '<span class="row-desc">'+esc(t.desc)+'</span>'+
-    '</span>'+
-    '<span class="row-path">/tools/'+esc(t.path)+'</span>'+
-    '<span class="row-arrow"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></svg></span>'+
-  '</a>';
+  return '<div class="row" data-hay="'+esc(hay)+'">'+
+    '<a class="row-hit" href="'+esc(t.path)+'">'+
+      '<span class="row-ico">'+(ICONS[t.icon]||ICONS.doc)+'</span>'+
+      '<span class="row-main">'+
+        '<span class="row-name">'+esc(t.name)+'</span>'+
+        '<span class="row-desc">'+esc(t.desc)+'</span>'+
+      '</span>'+
+      '<span class="row-path">/tools/'+esc(t.path)+'</span>'+
+      '<span class="row-arrow"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="m12.5 6 6 6-6 6"/></svg></span>'+
+    '</a>'+
+    pinBtnHTML(t, on)+
+  '</div>';
+}
+
+function sectionHTML(labelHTML, key, gcount, rows){
+  return '<section class="group" data-group="'+esc(key)+'">'+
+    '<div class="group-head"><span class="gname">'+labelHTML+'</span>'+
+    '<span class="line"></span><span class="gcount">'+gcount+'</span></div>'+
+    rows+
+  '</section>';
 }
 
 function render(){
-  var buckets = {};
-  TOOLS.forEach(function(t){ (buckets[t.group]=buckets[t.group]||[]).push(t); });
-  var order = GROUPS.filter(function(g){ return buckets[g]; })
-    .concat(Object.keys(buckets).filter(function(g){ return GROUPS.indexOf(g)<0; }));
+  var html = '';
+  var pinned = pins.map(byPath).filter(Boolean);
 
-  document.getElementById('list').innerHTML = order.map(function(g){
-    return '<section class="group" data-group="'+esc(g)+'">'+
-      '<div class="group-head"><span class="gname">'+esc(g)+'</span><span class="line"></span>'+
-      '<span class="gcount">'+buckets[g].length+'</span></div>'+
-      buckets[g].map(rowHTML).join('')+
-    '</section>';
+  /* 置顶的工具从原分组移出，不在两处重复出现（避免键盘导航重复命中） */
+  if(pinned.length){
+    html += sectionHTML(STAR_ON + '置顶', PIN_GROUP, pinned.length,
+      pinned.map(function(t){ return rowHTML(t, true); }).join(''));
+  }
+
+  var buckets = {};
+  TOOLS.forEach(function(t){
+    if(pins.indexOf(t.path) > -1) return;
+    (buckets[t.group] = buckets[t.group] || []).push(t);
+  });
+  var order = GROUPS.filter(function(g){ return buckets[g]; })
+    .concat(Object.keys(buckets).filter(function(g){ return GROUPS.indexOf(g) < 0; }));
+
+  html += order.map(function(g){
+    return sectionHTML(esc(g), g, buckets[g].length,
+      buckets[g].map(function(t){ return rowHTML(t, false); }).join(''));
   }).join('');
 
+  document.getElementById('list').innerHTML = html;
   document.getElementById('count').textContent = TOOLS.length;
 }
 
@@ -324,13 +483,12 @@ function render(){
 var q = document.getElementById('q');
 var listEl = document.getElementById('list');
 var emptyEl = document.getElementById('empty');
-var fadeEl = document.getElementById('fade');
+var barEl = document.querySelector('.bar');
 var active = 0;
 
-function updateFade(){
-  var scrollable = listEl.scrollHeight - listEl.clientHeight > 4;
-  var atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 4;
-  fadeEl.classList.toggle('on', scrollable && !atBottom && listEl.style.display !== 'none');
+/* 顶栏吸顶时给它挂 .stuck（下沿渐隐条只在吸顶时出现） */
+function syncBar(){
+  barEl.classList.toggle('stuck', barEl.getBoundingClientRect().top <= 0);
 }
 
 function visibleRows(){
@@ -339,17 +497,29 @@ function visibleRows(){
   });
 }
 
-function setActive(i){
+/* 列表没有自己的滚动容器了，把选中行限进视野要靠窗口滚动。
+   （原来是改 listEl.scrollTop —— 现在 listEl 不滚，改了没有任何效果。）
+   上边界要取顶栏的实际底边：顶栏是 sticky 的，行滚到窗口顶部会藏在它后面。 */
+function keepInView(el, isFirst){
+  /* 第一行的正上方就是搜索框，回到第一行时顺势滚到页顶，把整个顶栏露出 */
+  if(isFirst){ window.scrollTo(0, 0); return; }
+  var r = el.getBoundingClientRect();
+  var top = barEl.getBoundingClientRect().bottom + 8;
+  var vh = window.innerHeight, pad = 12;
+  if(r.top < top) window.scrollBy(0, r.top - top);
+  else if(r.bottom > vh - pad) window.scrollBy(0, r.bottom - (vh - pad));
+}
+
+/* noScroll：鼠标划过时只换高亮、不挪页面 —— 悬停本身说明那一行已经看得见，
+   顺手挪 12px 反而会让指针下的内容动，观感很差。 */
+function setActive(i, noScroll){
   var rows = visibleRows();
   if(!rows.length){ active = -1; return; }
   if(i < 0) i = rows.length - 1;
   if(i >= rows.length) i = 0;
   active = i;
   rows.forEach(function(el, k){ el.classList.toggle('is-active', k === i); });
-  var el = rows[i];
-  var lr = listEl.getBoundingClientRect(), r = el.getBoundingClientRect();
-  if(r.top < lr.top) listEl.scrollTop -= (lr.top - r.top) + 6;
-  else if(r.bottom > lr.bottom) listEl.scrollTop += (r.bottom - lr.bottom) + 6;
+  if(!noScroll) keepInView(rows[i], i === 0);
 }
 
 function filter(){
@@ -369,7 +539,26 @@ function filter(){
   emptyEl.style.display = shown ? 'none' : 'block';
   listEl.style.display = shown ? '' : 'none';
   setActive(0);
-  updateFade();
+}
+
+function togglePin(path){
+  var i = pins.indexOf(path);
+  if(i > -1) pins.splice(i, 1); else pins.unshift(path);   /* 最新置顶排最前，点了立刻在顶上看到 */
+  savePins();
+
+  /* 重建 DOM 会让文档高度变化、把窗口滚动位置带偏，先存后还，
+     这样在列表底部点星标时视野不会跳。 */
+  var keepScroll = window.scrollY;
+  render();
+  filter();
+  window.scrollTo(0, keepScroll);
+
+  /* DOM 重建会丢焦点，把它还给同一个星标，键盘用户不至于迷路 */
+  var btn = null;
+  Array.prototype.forEach.call(listEl.querySelectorAll('.row-pin'), function(b){
+    if(!btn && b.getAttribute('data-path') === path) btn = b;
+  });
+  if(btn && btn.offsetParent) btn.focus({ preventScroll:true });
 }
 
 q.addEventListener('input', filter);
@@ -379,11 +568,21 @@ q.addEventListener('keydown', function(e){
   else if(e.key === 'Enter'){
     e.preventDefault();
     var rows = visibleRows();
-    if(rows[active]) rows[active].click();
+    var hit = rows[active] && rows[active].querySelector('.row-hit');
+    if(hit) hit.click();
   } else if(e.key === 'Escape'){
     e.preventDefault();
     q.value = ''; filter();
   }
+});
+
+/* 星标点击：事件委托，重渲染后不用重新绑定 */
+listEl.addEventListener('click', function(e){
+  var pin = e.target && e.target.closest ? e.target.closest('.row-pin') : null;
+  if(!pin) return;
+  e.preventDefault();
+  e.stopPropagation();
+  togglePin(pin.getAttribute('data-path'));
 });
 
 document.addEventListener('keydown', function(e){
@@ -397,12 +596,12 @@ listEl.addEventListener('mousemove', function(e){
   if(!row || row.style.display === 'none') return;
   var rows = visibleRows();
   var i = rows.indexOf(row);
-  if(i > -1 && i !== active) setActive(i);
+  if(i > -1 && i !== active) setActive(i, true);
 });
 
 document.getElementById('kbd-hint').addEventListener('click', function(){ q.focus(); });
-listEl.addEventListener('scroll', updateFade, { passive:true });
-window.addEventListener('resize', updateFade);
+window.addEventListener('scroll', syncBar, { passive:true });
+window.addEventListener('resize', syncBar);
 
 /* 快捷键标签按平台显示 */
 if(!/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)){
@@ -411,6 +610,7 @@ if(!/Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)){
 
 render();
 filter();
+syncBar();
 </script>
 </body>
 </html>

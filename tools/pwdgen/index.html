@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>密码生成</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="password"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+  input[type="range"] { padding: 0; border: 0; background: none; accent-color: var(--accent); cursor: pointer; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row > label.k { width: 68px; color: var(--text-2); flex: none; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+  .len-val {
+    font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent);
+    min-width: 2.4em; text-align: right;
+  }
+
+  /* 生成结果 */
+  .pwlist { display: flex; flex-direction: column; gap: 6px; }
+  .pw {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px;
+  }
+  .pw code {
+    font: 13.5px/1.5 var(--mono); letter-spacing: .3px; color: var(--text);
+    flex: 1; min-width: 0; word-break: break-all; user-select: all;
+  }
+  .pw .bits { font-size: 11px; color: var(--text-3); flex: none; font-variant-numeric: tabular-nums; }
+
+  /* 强度条 */
+  .meter {
+    height: 7px; border-radius: 6px; background: var(--surface-2);
+    overflow: hidden; margin: 10px 0 6px;
+  }
+  .meter > i { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--err); transition: width .25s, background .25s; }
+  .verdict { font-size: 12.5px; color: var(--text-2); }
+  .verdict b { color: var(--text); }
+  .kv { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-top: 8px; }
+  .kv span { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; }
+  .kv b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .err-tip { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .row > label.k { width: 58px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大
+       （select 同样会被 iOS 缩放，所以这里一并提上去） */
+    input[type="text"], input[type="password"], select { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Password<span>Gen</span></div>
+  <span class="sep"></span>
+  <span class="stat">WebCrypto 真随机</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内生成，不联网、不留存</span>
+  <button class="mini" id="btnClear" title="清空生成结果与检测输入">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 生成设置 ============ -->
+  <section class="card">
+    <h2>
+      生成设置
+      <span class="hint">长度 4–64</span>
+    </h2>
+
+    <div class="row">
+      <label class="k" for="len">长度</label>
+      <input type="range" id="len" min="4" max="64" step="1" value="20" style="flex:1" />
+      <span class="len-val" id="lenVal">20</span>
+    </div>
+
+    <div class="row">
+      <label class="k">字符集</label>
+      <label class="chk"><input type="checkbox" id="cUpper" checked>大写 A-Z</label>
+      <label class="chk"><input type="checkbox" id="cLower" checked>小写 a-z</label>
+      <label class="chk"><input type="checkbox" id="cDigit" checked>数字 0-9</label>
+      <label class="chk"><input type="checkbox" id="cSymbol" checked>符号 !@#$…</label>
+    </div>
+
+    <div class="row">
+      <label class="k">选项</label>
+      <label class="chk"><input type="checkbox" id="cNoAmb" checked>排除易混淆 0 O o 1 l I |</label>
+    </div>
+
+    <div class="row">
+      <label class="k" for="count">数量</label>
+      <select id="count">
+        <option value="1">1 个</option>
+        <option value="5" selected>5 个</option>
+        <option value="10">10 个</option>
+        <option value="20">20 个</option>
+      </select>
+      <span style="flex:1"></span>
+      <button class="primary" id="btnGen">生成密码</button>
+    </div>
+
+    <div class="tip" id="poolTip"></div>
+  </section>
+
+  <!-- ============ 2. 强度检测 ============ -->
+  <section class="card">
+    <h2>
+      强度检测
+      <span class="hint">只做粗估，防不住字典攻击</span>
+    </h2>
+    <div class="row" style="margin-bottom:6px">
+      <input type="password" id="chkPw" placeholder="粘贴一个已有密码…" style="flex:1" autocomplete="off" spellcheck="false">
+      <button class="mini" id="btnEye" title="显示 / 隐藏">显示</button>
+    </div>
+    <div class="meter"><i id="meterBar"></i></div>
+    <div class="verdict" id="verdict">等待输入…</div>
+    <div class="kv" id="chkKv"></div>
+    <div class="tip" style="margin-top:10px">
+      估算方式：按出现过的字符类别推断组合空间，熵 = 长度 × log₂(空间大小)。
+      真实安全性还取决于「是否被泄露库命中」—— 重要账号请用独立随机密码 + 密码管理器。
+    </div>
+  </section>
+
+  <!-- ============ 3. 生成结果 ============ -->
+  <section class="card wide">
+    <h2>
+      生成结果
+      <span class="hint" id="resHint">点「生成密码」开始</span>
+      <span class="right">
+        <button class="mini" id="btnCopyAll" disabled>复制全部</button>
+        <button class="mini" id="btnRegen">重新生成</button>
+      </span>
+    </h2>
+    <div class="pwlist" id="pwlist"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  /* ============================================================
+     随机数
+     -- 密码必须用密码学随机源。Math.random 是可预测的（V8 下状态可被反推），
+        绝不能用来生成密码。
+     -- crypto.getRandomValues 在 file:// 下也可用（它不属于 WebCrypto 的
+        安全上下文限制，受限的是 crypto.subtle）。
+     -- 直接 rand % n 会有取模偏差（2^32 不是 n 的整数倍时前几个值概率偏高），
+        用拒绝采样把偏差去干净。
+     ============================================================ */
+  const HAS_RNG = !!(window.crypto && window.crypto.getRandomValues);
+  const rbuf = new Uint32Array(1);
+  function randInt(n) {
+    if (n <= 0) return 0;
+    if (n === 1) return 0;
+    const limit = Math.floor(4294967296 / n) * n;   // 4 294 967 296 = 2^32
+    let v;
+    do { crypto.getRandomValues(rbuf); v = rbuf[0]; } while (v >= limit);
+    return v % n;
+  }
+  /* Fisher–Yates：保证「每类至少一个」的前提下打散位置。
+     不用 sort(() => Math.random() - .5) —— 那个分布不均匀。 */
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randInt(i + 1);
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  /* ============================================================
+     字符集
+     ============================================================ */
+  const SETS = {
+    upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    lower: "abcdefghijklmnopqrstuvwxyz",
+    digit: "0123456789",
+    symbol: "!@#$%^&*()-_=+[]{};:,.?/~"
+  };
+  /* 易混淆字符：0/O/o、1/l/I、| —— 手抄密码时的主要错误来源 */
+  const AMBIG = new Set("0Oo1lI|");
+
+  function currentSpec() {
+    const on = { upper: $("cUpper").checked, lower: $("cLower").checked, digit: $("cDigit").checked, symbol: $("cSymbol").checked };
+    const noAmb = $("cNoAmb").checked;
+    const groups = [];
+    for (const k of ["upper", "lower", "digit", "symbol"]) {
+      if (!on[k]) continue;
+      let s = SETS[k];
+      if (noAmb) s = s.split("").filter(c => !AMBIG.has(c)).join("");
+      if (s) groups.push(s);
+    }
+    return { groups, len: +$("len").value, count: +$("count").value };
+  }
+
+  function generate(spec) {
+    const pool = spec.groups.join("");
+    if (!pool) return null;
+    const out = [];
+    /* 先每类抽一个，保证四个字符集勾上后真的都出现（很多站点强制要求），
+       剩余位置从全池抽，最后整体洗牌。 */
+    for (const g of spec.groups) out.push(g.charAt(randInt(g.length)));
+    while (out.length < spec.len) out.push(pool.charAt(randInt(pool.length)));
+    shuffle(out);
+    return out.slice(0, spec.len).join("");
+  }
+
+  const entropy = (len, poolSize) => len * Math.log2(poolSize);
+
+  /* ============================================================
+     渲染：生成结果
+     ============================================================ */
+  let results = [];
+
+  function renderResults(spec) {
+    const poolSize = spec.groups.join("").length;
+    const bits = entropy(spec.len, poolSize);
+    const list = $("pwlist");
+    list.textContent = "";
+    results.forEach((pw, i) => {
+      const row = document.createElement("div");
+      row.className = "pw";
+      const code = document.createElement("code");
+      code.textContent = pw;                      // textContent：绝不拼 innerHTML
+      const b = document.createElement("span");
+      b.className = "bits";
+      b.textContent = bits.toFixed(1) + " bit · " + pw.length + " 位";
+      const cp = document.createElement("button");
+      cp.className = "mini";
+      cp.textContent = "复制";
+      cp.addEventListener("click", () => copyText(pw, "已复制第 " + (i + 1) + " 个"));
+      row.append(code, b, cp);
+      list.appendChild(row);
+    });
+    $("resHint").textContent = results.length
+      ? "共 " + results.length + " 个 · 每个 " + bits.toFixed(1) + " bit 熵"
+      : "点「生成密码」开始";
+    $("btnCopyAll").disabled = !results.length;
+  }
+
+  function doGen() {
+    if (!HAS_RNG) { toast("当前环境没有随机数源，无法生成安全密码"); return; }
+    const spec = currentSpec();
+    if (!spec.groups.length) { toast("至少要勾选一类字符集"); return; }
+    if (spec.groups.length > spec.len) { toast("长度太小，装不下所选字符集（每类至少 1 个）"); return; }
+    results = [];
+    for (let i = 0; i < spec.count; i++) results.push(generate(spec));
+    renderResults(spec);
+  }
+
+  /* ============================================================
+     强度检测
+     ============================================================ */
+  const CLASS_SIZE = { lower: 26, upper: 26, digit: 10, symbol: 33 };
+  const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm", "1234567890"];
+
+  function hasRun(pw, n) {         // 是否存在长度 ≥ n 的递增/递减连续序列（qwerty / 1234）
+    const low = pw.toLowerCase();
+    for (let i = 0; i + n <= low.length; i++) {
+      let up = true, dn = true;
+      for (let j = 1; j < n; j++) {
+        if (low.charCodeAt(i + j) !== low.charCodeAt(i + j - 1) + 1) up = false;
+        if (low.charCodeAt(i + j) !== low.charCodeAt(i + j - 1) - 1) dn = false;
+      }
+      if (up || dn) return true;
+      for (const row of KEYBOARD_ROWS) {
+        const seg = low.slice(i, i + n);
+        if (row.includes(seg) || row.split("").reverse().join("").includes(seg)) return true;
+      }
+    }
+    return false;
+  }
+
+  function checkStrength() {
+    const pw = $("chkPw").value;
+    const bar = $("meterBar"), vd = $("verdict"), kv = $("chkKv");
+    kv.textContent = "";
+    if (!pw) {
+      bar.style.width = "0";
+      bar.style.background = "var(--err)";
+      vd.textContent = "等待输入…";
+      return;
+    }
+    let pool = 0;
+    const kinds = [];
+    if (/[a-z]/.test(pw)) { pool += CLASS_SIZE.lower; kinds.push("小写"); }
+    if (/[A-Z]/.test(pw)) { pool += CLASS_SIZE.upper; kinds.push("大写"); }
+    if (/\d/.test(pw)) { pool += CLASS_SIZE.digit; kinds.push("数字"); }
+    if (/[^A-Za-z0-9]/.test(pw)) { pool += CLASS_SIZE.symbol; kinds.push("符号"); }
+    if (/[^\x00-\x7f]/.test(pw)) { pool += 100; kinds.push("非 ASCII"); }   // 中文等：粗估
+    const bits = pool ? pw.length * Math.log2(pool) : 0;
+
+    /* 长度惩罚：短密码无论字符多杂都不安全；重复字符、键盘序、纯数字再降级 */
+    const uniq = new Set(pw).size;
+    const repeat = uniq / pw.length < 0.5;
+    const run = hasRun(pw, 4);
+    const onlyDigits = /^\d+$/.test(pw);
+    let level, color;
+    if (pw.length < 8 || bits < 40 || onlyDigits) { level = "很弱"; color = "var(--err)"; }
+    else if (bits < 60) { level = "弱"; color = "var(--err)"; }
+    else if (bits < 80) { level = "中等"; color = "var(--num)"; }
+    else if (bits < 112) { level = "强"; color = "var(--ok)"; }
+    else { level = "很强"; color = "var(--ok)"; }
+    if (level === "中等" && (repeat || run)) { level = "偏弱"; color = "var(--num)"; }
+
+    bar.style.width = Math.max(6, Math.min(100, bits / 1.28)) + "%";   // 128 bit 打满
+    bar.style.background = color;
+    vd.innerHTML = "强度 <b>" + level + "</b> · 约 <b>" + bits.toFixed(1) + " bit</b>"
+      + (kinds.length ? "（含 " + kinds.join(" / ") + "）" : "");
+    const chips = [];
+    chips.push("长度 <b>" + pw.length + "</b>");
+    chips.push("字符空间 <b>" + pool + "</b>");
+    chips.push("不同字符 <b>" + uniq + "</b>");
+    if (repeat) chips.push("<b>重复偏多</b>");
+    if (run) chips.push("<b>含连续/键盘序</b>");
+    if (onlyDigits) chips.push("<b>纯数字</b>");
+    for (const c of chips) {
+      const s = document.createElement("span");
+      s.innerHTML = c;
+      kv.appendChild(s);
+    }
+  }
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     事件绑定
+     ============================================================ */
+  function updatePoolTip() {
+    const spec = currentSpec();
+    const pool = spec.groups.join("").length;
+    const bits = pool ? entropy(spec.len, pool) : 0;
+    $("poolTip").innerHTML = pool
+      ? "当前字符空间 <b style='color:var(--accent)'>" + pool + "</b> 个字符，"
+        + spec.len + " 位约 <b style='color:var(--accent)'>" + bits.toFixed(1) + " bit</b> 熵"
+        + (bits >= 80 ? " —— 够用" : bits >= 60 ? " —— 一般" : " —— 偏弱，建议加长")
+      : '<span class="err-tip">至少要勾选一类字符集</span>';
+  }
+
+  $("len").addEventListener("input", () => {
+    $("lenVal").textContent = $("len").value;
+    updatePoolTip();
+  });
+  for (const id of ["cUpper", "cLower", "cDigit", "cSymbol", "cNoAmb"]) {
+    $(id).addEventListener("change", updatePoolTip);
+  }
+  $("btnGen").addEventListener("click", doGen);
+  $("btnRegen").addEventListener("click", doGen);
+  $("btnCopyAll").addEventListener("click", () => {
+    if (!results.length) { toast("还没有生成结果"); return; }
+    copyText(results.join("\n"), "已复制 " + results.length + " 个密码");
+  });
+  $("btnClear").addEventListener("click", () => {
+    results = [];
+    $("pwlist").textContent = "";
+    $("chkPw").value = "";
+    $("btnCopyAll").disabled = true;
+    $("resHint").textContent = "点「生成密码」开始";
+    checkStrength();
+    toast("已清空");
+  });
+  $("btnEye").addEventListener("click", () => {
+    const el = $("chkPw");
+    const show = el.type === "password";
+    el.type = show ? "text" : "password";
+    $("btnEye").textContent = show ? "隐藏" : "显示";
+  });
+  /* 检测输入走 input 事件；计算量 O(长度)，无需防抖 */
+  $("chkPw").addEventListener("input", checkStrength);
+
+  /* 初始化 */
+  if (!HAS_RNG) {
+    $("btnGen").disabled = true;
+    $("poolTip").innerHTML = '<span class="err-tip">当前环境没有 crypto.getRandomValues，无法生成安全密码（请更新浏览器）。</span>';
+  } else {
+    updatePoolTip();
+  }
+  checkStrength();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hash 校验</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="password"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .io {
+    display: block; width: 100%; min-height: 84px; resize: vertical;
+    font: 12.5px/1.65 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    word-break: break-all; white-space: pre-wrap;
+  }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 620px; }
+  .row + .row { margin-top: 8px; }
+  .row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  .row > select { flex: 0 0 auto; max-width: 46%; }
+
+  /* ===== 文件投放区 ===== */
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    min-height: 108px; padding: 14px; text-align: center; cursor: pointer;
+    border: 1.5px dashed var(--border-2); border-radius: 10px;
+    background: var(--panel-2); color: var(--text-2); font-size: 12px;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .drop .big { font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .drop.over .big { color: var(--accent); }
+  .drop .sub { font-size: 11px; color: var(--text-3); }
+  .drop input[type="file"] { display: none; }
+
+  .fileinfo {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-2);
+  }
+  .fileinfo .nm { font-weight: 600; color: var(--text); word-break: break-all; }
+
+  /* ===== 表格 ===== */
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl th.r, .tbl td.r { text-align: right; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; white-space: pre-wrap; }
+  .tbl td.cp { cursor: pointer; }
+  .tbl td.cp:hover { background: var(--accent-soft); }
+  .tbl tr.hit td { background: var(--accent-soft); }
+  .tbl tr.hit td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+  .tbl .sub { color: var(--text-3); font-size: 11px; font-weight: 400; }
+  /* 首列按内容收紧：否则两列按 max-content 比例均分整表宽度，标签列被撑得很空 */
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); font-weight: 600; }
+  .empty-tip { color: var(--text-3); }
+
+  .spinner {
+    display: inline-block; width: 11px; height: 11px; vertical-align: -1px;
+    border: 2px solid var(--border-2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .row > label { width: 60px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, input[type="text"], input[type="password"], select { font-size: 16px; }
+    .io { min-height: 72px; }
+    /* ★ 顶栏那条算法清单有 400px 宽，而 .stat 基础规则是 flex:none（= flex-shrink:0），
+       窄屏下它虽会换到第二行，仍比内容盒宽，会被 header 的 overflow-x:hidden 从中间裁掉。
+       只放开 white-space 不够 —— 还必须允许收缩（并给出 min-width:0），它才会在
+       换行后压到行宽以内、把文字折成两行。宁可占两行，也不丢信息。
+       必须限定 header 内：卡片里也有 .stat，放开会波及。 */
+    header .stat { white-space: normal; flex-shrink: 1; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Hash<span>Check</span></div>
+  <span class="sep"></span>
+  <span class="stat">MD5 · SHA-1 · SHA-256 · SHA-384 · SHA-512 · CRC32 · HMAC</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内计算，文件不会上传</span>
+  <button class="mini" id="btnClear" title="清空所有输入与结果">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 文本哈希 ============ -->
+  <section class="card">
+    <h2>
+      文本哈希
+      <span class="hint">输入即时计算</span>
+      <span class="right">
+        <button class="mini" id="btnTextAll">复制全部</button>
+      </span>
+    </h2>
+    <textarea class="io" id="txtIn" spellcheck="false" autocomplete="off"
+      placeholder="在这里输入或粘贴文本…"></textarea>
+    <div class="ops">
+      <span id="txtAlgos"></span>
+    </div>
+    <div class="ops">
+      <label class="chk"><input type="checkbox" id="txtB64">按 Base64 输出</label>
+      <span class="sp"></span>
+      <button class="mini" id="btnTextRun">重新计算</button>
+    </div>
+    <div class="tbl-wrap"><table class="tbl fit" id="txtTbl"></table></div>
+    <div class="note" id="txtNote"></div>
+  </section>
+
+  <!-- ============ 2. 文件哈希 ============ -->
+  <section class="card">
+    <h2>
+      文件哈希
+      <span class="hint">拖进来或点击选择，文件不出本机</span>
+      <span class="right">
+        <button class="mini" id="btnFileAll">复制全部</button>
+      </span>
+    </h2>
+    <label class="drop" id="drop">
+      <input type="file" id="fileIn" />
+      <span class="big">把文件拖到这里</span>
+      <span class="sub">或点击选择文件 · 任意类型，单文件最大 256 MB</span>
+    </label>
+    <div class="fileinfo" id="fileInfo" style="display:none"></div>
+    <div class="ops">
+      <label class="chk"><input type="checkbox" id="fileB64">按 Base64 输出</label>
+    </div>
+    <div class="tbl-wrap"><table class="tbl fit" id="fileTbl"></table></div>
+    <div class="note" id="fileNote"></div>
+  </section>
+
+  <!-- ============ 3. HMAC ============ -->
+  <section class="card">
+    <h2>
+      HMAC
+      <span class="hint">带密钥的消息认证码</span>
+      <span class="right">
+        <button class="mini" id="btnHmacCopy">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="hmKey">密钥</label>
+      <input type="password" id="hmKey" spellcheck="false" autocomplete="off" placeholder="共享密钥" />
+    </div>
+    <div class="ops" style="margin-top:8px">
+      <label class="chk"><input type="checkbox" id="hmShow">显示密钥</label>
+      <span class="sp"></span>
+      <select id="hmAlgo" title="HMAC 所用摘要算法">
+        <option value="MD5">HMAC-MD5</option>
+        <option value="SHA-1">HMAC-SHA1</option>
+        <option value="SHA-256" selected>HMAC-SHA256</option>
+        <option value="SHA-384">HMAC-SHA384</option>
+        <option value="SHA-512">HMAC-SHA512</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="hmB64">Base64</label>
+    </div>
+    <textarea class="io" id="hmMsg" spellcheck="false" autocomplete="off" style="margin-top:8px"
+      placeholder="要签名的消息…"></textarea>
+    <div class="tbl-wrap"><table class="tbl fit" id="hmTbl"></table></div>
+    <div class="note" id="hmNote"></div>
+  </section>
+
+  <!-- ============ 4. 校验比对 ============ -->
+  <section class="card">
+    <h2>
+      校验比对
+      <span class="hint">粘贴期望值，自动找出它属于哪个算法</span>
+    </h2>
+    <div class="row">
+      <label for="cmpIn">期望值</label>
+      <input type="text" id="cmpIn" spellcheck="false" autocomplete="off"
+        placeholder="粘贴下载页给出的校验值" />
+    </div>
+    <div class="tbl-wrap"><table class="tbl fit" id="cmpTbl"></table></div>
+    <div class="note" id="cmpNote"></div>
+  </section>
+
+  <!-- ============ 5. 算法说明 ============ -->
+  <section class="card wide">
+    <h2>算法说明</h2>
+    <div class="tbl-wrap"><table class="tbl" id="refTbl"></table></div>
+    <div class="note">
+      <b>怎么用：</b>下载大文件后，去发布页找到官方的校验值，粘贴到「校验比对」里 —— 只要有一个算法对上，
+      就说明文件与官方发布的一致、没有被中间环节篡改或截断。<br>
+      <b>为什么现在推荐 SHA-256：</b>MD5 与 SHA-1 都已被证实存在<b>碰撞攻击</b>（能造出两个内容不同但摘要相同的文件），
+      做完整性校验已经不够安全，只适合当「内容指纹」用来去重。SHA-2 系列目前没有已知的实用碰撞攻击。<br>
+      <b>HMAC 和普通哈希的区别：</b>普通哈希谁都能算，所以「摘要正确」不能证明「来源可信」；
+      HMAC 把密钥混进计算过程，只有持有密钥的一方能生成或验证，因此可以用来做 API 签名。<br>
+      <b>CRC32 不是加密哈希：</b>它只是传输检错码，用来发现随机比特翻转，任何人都能轻易伪造。
+      本工具里放在一起只是为了顺手，不要拿它当安全校验。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const U8 = new TextEncoder();
+  const CHUNK = 0x8000;
+
+  /* 文件哈希的体积门槛 —— 文件是整块读进内存的（浏览器的摘要接口没有流式版本），
+     所以超大文件有把标签页撑爆的真实风险；MD5 / CRC32 还是纯 JS，会在主线程上同步跑。
+     超过 PAUSE 需要用户确认，超过 LIMIT 直接拒绝。 */
+  const FILE_PAUSE = 64 * 1024 * 1024;      // 64 MB
+  const FILE_LIMIT = 256 * 1024 * 1024;     // 256 MB（峰值内存约 2 份：原件 + MD5 的补齐副本）
+  const SLOW_ALGOS = ["MD5", "CRC32"];      // 自写实现，不支持增量，全在 JS 里跑
+
+  /* ============================================================
+     摘要算法
+     ============================================================ */
+
+  /* ---------- MD5（自写）----------
+     WebCrypto 刻意不提供 MD5（它已被攻破），但校验老发布的文件时经常只有 MD5 可用，
+     所以自己实现一份。K 表按规范定义 K[i] = floor(abs(sin(i+1)) × 2^32) 现算，
+     比硬编码 64 个魔数更不容易抄错。 */
+  const MD5_S = [
+    7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
+    5, 9,14,20, 5, 9,14,20, 5, 9,14,20, 5, 9,14,20,
+    4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23,
+    6,10,15,21, 6,10,15,21, 6,10,15,21, 6,10,15,21
+  ];
+  const MD5_K = (() => {
+    const k = new Uint32Array(64);
+    for (let i = 0; i < 64; i++) k[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
+    return k;
+  })();
+
+  function md5(bytes) {
+    const n = bytes.length;
+    /* 补一个 0x80，再补 0 直到长度 ≡ 56 (mod 64)，末尾放 8 字节小端比特长度 */
+    const total = (((n + 8) >> 6) + 1) << 6;
+    const buf = new Uint8Array(total);
+    buf.set(bytes);
+    buf[n] = 0x80;
+    const bits = n * 8;
+    const hi = Math.floor(bits / 4294967296), lo = bits >>> 0;
+    buf[total - 8] = lo & 255; buf[total - 7] = (lo >>> 8) & 255;
+    buf[total - 6] = (lo >>> 16) & 255; buf[total - 5] = (lo >>> 24) & 255;
+    buf[total - 4] = hi & 255; buf[total - 3] = (hi >>> 8) & 255;
+    buf[total - 2] = (hi >>> 16) & 255; buf[total - 1] = (hi >>> 24) & 255;
+
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    const M = new Uint32Array(16);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) {
+        const p = off + i * 4;
+        M[i] = buf[p] | (buf[p + 1] << 8) | (buf[p + 2] << 16) | (buf[p + 3] << 24);
+      }
+      let A = a0, B = b0, C = c0, D = d0;
+      for (let i = 0; i < 64; i++) {
+        let F, g;
+        if (i < 16) { F = (B & C) | (~B & D); g = i; }
+        else if (i < 32) { F = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+        else if (i < 48) { F = B ^ C ^ D; g = (3 * i + 5) % 16; }
+        else { F = C ^ (B | ~D); g = (7 * i) % 16; }
+        F = (F + A + MD5_K[i] + M[g]) | 0;
+        A = D; D = C; C = B;
+        const s = MD5_S[i];
+        B = (B + ((F << s) | (F >>> (32 - s)))) | 0;
+      }
+      a0 = (a0 + A) | 0; b0 = (b0 + B) | 0; c0 = (c0 + C) | 0; d0 = (d0 + D) | 0;
+    }
+    const out = new Uint8Array(16);
+    [a0, b0, c0, d0].forEach((v, i) => {
+      out[i * 4] = v & 255; out[i * 4 + 1] = (v >>> 8) & 255;
+      out[i * 4 + 2] = (v >>> 16) & 255; out[i * 4 + 3] = (v >>> 24) & 255;
+    });
+    return out;
+  }
+
+  /* ---------- CRC32 ---------- */
+  let CRC_TABLE = null;
+  function crc32(bytes) {
+    if (!CRC_TABLE) {
+      CRC_TABLE = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        CRC_TABLE[n] = c >>> 0;
+      }
+    }
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  /* ---------- 统一入口 ---------- */
+  const SUBTLE_OK = !!(window.crypto && crypto.subtle);
+
+  /* name 同时是 WebCrypto 的算法名；'MD5' / 'CRC32' 走自写分支 */
+  async function digest(name, bytes) {
+    if (name === "MD5") return md5(bytes);
+    if (name === "CRC32") {
+      const v = crc32(bytes);
+      return new Uint8Array([(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255]);
+    }
+    if (!SUBTLE_OK) throw new Error("当前环境不提供 WebCrypto（需要 https 或 localhost）");
+    const buf = await crypto.subtle.digest(name, bytes);
+    return new Uint8Array(buf);
+  }
+
+  /* ---------- HMAC ---------- */
+  async function hmacOf(name, keyBytes, msgBytes) {
+    if (name === "MD5") return hmacMd5(keyBytes, msgBytes);
+    if (!SUBTLE_OK) throw new Error("当前环境不提供 WebCrypto（需要 https 或 localhost）");
+    const k = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: name }, false, ["sign"]);
+    const sig = await crypto.subtle.sign("HMAC", k, msgBytes);
+    return new Uint8Array(sig);
+  }
+  /* HMAC 的结构是固定的：K' = key 补/散列到块长，然后 H(K'⊕opad ‖ H(K'⊕ipad ‖ msg)) */
+  function hmacMd5(key, msg) {
+    let k = key;
+    if (k.length > 64) k = md5(k);
+    const kp = new Uint8Array(64); kp.set(k);
+    const ipad = new Uint8Array(64), opad = new Uint8Array(64);
+    for (let i = 0; i < 64; i++) { ipad[i] = kp[i] ^ 0x36; opad[i] = kp[i] ^ 0x5c; }
+    return md5(cat(opad, md5(cat(ipad, msg))));
+  }
+  function cat(a, b) {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a); out.set(b, a.length);
+    return out;
+  }
+
+  /* ---------- 输出格式 ---------- */
+  const HEXD = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, "0"));
+  function toHex(bytes, upper) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += HEXD[bytes[i]];
+    return upper ? s.toUpperCase() : s;
+  }
+  function toB64(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += CHUNK) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    return btoa(bin);
+  }
+
+  /* ============================================================
+     算法清单
+     ============================================================ */
+  const ALGOS = ["MD5", "SHA-1", "SHA-256", "SHA-384", "SHA-512", "CRC32"];
+  const BITS = { MD5: 128, "SHA-1": 160, "SHA-256": 256, "SHA-384": 384, "SHA-512": 512, CRC32: 32 };
+
+  /* 勾选框一次生成，省得在 HTML 里手写六遍还容易漏 */
+  $("txtAlgos").innerHTML = ALGOS.map(a =>
+    '<label class="chk" style="margin-right:10px"><input type="checkbox" class="alg" value="' + a + '" checked>' + a + "</label>"
+  ).join("");
+
+  const checkedAlgos = () =>
+    Array.prototype.map.call(document.querySelectorAll("#txtAlgos .alg:checked"), el => el.value);
+
+  /* ============================================================
+     结果渲染
+     ============================================================ */
+  /* 两份结果分开存：文本一份、文件一份，「校验比对」要同时比对这两套 */
+  const RESULTS = { text: {}, file: {} };
+
+  function renderTable(tbl, obj, asB64, emptyTip) {
+    const keys = Object.keys(obj);
+    if (!keys.length) {
+      tbl.innerHTML = "";
+      return;
+    }
+    tbl.innerHTML = "<thead><tr><th>算法</th><th>值</th></tr></thead><tbody>"
+      + keys.map(a => {
+          const v = obj[a];
+          /* data-copy 一律存十六进制：显示可以切成 Base64，但复制出去的必须是
+             拿来就能比对的原值。（这里若写成 eh(v) 会得到 "[object Object]"） */
+          return '<tr><td class="u">' + eh(a) + ' <span class="sub">' + BITS[a] + " 位</span></td>"
+               + '<td class="n wrap cp" data-copy="' + eh(v.hex) + '" title="点击复制十六进制值">'
+               + eh(asB64 ? v.b64 : v.hex) + "</td></tr>";
+        }).join("")
+      + "</tbody>";
+  }
+
+  let txtBusy = false;
+  async function runText() {
+    const txt = $("txtIn").value;
+    const algos = checkedAlgos();
+    const asB64 = $("txtB64").checked;
+    if (!txt) {
+      RESULTS.text = {};
+      renderTable($("txtTbl"), {}, asB64);
+      $("txtNote").innerHTML = '<span class="empty-tip">输入文本后自动计算</span>';
+      refreshCompare();
+      return;
+    }
+    if (!algos.length) {
+      RESULTS.text = {};
+      renderTable($("txtTbl"), {}, asB64);
+      $("txtNote").innerHTML = '<span class="err-tip">至少勾选一个算法</span>';
+      refreshCompare();
+      return;
+    }
+    if (txtBusy) return;
+    txtBusy = true;
+    const bytes = U8.encode(txt);
+    const out = {};
+    try {
+      for (const a of algos) {
+        const d = await digest(a, bytes);
+        out[a] = { hex: toHex(d), b64: toB64(d) };
+      }
+      RESULTS.text = out;
+      renderTable($("txtTbl"), out, asB64);
+      $("txtNote").innerHTML = '<b>' + bytes.length + '</b> 字节（UTF-8）· 已计算 <b>' + algos.length + '</b> 个算法。'
+        + "值可以直接点击复制。";
+    } catch (e) {
+      RESULTS.text = {};
+      renderTable($("txtTbl"), {}, asB64);
+      $("txtNote").innerHTML = '<span class="err-tip">计算失败：' + eh(e.message) + "</span>";
+    } finally {
+      txtBusy = false;
+    }
+    refreshCompare();
+  }
+
+  /* 结果作废：表格、暂存、比对卡片要一起清掉 —— 只清表格的话，
+     上一轮的结果还留在 RESULTS 里，「校验比对」会拿旧值给出假通过。 */
+  function clearFileResults(note) {
+    RESULTS.file = {};
+    renderTable($("fileTbl"), {}, $("fileB64").checked);
+    $("fileNote").innerHTML = note || "";
+    refreshCompare();
+  }
+
+  /* 被体积守卫拦下的那个文件，「仍要计算」按钮要用 */
+  let pendingFile = null;
+
+  let fileBusy = false;
+  async function runFile(file, force) {
+    if (!file) return;
+    const algos = checkedAlgos();
+    const asB64 = $("fileB64").checked;
+
+    $("fileInfo").style.display = "";
+    $("fileInfo").innerHTML =
+      '<span class="nm">' + eh(file.name) + "</span>"
+      + "<span>" + fmtSize(file.size) + "</span>"
+      + "<span>" + eh(file.type || "未知类型") + "</span>"
+      + "<span>修改于 " + new Date(file.lastModified).toLocaleString("zh-CN", { hour12: false }) + "</span>";
+
+    if (!algos.length) {
+      $("fileNote").innerHTML = '<span class="err-tip">至少勾选一个算法</span>';
+      return;
+    }
+    if (fileBusy) return;
+
+    /* ---- 前置体积守卫 ---- ★ 必须在 arrayBuffer() 之前拦，读完再提示就已经太晚了 */
+    pendingFile = null;
+    if (file.size > FILE_LIMIT) {
+      clearFileResults('<span class="err-tip">文件 ' + fmtSize(file.size) + " 超过 " + fmtSize(FILE_LIMIT)
+        + " 上限，已拒绝读取。</span>本页是把整个文件读进内存再算的，再大就有把标签页撑爆的风险。"
+        + "这么大的文件建议在本地用命令行核对：<code>shasum -a 256</code>（macOS / Linux）或 "
+        + "<code>certutil -hashfile … SHA256</code>（Windows）。");
+      return;
+    }
+    if (file.size > FILE_PAUSE && !force) {
+      pendingFile = file;
+      clearFileResults('<span class="err-tip">文件 ' + fmtSize(file.size) + " 超过 " + fmtSize(FILE_PAUSE)
+        + " 的安全阈值，已暂停。</span>完整算一遍需要先在内存里放下一份文件"
+        + (SLOW_ALGOS.some(a => algos.indexOf(a) >= 0)
+            ? "，而且当前勾选的 MD5 / CRC32 是纯 JS 实现、会在主线程上同步跑，期间页面会没反应"
+            : "")
+        + "。"
+        + '<div class="ops" style="margin:8px 0 0"><button class="mini" id="btnFileForce">仍要计算</button></div>'
+        + '<div style="margin-top:6px">也可以改用命令行：<code>shasum -a 256</code>。</div>');
+      const b = $("btnFileForce");
+      if (b) b.addEventListener("click", () => { if (pendingFile) runFile(pendingFile, true); });
+      return;
+    }
+
+    fileBusy = true;
+    $("fileNote").innerHTML = '<span class="spinner"></span>正在读取并计算 ' + eh(file.name) + " …";
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const out = {};
+      for (const a of algos) {
+        const d = await digest(a, bytes);
+        out[a] = { hex: toHex(d), b64: toB64(d) };
+      }
+      RESULTS.file = out;
+      renderTable($("fileTbl"), out, asB64);
+      $("fileNote").innerHTML = '<b>' + fmtSize(bytes.length) + '</b> · 已计算 <b>' + algos.length + '</b> 个算法。'
+        + (bytes.length > FILE_PAUSE
+            ? "<br>文件较大，MD5 是纯 JS 实现、比浏览器内置的 SHA 慢，如果只想核对 SHA-256，可以只勾选它再点一次。"
+            : "");
+    } catch (e) {
+      clearFileResults('<span class="err-tip">读取或计算失败：' + eh(e.message) + "</span>");
+      return;
+    } finally {
+      fileBusy = false;
+    }
+    refreshCompare();
+  }
+
+  function fmtSize(n) {
+    if (n < 1024) return n + " B";
+    const u = ["KB", "MB", "GB", "TB"];
+    let i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+    return (Math.round(n * 100) / 100) + " " + u[i];
+  }
+
+  /* ============================================================
+     HMAC
+     ============================================================ */
+  let hmBusy = false;
+  async function runHmac() {
+    const key = $("hmKey").value, msg = $("hmMsg").value;
+    const algo = $("hmAlgo").value, asB64 = $("hmB64").checked;
+    if (!key && !msg) {
+      $("hmTbl").innerHTML = "";
+      $("hmNote").innerHTML = '<span class="empty-tip">填入密钥与消息后自动计算</span>';
+      return;
+    }
+    if (hmBusy) return;
+    hmBusy = true;
+    try {
+      const d = await hmacOf(algo, U8.encode(key), U8.encode(msg));
+      const hex = toHex(d), b64 = toB64(d);
+      $("hmTbl").innerHTML = "<thead><tr><th>算法</th><th>值</th></tr></thead><tbody>"
+        + '<tr><td class="u">HMAC-' + eh(algo.replace("-", "")) + ' <span class="sub">' + BITS[algo] + " 位</span></td>"
+        + '<td class="n wrap cp" data-copy="' + eh(hex) + '" title="点击复制">' + eh(asB64 ? b64 : hex) + "</td></tr>"
+        + "</tbody>";
+      $("hmNote").innerHTML = "密钥 <b>" + U8.encode(key).length + "</b> 字节 · 消息 <b>" + U8.encode(msg).length + "</b> 字节。"
+        + "<br>HMAC 会把密钥按块长（64 字节）补齐后与消息一起参与两轮散列，所以密钥长度不影响输出长度。"
+        + (asB64 ? "当前显示 Base64，十六进制值仍可复制。" : "当前显示十六进制。");
+    } catch (e) {
+      $("hmTbl").innerHTML = "";
+      $("hmNote").innerHTML = '<span class="err-tip">计算失败：' + eh(e.message) + "</span>";
+    } finally {
+      hmBusy = false;
+    }
+  }
+
+  /* ============================================================
+     校验比对
+     ============================================================ */
+  function refreshCompare() {
+    const raw = $("cmpIn").value;
+    /* 宽松归一：去掉空白与常见分隔符，去掉 `sha256:` / `SHA256=` 这类前缀，统一小写 */
+    const want = raw.trim().toLowerCase()
+      .replace(/^[a-z0-9][a-z0-9._-]*\s*[:=]\s*/, "")
+      .replace(/[\s:_-]/g, "");
+    if (!want) {
+      $("cmpTbl").innerHTML = "";
+      /* 空着也要有话说：否则这张卡片就是「一个输入框 + 一片空白」，看着像没做完 */
+      const n = Object.keys(RESULTS.text).length + Object.keys(RESULTS.file).length;
+      $("cmpNote").innerHTML = n
+        ? '<span class="empty-tip">当前有 <b>' + n + '</b> 个已算出的结果可参与比对，粘贴期望值后自动开始</span>'
+        : '<span class="empty-tip">先在上方计算文本或文件的哈希，再回到这里粘贴期望值</span>';
+      return;
+    }
+    const hits = [];
+    let total = 0;
+    ["text", "file"].forEach(src => {
+      const obj = RESULTS[src];
+      Object.keys(obj).forEach(a => {
+        total++;
+        if (obj[a].hex.toLowerCase() === want) hits.push({ src: src, algo: a });
+      });
+    });
+
+    if (hits.length) {
+      const srcName = { text: "文本", file: "文件" };
+      $("cmpTbl").innerHTML = "<thead><tr><th>一致</th><th>来源</th><th>算法</th></tr></thead><tbody>"
+        + hits.map(h => '<tr class="hit"><td class="ok-tip">✓</td><td class="u">' + srcName[h.src] + "</td>"
+            + '<td class="n">' + eh(h.algo) + "</td></tr>").join("")
+        + "</tbody>";
+      $("cmpNote").innerHTML = '<span class="ok-tip">一致</span>：期望值匹配 <b>'
+        + hits.map(h => srcName[h.src] + "的 " + h.algo).join("</b>、<b>")
+        + "</b>。";
+      return;
+    }
+
+    if (!total) {
+      $("cmpTbl").innerHTML = "";
+      $("cmpNote").innerHTML = '<span class="empty-tip">还没有可比对的结果 —— 请先在上方计算文本或文件的哈希</span>';
+      return;
+    }
+    $("cmpTbl").innerHTML = "<thead><tr><th>一致</th><th>来源</th><th>算法</th></tr></thead><tbody>"
+      + '<tr><td class="err-tip">✗</td><td class="u">—</td><td class="u">已比对 ' + total + " 项，无一匹配</td></tr>"
+      + "</tbody>";
+    $("cmpNote").innerHTML = '<span class="err-tip">不一致</span>：与当前已计算的 <b>' + total + '</b> 个结果都对不上。'
+      + "可能原因：文件没下完或被改过、期望值来自另一个算法、粘贴时漏了字符。"
+      + (want.length !== 32 && want.length !== 40 && want.length !== 64 && want.length !== 96 && want.length !== 128 && want.length !== 8
+          ? "<br>顺带一提：当前期望值长 <b>" + want.length + "</b> 个十六进制字符，不对应任何常见摘要长度（8 / 32 / 40 / 64 / 96 / 128），可能粘错了。"
+          : "");
+  }
+
+  /* ============================================================
+     参考表
+     ============================================================ */
+  const REF = [
+    ["MD5", "128 位 / 32 字符", "已攻破", "内容指纹、去重、老系统兼容", "碰撞可在秒级构造，不可用于签名或安全校验"],
+    ["SHA-1", "160 位 / 40 字符", "已攻破", "老版本 Git 对象、老证书", "2017 年 SHAttered 已给出实用碰撞，逐步淘汰"],
+    ["SHA-256", "256 位 / 64 字符", "安全", "文件校验、区块链、TLS 证书", "当前默认选择，无已知实用碰撞"],
+    ["SHA-384", "384 位 / 96 字符", "安全", "高安全等级场景", "SHA-512 的截断版，性能与 SHA-512 相当"],
+    ["SHA-512", "512 位 / 128 字符", "安全", "高安全等级场景", "64 位平台上比 SHA-256 更快"],
+    ["CRC32", "32 位 / 8 字符", "非加密", "传输检错、压缩包校验", "线性校验码，可任意构造碰撞，绝不能当安全校验"],
+    ["HMAC-SHA256", "256 位 / 64 字符", "安全", "API 签名、JWT（HS256）", "带密钥，可证明来源而不只是完整性"]
+  ];
+  $("refTbl").innerHTML = "<thead><tr><th>算法</th><th>摘要长度</th><th>安全性</th><th>典型用途</th><th class=\"hide-sm\">备注</th></tr></thead><tbody>"
+    + REF.map(([a, len, sec, use, memo]) => {
+        const cls = sec === "安全" ? "ok-tip" : sec === "非加密" ? "u" : "err-tip";
+        return "<tr><td>" + eh(a) + '</td><td class="u">' + eh(len) + '</td><td class="' + cls + '">' + eh(sec) + "</td>"
+             + "<td>" + eh(use) + '</td><td class="wrap u hide-sm">' + eh(memo) + "</td></tr>";
+      }).join("")
+    + "</tbody>";
+
+  /* ============================================================
+     事件
+     ============================================================ */
+
+  let txtTimer = 0;
+  $("txtIn").addEventListener("input", () => {
+    clearTimeout(txtTimer);
+    txtTimer = setTimeout(runText, 260);      // 防抖：一次按键重算 6 个算法没必要
+  });
+  $("txtAlgos").addEventListener("change", runText);
+  $("txtB64").addEventListener("change", () => { renderTable($("txtTbl"), RESULTS.text, $("txtB64").checked); });
+  $("btnTextRun").addEventListener("click", runText);
+
+  /* 文件：拖拽 + 点击选择。dragover 必须 preventDefault，否则浏览器会直接打开文件。 */
+  const drop = $("drop");
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.add("over");
+  }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove("over");
+  }));
+  drop.addEventListener("drop", e => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) runFile(f);
+  });
+  /* 整页也接住 drop，避免拖到页面空白处时浏览器把文件当导航打开 */
+  window.addEventListener("dragover", e => e.preventDefault());
+  window.addEventListener("drop", e => e.preventDefault());
+
+  $("fileIn").addEventListener("change", e => { if (e.target.files[0]) runFile(e.target.files[0]); });
+  $("fileB64").addEventListener("change", () => { renderTable($("fileTbl"), RESULTS.file, $("fileB64").checked); });
+  $("txtAlgos").addEventListener("change", () => {
+    /* 算法集合变了，文件结果就过期了 —— 清掉避免「比对到旧值」这种阴险的假通过 */
+    if (RESULTS.file && Object.keys(RESULTS.file).length) {
+      const missing = Object.keys(RESULTS.file).filter(a => checkedAlgos().indexOf(a) < 0);
+      if (missing.length) {
+        $("fileNote").innerHTML = '<span class="empty-tip">算法选择已变化，请重新选择文件以刷新结果</span>';
+        RESULTS.file = {};
+        renderTable($("fileTbl"), {}, $("fileB64").checked);
+        refreshCompare();
+      }
+    }
+  });
+
+  $("hmKey").addEventListener("input", runHmac);
+  $("hmMsg").addEventListener("input", runHmac);
+  $("hmAlgo").addEventListener("change", runHmac);
+  $("hmB64").addEventListener("change", runHmac);
+  $("hmShow").addEventListener("change", () => { $("hmKey").type = $("hmShow").checked ? "text" : "password"; });
+
+  $("cmpIn").addEventListener("input", refreshCompare);
+
+  $("btnTextAll").addEventListener("click", () => {
+    const keys = Object.keys(RESULTS.text);
+    if (!keys.length) { toast("还没有可复制的结果"); return; }
+    copyText(keys.map(a => a + ": " + RESULTS.text[a].hex).join("\n"), "已复制全部结果");
+  });
+  $("btnFileAll").addEventListener("click", () => {
+    const keys = Object.keys(RESULTS.file);
+    if (!keys.length) { toast("还没有可复制的结果"); return; }
+    const nm = ($("fileInfo").querySelector(".nm") || {}).textContent || "";
+    copyText(keys.map(a => a + ": " + RESULTS.file[a].hex).join("\n"), "已复制全部结果");
+  });
+  $("btnHmacCopy").addEventListener("click", () => {
+    const td = $("hmTbl").querySelector("td.cp");
+    if (!td) { toast("还没有可复制的结果"); return; }
+    copyText(td.dataset.copy, "已复制 HMAC");
+  });
+
+  /* 点表格里的值即复制 */
+  document.addEventListener("click", e => {
+    const td = e.target.closest("td.cp");
+    if (!td || !td.dataset.copy) return;
+    copyText(td.dataset.copy, "已复制");
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    ["txtIn", "hmKey", "hmMsg", "cmpIn"].forEach(i => { $(i).value = ""; });
+    $("fileIn").value = "";
+    $("fileInfo").style.display = "none";
+    $("fileInfo").innerHTML = "";
+    pendingFile = null;
+    RESULTS.text = {}; RESULTS.file = {};
+    ["txtTbl", "fileTbl", "hmTbl", "cmpTbl"].forEach(i => { $(i).innerHTML = ""; });
+    ["txtNote", "fileNote", "hmNote", "cmpNote"].forEach(i => { $(i).innerHTML = ""; });
+    refreshCompare();          // 重新给出空态提示，而不是留一片空白
+    toast("已清空");
+  });
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  if (!SUBTLE_OK) {
+    $("txtNote").innerHTML = '<span class="err-tip">当前环境没有 WebCrypto，SHA 系列不可用。'
+      + "请用 https 或 localhost 打开本页（file:// 不是安全上下文）。MD5 与 CRC32 仍可用。</span>";
+  }
+  runText();
+  runHmac();
+  refreshCompare();
+})();
+</script>
+</body>
+</html>

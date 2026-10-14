@@ -135,6 +135,9 @@
     .stat { font-size: 11px; }
     main { padding: 10px; gap: 10px; }
     .card { padding: 12px 12px; }
+    /* 触屏下输入控件字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大。
+       #time 有 id 级规则（15px），特异性高于裸 textarea，必须一并列出。 */
+    #time, textarea { font-size: 16px; }
   }
 </style>
 </head>

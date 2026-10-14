@@ -329,6 +329,14 @@
                 padding: 10px;
             }
         }
+
+        /* 触屏下输入控件字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大。
+           原有的 `.calendar .container .bar select` 是 11px 且特异性为 (0,2,1)，
+           所以这里必须写成同等特异性、并放在其后才能覆盖。 */
+        @media (max-width: 640px) {
+            .calendar .container .bar input,
+            .calendar .container .bar select { font-size: 16px; height: 34px; }
+        }
     </style>
 </head>
 

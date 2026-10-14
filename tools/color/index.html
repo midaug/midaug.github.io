@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>颜色工具</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一条）。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"] { cursor: text; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder { color: var(--text-3); }
+  input[type="color"] { padding: 2px; height: 34px; width: 46px; cursor: pointer; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row > label.k { width: 56px; color: var(--text-2); flex: none; }
+
+  .swatch {
+    height: 92px; border-radius: 8px; border: 1px solid var(--border-2);
+    display: grid; place-items: center; margin-bottom: 10px;
+    font: 700 13px/1 var(--mono); letter-spacing: .5px;
+    transition: background .15s;
+  }
+  .swatch small { font-weight: 400; font-size: 11px; opacity: .85; display: block; margin-top: 5px; letter-spacing: 0; }
+
+  .fmt {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; margin-bottom: 6px;
+  }
+  .fmt .name { width: 74px; color: var(--text-3); font-size: 11.5px; flex: none; }
+  .fmt code { flex: 1; min-width: 0; font: 12.5px/1.5 var(--mono); word-break: break-all; user-select: all; }
+
+  /* WCAG 对比度 */
+  .contrast-preview {
+    border-radius: 8px; border: 1px solid var(--border-2);
+    padding: 14px 16px; margin-top: 10px; transition: background .15s, color .15s;
+  }
+  .contrast-preview .big { font-size: 22px; font-weight: 700; line-height: 1.35; }
+  .contrast-preview .small { font-size: 12.5px; margin-top: 6px; line-height: 1.75; }
+  .ratio {
+    font: 700 26px/1 var(--mono); color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 2px; }
+  .badge {
+    font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text-2); white-space: nowrap;
+  }
+  .badge.pass { background: rgba(13,122,82,.1); border-color: rgba(13,122,82,.28); color: var(--ok); font-weight: 600; }
+  .badge.fail { background: rgba(209,36,47,.08); border-color: rgba(209,36,47,.25); color: var(--err); }
+
+  /* 明暗梯度 */
+  .ramp { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 5px; margin-top: 4px; }
+  .ramp button {
+    height: 52px; border-radius: 7px; border: 1px solid var(--border-2);
+    padding: 0; cursor: pointer; position: relative;
+  }
+  .ramp button span {
+    position: absolute; left: 0; right: 0; bottom: 3px; text-align: center;
+    font-size: 9.5px; font-variant-numeric: tabular-nums;
+  }
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .err-tip { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    input[type="text"] { font-size: 16px; }
+    .fmt code { font-size: 12px; }
+    .ramp { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Color<span>Toolkit</span></div>
+  <span class="sep"></span>
+  <span class="stat">HEX · RGB · HSL · HSV · CMYK · WCAG 对比度</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部本地计算</span>
+  <button class="mini" id="btnClear" title="重置为默认颜色">重置</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 主颜色 ============ -->
+  <section class="card">
+    <h2>
+      主颜色
+      <span class="hint">HEX / RGB 双向输入</span>
+    </h2>
+    <div class="swatch" id="swatch"><span><span id="swHex">#4F6BED</span><small id="swName">—</small></span></div>
+
+    <div class="row">
+      <label class="k" for="picked">拾色</label>
+      <input type="color" id="picked" value="#4f6bed" />
+      <label class="k" for="hexIn" style="width:auto">HEX</label>
+      <input type="text" id="hexIn" value="#4f6bed" spellcheck="false" autocomplete="off" style="flex:1;min-width:110px" />
+    </div>
+    <div class="row">
+      <label class="k">RGB</label>
+      <input type="text" id="rIn" value="79" style="width:64px" inputmode="numeric" />
+      <input type="text" id="gIn" value="107" style="width:64px" inputmode="numeric" />
+      <input type="text" id="bIn" value="237" style="width:64px" inputmode="numeric" />
+      <span style="flex:1"></span>
+      <button class="mini" id="btnRand">随机</button>
+    </div>
+
+    <div id="fmts"></div>
+    <div class="tip" id="parseTip">支持 `#rgb` / `#rrggbb` / `#rrggbbaa`，也接受不带 `#` 的写法。</div>
+  </section>
+
+  <!-- ============ 2. WCAG 对比度 ============ -->
+  <section class="card">
+    <h2>
+      对比度检查
+      <span class="hint">WCAG 2.1</span>
+      <span class="right">
+        <button class="mini" id="btnSwap" title="交换前景与背景">交换 ⇄</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label class="k">前景</label>
+      <input type="color" id="fgPick" value="#0f172a" />
+      <input type="text" id="fgIn" value="#0f172a" spellcheck="false" style="flex:1;min-width:100px" />
+    </div>
+    <div class="row">
+      <label class="k">背景</label>
+      <input type="color" id="bgPick" value="#ffffff" />
+      <input type="text" id="bgIn" value="#ffffff" spellcheck="false" style="flex:1;min-width:100px" />
+      <button class="mini" id="btnFromMain" title="把主颜色设为背景">用主色</button>
+    </div>
+
+    <div class="ratio" id="ratio">21.00 : 1</div>
+    <div class="badges" id="badges"></div>
+    <div class="contrast-preview" id="cprev">
+      <div class="big">大号文字 · 18pt / 14pt 粗体</div>
+      <div class="small">正文文字：在 4.5:1 以上才算通过 AA；表格、按钮、图标等非文本内容按 3:1 判定。</div>
+    </div>
+    <div class="tip" style="margin-top:8px">
+      计算公式：相对亮度按 sRGB 线性化（阈值 0.03928，分段 gamma），
+      对比度 = (L<sub>亮</sub> + 0.05) / (L<sub>暗</sub> + 0.05)。
+    </div>
+  </section>
+
+  <!-- ============ 3. 明暗梯度 ============ -->
+  <section class="card wide">
+    <h2>
+      明暗梯度
+      <span class="hint">点任意一档复制 HEX · 左浅右深</span>
+      <span class="right"><button class="mini" id="btnCopyRamp">复制全部</button></span>
+    </h2>
+    <div class="ramp" id="ramp"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  /* ============================================================
+     颜色解析与转换
+     -- 全部按 sRGB（0-255 整数）为中间表示，避免多处各自解析互相打架。
+     ============================================================ */
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  /* #rgb / #rgba / #rrggbb / #rrggbbaa，允许省略 #；返回 {r,g,b,a} 或 null */
+  function parseHex(input) {
+    let s = String(input).trim().replace(/^#/, "");
+    if (!/^[0-9a-fA-F]+$/.test(s)) return null;
+    let r, g, b, a = 1;
+    if (s.length === 3 || s.length === 4) {
+      r = parseInt(s[0] + s[0], 16); g = parseInt(s[1] + s[1], 16); b = parseInt(s[2] + s[2], 16);
+      if (s.length === 4) a = parseInt(s[3] + s[3], 16) / 255;
+    } else if (s.length === 6 || s.length === 8) {
+      r = parseInt(s.slice(0, 2), 16); g = parseInt(s.slice(2, 4), 16); b = parseInt(s.slice(4, 6), 16);
+      if (s.length === 8) a = parseInt(s.slice(6, 8), 16) / 255;
+    } else return null;
+    return { r, g, b, a };
+  }
+
+  const hex2 = n => clamp(Math.round(n), 0, 255).toString(16).padStart(2, "0").toUpperCase();
+  const toHex = c => "#" + hex2(c.r) + hex2(c.g) + hex2(c.b) + (c.a < 1 ? hex2(c.a * 255) : "");
+  const toRgbStr = c => "rgb(" + c.r + ", " + c.g + ", " + c.b + ")"
+    + (c.a < 1 ? " / " + (Math.round(c.a * 100) / 100) : "");
+
+  function toHsl(c) {
+    const r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return { h, s, l };
+  }
+  function toHsv(c) {
+    const r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0;
+    if (d) {
+      if (max === r) h = 60 * (((g - b) / d) % 6);
+      else if (max === g) h = 60 * ((b - r) / d + 2);
+      else h = 60 * ((r - g) / d + 4);
+    }
+    if (h < 0) h += 360;
+    return { h, s: max ? d / max : 0, v: max };
+  }
+  /* CMYK：不做黑版抽离（GCR），用教科书公式；k=1 时 c/m/y 记 0 避免除零 */
+  function toCmyk(c) {
+    const r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    const k = 1 - Math.max(r, g, b);
+    if (k >= 1) return { c: 0, m: 0, y: 0, k: 100 };
+    return {
+      c: (1 - r - k) / (1 - k) * 100,
+      m: (1 - g - k) / (1 - k) * 100,
+      y: (1 - b - k) / (1 - k) * 100,
+      k: k * 100
+    };
+  }
+
+  /* WCAG 相对亮度：sRGB → 线性（≤0.03928 段除 12.92，否则 ((c+0.055)/1.055)^2.4） */
+  function luminance(c) {
+    const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+  function contrastRatio(a, b) {
+    const la = luminance(a), lb = luminance(b);
+    const hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  /* 明暗混合：t=0 取白、t=0.5 取本色、t=1 取黑（简单线性插值，够用且可逆性好） */
+  function mix(c, t) {
+    if (t <= 0.5) {
+      const k = t / 0.5;
+      return { r: 255 + (c.r - 255) * k, g: 255 + (c.g - 255) * k, b: 255 + (c.b - 255) * k, a: 1 };
+    }
+    const k = (t - 0.5) / 0.5;
+    return { r: c.r * (1 - k), g: c.g * (1 - k), b: c.b * (1 - k), a: 1 };
+  }
+
+  /* ============================================================
+     状态
+     ============================================================ */
+  let main = { r: 79, g: 107, b: 237, a: 1 };
+
+  /* 颜色名：只查最近邻的几个常用名，不做完整名称表（避免体积） */
+  const NAMED = [
+    ["黑色", 0, 0, 0], ["白色", 255, 255, 255], ["红色", 255, 0, 0], ["绿色", 0, 128, 0],
+    ["蓝色", 0, 0, 255], ["黄色", 255, 255, 0], ["橙色", 255, 165, 0], ["紫色", 128, 0, 128],
+    ["灰色", 128, 128, 128], ["青色", 0, 255, 255], ["粉色", 255, 192, 203], ["棕色", 165, 42, 42]
+  ];
+  function nearestName(c) {
+    let best = "", bd = Infinity;
+    for (const [name, r, g, b] of NAMED) {
+      const d = (c.r - r) ** 2 + (c.g - g) ** 2 + (c.b - b) ** 2;
+      if (d < bd) { bd = d; best = name; }
+    }
+    /* 距离太远就不硬套名字，避免「深靛蓝」被叫成「蓝色」这种误导 */
+    return bd <= 60 ** 2 ? "接近「" + best + "」" : "—";
+  }
+
+  /* ============================================================
+     渲染
+     ============================================================ */
+  function fmtRow(label, value, copyable) {
+    const row = document.createElement("div");
+    row.className = "fmt";
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = label;
+    const code = document.createElement("code");
+    code.textContent = value;
+    row.append(n, code);
+    if (copyable !== false) {
+      const b = document.createElement("button");
+      b.className = "mini";
+      b.textContent = "复制";
+      b.addEventListener("click", () => copyText(value, label + " 已复制"));
+      row.appendChild(b);
+    }
+    return row;
+  }
+
+  function renderMain(keepHex) {
+    const c = main;
+    $("swatch").style.background = toHex({ ...c, a: 1 });
+    /* 自动挑一个能看清的叠字色：亮底用深字、暗底用白字 */
+    $("swatch").style.color = luminance(c) > 0.45 ? "#0f172a" : "#ffffff";
+    $("swHex").textContent = toHex(c);
+    $("swName").textContent = nearestName(c);
+
+    const hsl = toHsl(c), hsv = toHsv(c), cmyk = toCmyk(c);
+    const box = $("fmts");
+    box.textContent = "";
+    box.append(
+      fmtRow("HEX", toHex(c)),
+      fmtRow("RGB", toRgbStr(c)),
+      fmtRow("HSL", "hsl(" + Math.round(hsl.h) + ", " + Math.round(hsl.s * 100) + "%, " + Math.round(hsl.l * 100) + "%)"),
+      fmtRow("HSV", "hsv(" + Math.round(hsv.h) + ", " + Math.round(hsv.s * 100) + "%, " + Math.round(hsv.v * 100) + "%)"),
+      fmtRow("CMYK", "cmyk(" + Math.round(cmyk.c) + "%, " + Math.round(cmyk.m) + "%, " + Math.round(cmyk.y) + "%, " + Math.round(cmyk.k) + "%)")
+    );
+    const cssVar = "--brand: " + toHex(c) + ";";
+    box.appendChild(fmtRow("CSS 变量", cssVar));
+
+    $("picked").value = toHex({ r: c.r, g: c.g, b: c.b, a: 1 }).slice(0, 7).toLowerCase();
+    $("rIn").value = c.r; $("gIn").value = c.g; $("bIn").value = c.b;
+    /* ★ 用户正在 HEX 框里打字时不要回写该输入框 —— 输入 "#4f6" 会被解析成
+       #44FF66 再写回去，光标和内容都被打断（输入法/逐字输入的常见坑）。 */
+    if (!keepHex) $("hexIn").value = toHex(c);
+    renderRamp();
+    renderContrast();
+  }
+
+  function renderRamp() {
+    const box = $("ramp");
+    box.textContent = "";
+    const STEPS = 11;
+    for (let i = 0; i < STEPS; i++) {
+      const t = i / (STEPS - 1);
+      const col = mix(main, t);
+      const hex = toHex(col);
+      const b = document.createElement("button");
+      b.style.background = hex;
+      b.title = hex;
+      const lab = document.createElement("span");
+      lab.textContent = String(Math.round((1 - t) * 100));
+      lab.style.color = luminance(col) > 0.45 ? "rgba(15,23,42,.55)" : "rgba(255,255,255,.75)";
+      b.appendChild(lab);
+      b.addEventListener("click", () => copyText(hex, hex + " 已复制"));
+      box.appendChild(b);
+    }
+  }
+
+  let fg = { r: 15, g: 23, b: 42, a: 1 };
+  let bg = { r: 255, g: 255, b: 255, a: 1 };
+
+  function renderContrast() {
+    const ratio = contrastRatio(fg, bg);
+    $("ratio").textContent = ratio.toFixed(2) + " : 1";
+    $("ratio").style.color = ratio >= 4.5 ? "var(--ok)" : ratio >= 3 ? "var(--num)" : "var(--err)";
+
+    const tests = [
+      ["正文 AA ≥ 4.5", ratio >= 4.5],
+      ["正文 AAA ≥ 7", ratio >= 7],
+      ["大字 AA ≥ 3", ratio >= 3],
+      ["大字 AAA ≥ 4.5", ratio >= 4.5],
+      ["非文本 ≥ 3", ratio >= 3]
+    ];
+    const badges = $("badges");
+    badges.textContent = "";
+    for (const [label, ok] of tests) {
+      const s = document.createElement("span");
+      s.className = "badge " + (ok ? "pass" : "fail");
+      s.textContent = (ok ? "✓ " : "✗ ") + label;
+      badges.appendChild(s);
+    }
+    const prev = $("cprev");
+    prev.style.background = toHex({ ...bg, a: 1 });
+    prev.style.color = toHex({ ...fg, a: 1 });
+    $("fgPick").value = toHex({ r: fg.r, g: fg.g, b: fg.b, a: 1 }).slice(0, 7).toLowerCase();
+    $("bgPick").value = toHex({ r: bg.r, g: bg.g, b: bg.b, a: 1 }).slice(0, 7).toLowerCase();
+    $("fgIn").value = toHex(fg);
+    $("bgIn").value = toHex(bg);
+  }
+
+  /* ============================================================
+     输入处理
+     ============================================================ */
+  function applyMainHex(text, silent, keepHex) {
+    const c = parseHex(text);
+    if (!c) {
+      if (!silent) $("parseTip").innerHTML = '<span class="err-tip">无法解析：' + esc(text) + '（支持 #rgb / #rrggbb / #rrggbbaa）</span>';
+      return false;
+    }
+    main = c;
+    $("parseTip").textContent = "支持 `#rgb` / `#rrggbb` / `#rrggbbaa`，也接受不带 `#` 的写法。";
+    renderMain(keepHex);
+    return true;
+  }
+  function applyMainRgb() {
+    const r = parseInt($("rIn").value, 10), g = parseInt($("gIn").value, 10), b = parseInt($("bIn").value, 10);
+    if (![r, g, b].every(v => Number.isFinite(v) && v >= 0 && v <= 255)) {
+      $("parseTip").innerHTML = '<span class="err-tip">RGB 每个分量必须是 0–255 的整数</span>';
+      return;
+    }
+    main = { r, g, b, a: 1 };
+    $("parseTip").textContent = "支持 `#rgb` / `#rrggbb` / `#rrggbbaa`，也接受不带 `#` 的写法。";
+    renderMain();
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     事件绑定
+     ============================================================ */
+  $("hexIn").addEventListener("input", () => applyMainHex($("hexIn").value, true, true));
+  $("hexIn").addEventListener("change", () => applyMainHex($("hexIn").value, false, false));
+  for (const id of ["rIn", "gIn", "bIn"]) {
+    $(id).addEventListener("change", applyMainRgb);
+    /* 输入到合法值立刻跟手，但不打断正在输入的中间态 */
+    $(id).addEventListener("input", () => {
+      const v = $(id).value;
+      if (/^\d{1,3}$/.test(v) && +v <= 255 && $("rIn").value && $("gIn").value && $("bIn").value) applyMainRgb();
+    });
+  }
+  $("picked").addEventListener("input", () => applyMainHex($("picked").value, true));
+  $("btnRand").addEventListener("click", () => {
+    /* 用 crypto 取真随机色，避免 Math.random 在快速连点下出现可预测序列 */
+    const buf = new Uint8Array(3);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(buf);
+    else { buf[0] = Math.random() * 256; buf[1] = Math.random() * 256; buf[2] = Math.random() * 256; }
+    main = { r: buf[0], g: buf[1], b: buf[2], a: 1 };
+    renderMain();
+  });
+
+  $("fgIn").addEventListener("change", () => {
+    const c = parseHex($("fgIn").value);
+    if (c) { fg = c; renderContrast(); } else toast("前景色无法解析");
+  });
+  $("bgIn").addEventListener("change", () => {
+    const c = parseHex($("bgIn").value);
+    if (c) { bg = c; renderContrast(); } else toast("背景色无法解析");
+  });
+  $("fgPick").addEventListener("input", () => { fg = parseHex($("fgPick").value); renderContrast(); });
+  $("bgPick").addEventListener("input", () => { bg = parseHex($("bgPick").value); renderContrast(); });
+  $("btnSwap").addEventListener("click", () => {
+    const t = fg; fg = bg; bg = t;
+    renderContrast();
+    toast("已交换前景与背景");
+  });
+  $("btnFromMain").addEventListener("click", () => {
+    bg = { r: main.r, g: main.g, b: main.b, a: 1 };
+    renderContrast();
+    toast("背景已设为当前主色");
+  });
+  $("btnCopyRamp").addEventListener("click", () => {
+    const out = [];
+    for (let i = 0; i < 11; i++) out.push(toHex(mix(main, i / 10)));
+    copyText(out.join("\n"), "已复制 11 档色值");
+  });
+  $("btnClear").addEventListener("click", () => {
+    main = { r: 79, g: 107, b: 237, a: 1 };
+    fg = { r: 15, g: 23, b: 42, a: 1 };
+    bg = { r: 255, g: 255, b: 255, a: 1 };
+    renderMain();
+    toast("已重置");
+  });
+
+  /* 初始化：URL 带 ?c=RRGGBB 时直接载入，方便从别处跳转过来 */
+  (function init() {
+    const q = new URLSearchParams(location.search).get("c");
+    if (q && applyMainHex(q, true)) return;
+    renderMain();
+  })();
+})();
+</script>
+</body>
+</html>

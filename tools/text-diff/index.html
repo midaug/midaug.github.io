@@ -373,6 +373,12 @@
     .hk-r { right: auto; }
     .hk-btn svg { width: 14px; height: 14px; }
   }
+  /* 触屏下输入控件字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大。
+     ★ 正文 textarea 由 `.ed textarea`（0,1,1）定 13px，所以这里必须用同等
+     特异性的选择器，只写裸 `textarea` 会被它盖掉。 */
+  @media (max-width: 640px) {
+    .ed textarea, select, input[type="text"], input[type="search"] { font-size: 16px; }
+  }
 </style>
 </head>
 <body>

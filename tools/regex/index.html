@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>正则测试</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* <code> 不设的话会用浏览器默认的 monospace，字号与行高都跟周边不一致，
+     在 flex 行里还会把行盒顶出参差。统一成 --mono。 */
+  code { font-family: var(--mono); }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 否则 main 会失去滚动容器身份 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .io {
+    display: block; width: 100%; min-height: 96px; resize: vertical;
+    font: 12.5px/1.7 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .io.out { background: var(--panel); border-style: dashed; }
+  .io.out.filled { border-style: solid; }
+
+  /* ===== 正则输入行：/  pattern  / flags ===== */
+  .re-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .re-row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .re-box {
+    flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0 10px; transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .re-box:focus-within { background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .re-box.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  .re-box > .sl { flex: none; color: var(--text-3); font-weight: 700; }
+  .re-box > input {
+    flex: 1 1 auto; min-width: 0; border: 0; background: none; padding: 6px 0;
+    font: 12.5px/1.6 var(--mono); color: var(--text);
+  }
+  .re-box > input:focus { box-shadow: none; }
+  .re-box > .fl { flex: none; color: var(--accent); font-weight: 700; font-size: 12px; min-width: 12px; }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+  .chk code { color: var(--accent); font-weight: 700; }
+
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .row > input[type="text"] { flex: 1 1 auto; }
+
+  /* ===== 高亮预览 ===== */
+  .preview {
+    min-height: 96px; max-height: 340px; overflow: auto; padding: 8px 10px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    font: 12.5px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  .preview::-webkit-scrollbar { width: 9px; height: 9px; }
+  .preview::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 9px; border: 2px solid var(--panel-2); }
+  .preview mark {
+    background: var(--accent-soft); color: var(--accent); font-weight: 700;
+    border-radius: 3px; box-shadow: inset 0 -1px 0 var(--accent);
+  }
+  /* 交替色，相邻两个匹配之间能看出边界（连续匹配如 \d 否则糊成一片） */
+  .preview mark.alt { background: rgba(178,94,9,.16); color: var(--num); box-shadow: inset 0 -1px 0 var(--num); }
+  .preview .empty { color: var(--text-3); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl th.r, .tbl td.r { text-align: right; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; white-space: pre-wrap; }
+  .tbl .sub { color: var(--text-3); font-size: 11px; font-weight: 400; }
+  .tbl .sub code { color: var(--num); }
+  .tbl tbody tr.pick { cursor: pointer; }
+  .tbl tbody tr.pick:hover td { background: var(--accent-soft); }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .re-row > label, .row > label { width: 52px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, .re-box > input, input[type="text"], select { font-size: 16px; }
+    .io { min-height: 84px; }
+    .preview { max-height: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Regex<span>Test</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="statMatch">—</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内计算，文本不会上传</span>
+  <button class="mini" id="btnClear" title="清空所有输入">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 表达式与测试文本 ============ -->
+  <section class="card wide">
+    <h2>
+      正则表达式
+      <span class="hint">输入即时匹配，无需点按钮</span>
+      <span class="right">
+        <button class="mini" id="btnSample">示例</button>
+      </span>
+    </h2>
+    <div class="re-row">
+      <label for="reSrc">正则</label>
+      <div class="re-box" id="reBox">
+        <span class="sl">/</span>
+        <input type="text" id="reSrc" spellcheck="false" autocomplete="off" placeholder="\d+" />
+        <span class="sl">/</span>
+        <span class="fl" id="flShow"></span>
+      </div>
+    </div>
+    <div class="ops" id="flagRow">
+      <label class="chk"><input type="checkbox" class="flag" value="g" checked><code>g</code> <span>全局</span></label>
+      <label class="chk"><input type="checkbox" class="flag" value="i"><code>i</code> <span>忽略大小写</span></label>
+      <label class="chk"><input type="checkbox" class="flag" value="m"><code>m</code> <span>多行（^ $ 匹配每行）</span></label>
+      <label class="chk"><input type="checkbox" class="flag" value="s"><code>s</code> <span>点匹配换行</span></label>
+      <label class="chk"><input type="checkbox" class="flag" value="u"><code>u</code> <span>Unicode 码位</span></label>
+      <label class="chk"><input type="checkbox" class="flag" value="y"><code>y</code> <span>粘性</span></label>
+    </div>
+    <textarea class="io" id="reTxt" spellcheck="false" autocomplete="off"
+      placeholder="在这里粘贴要测试的文本…"></textarea>
+    <div class="note" id="reNote"></div>
+  </section>
+
+  <!-- ============ 2. 高亮预览 ============ -->
+  <section class="card wide">
+    <h2>
+      匹配高亮
+      <span class="hint">相邻匹配交替配色，方便看清边界</span>
+    </h2>
+    <div class="preview" id="pv"></div>
+  </section>
+
+  <!-- ============ 3. 匹配明细 ============ -->
+  <section class="card">
+    <h2>
+      匹配明细
+      <span class="hint">位置按字符计，从 0 开始</span>
+      <span class="right">
+        <button class="mini" id="btnCopyMatch">复制匹配</button>
+      </span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="mTbl"></table></div>
+    <div class="note" id="mNote"></div>
+  </section>
+
+  <!-- ============ 4. 替换 ============ -->
+  <section class="card">
+    <h2>
+      替换预览
+      <span class="hint">支持 $1 $&amp; $&lt;名&gt; 等替换语法</span>
+      <span class="right">
+        <button class="mini" id="btnCopyRep">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="repTo">替换为</label>
+      <input type="text" id="repTo" spellcheck="false" autocomplete="off" placeholder="留空 = 删除匹配到的内容" />
+    </div>
+    <textarea class="io out" id="repOut" readonly spellcheck="false" style="margin-top:10px" placeholder="替换结果"></textarea>
+    <div class="note" id="repNote"></div>
+  </section>
+
+  <!-- ============ 5. 常用正则 ============ -->
+  <section class="card wide">
+    <h2>
+      常用正则速查
+      <span class="hint">点任意一行即可填入上方</span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl" id="presetTbl"></table></div>
+    <div class="note">
+      <b>关于性能：</b>像 <code>(a+)+</code>、<code>(.*)*</code> 这类「嵌套量词」在长文本上会触发<b>灾难性回溯</b>。
+      本页把匹配和替换都放在 <b>Web Worker</b> 里计算，并设了 <b>1.5 秒</b>时间预算：
+      超时就终止该线程并给出提示，页面本身不会卡死。另有三层常规保护：匹配数上限 3000 条、
+      高亮只渲染前 200 KB、输入超过 200 KB 时不再自动跑（需要手动点「仍要匹配」）。<br>
+      <b>位置怎么算：</b>按 <b>UTF-16 代码单元</b>计数，与 JavaScript 的 <code>str.slice()</code> 一致；
+      一个 emoji 通常占 2 个位置。勾上 <code>u</code> 标志后，正则本身按码位匹配，但位置计数仍按代码单元。<br>
+      <b>为什么要加 <code>g</code>：</b>不加时只找第一个匹配；<code>matchAll</code> 在非全局正则上会直接抛错，
+      所以本页会按是否勾选 <code>g</code> 走不同分支。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const MAX_MATCH = 3000;          // 匹配数上限
+  const MAX_HL = 200 * 1024;       // 高亮渲染的文本上限
+  const MAX_AUTO = 200 * 1024;     // 超过这个长度就不自动跑了
+  const TIME_BUDGET = 1500;        // 单次匹配/替换的时间预算（ms），超时就把 Worker 整个终止
+
+  /* state.re 不再需要：匹配与替换都在 Worker 里跑，主线程只留 flags 供文案判断。
+     ★ has 必须单独一个布尔量 —— flags 可以是空串（一个标志都不勾），不能用它判「有没有正则」。 */
+  const state = { has: false, flags: "", err: "", matches: [], text: "", truncated: false, cap: false };
+
+  /* ============================================================
+     构建正则（只做语法校验）
+     —— 真正的匹配在 Worker 里跑（见 computeMatches）。这里仍构造函数一次，
+        是为了把语法错误即时反馈出来，顺带算出内部会补上的 d 标志。
+     ============================================================ */
+  function buildRe() {
+    const src = $("reSrc").value;
+    const flags = Array.from(document.querySelectorAll(".flag:checked")).map(c => c.value).join("");
+    $("flShow").textContent = flags;
+    if (!src) return null;
+    try {
+      /* 额外挂一个 d 标志拿每个捕获组的起止位置（Chrome 90+ / Safari 15+ 支持）。
+         它只影响 exec 结果的 .indices，不改变匹配行为。 */
+      new RegExp(src, flags.indexOf("d") < 0 ? flags + "d" : flags);
+      return { flags: flags };
+    } catch (e) {
+      return { err: e.message };
+    }
+  }
+
+  /* ============================================================
+     ★ 核心计算：收集匹配 + 做替换
+     —— 这个函数会被 toString() 之后送进 Worker 独立执行，所以必须自包含：
+        不能引用 $ / eh / state 或本文件里的任何其它变量。
+     ============================================================ */
+  function computeMatches(text, src, flags, repl, maxMatch, mode, gen) {
+    const out = { gen: gen, mode: mode, matches: null, cap: false, err: "", out: null };
+    let re;
+    try {
+      re = new RegExp(src, flags.indexOf("d") < 0 ? flags + "d" : flags);
+    } catch (e) { out.err = String((e && e.message) || e); return out; }
+    /* RegExpMatchArray 的 index / indices / groups 是附加属性，结构化克隆不会带过去，
+       所以先压成纯对象再回传。 */
+    const pack = m => ({
+      index: m.index,
+      len: m[0].length,
+      v: m[0],
+      g: Array.prototype.slice.call(m, 1),
+      idx: m.indices ? Array.prototype.slice.call(m.indices, 1) : null,
+      named: m.groups || null
+    });
+    try {
+      if (mode !== "replace") {
+        out.matches = [];
+        if (flags.indexOf("g") >= 0 || flags.indexOf("y") >= 0) {
+          for (const m of text.matchAll(re)) {
+            out.matches.push(pack(m));
+            if (out.matches.length >= maxMatch) { out.cap = true; break; }
+          }
+        } else {
+          const m = re.exec(text);
+          if (m) out.matches.push(pack(m));
+        }
+      }
+      out.out = text.replace(re, repl);
+    } catch (e) { out.err = String((e && e.message) || e); }
+    return out;
+  }
+
+  /* ============================================================
+     Worker 调度
+     —— 匹配与替换一律丢进 Worker 跑。灾难性回溯最多把 Worker 线程转满，
+        主线程照常响应；一旦超过时间预算就 terminate() 把线程整个干掉。
+        万一环境不允许建 Worker（file:// 或 CSP 拦截），退回主线程同步计算。
+     ============================================================ */
+  const WORKER_SRC = "self.onmessage=function(e){var d=e.data;"
+    + "self.postMessage(computeMatches(d.text,d.src,d.flags,d.repl,d.maxMatch,d.mode,d.gen));};\n"
+    + computeMatches.toString();
+
+  let worker = null, workerDead = false, cur = null, gen = 0;
+
+  function ensureWorker() {
+    if (worker || workerDead) return worker;
+    try {
+      const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
+      const w = new Worker(url);
+      let revoked = false;
+      const free = () => { if (!revoked) { revoked = true; URL.revokeObjectURL(url); } };
+      w.onmessage = e => {
+        free();
+        const d = e.data;
+        if (!cur || d.gen !== cur.gen) return;      // 已经作废的那一轮，回包直接丢掉
+        const c = cur; cur = null;
+        clearTimeout(c.timer); clearTimeout(c.soft);
+        applyResult(d);
+      };
+      w.onerror = () => {                           // 脚本没能加载（CSP / file:// 等）
+        free();
+        workerDead = true;
+        if (worker) { try { worker.terminate(); } catch (e) {} }
+        worker = null;
+        const c = cur;
+        if (c) { cur = null; clearTimeout(c.timer); clearTimeout(c.soft); applyResult(computeLocal(c.p)); }
+      };
+      worker = w;
+    } catch (e) {
+      workerDead = true;
+      worker = null;
+    }
+    return worker;
+  }
+
+  const computeLocal = p => computeMatches(p.text, p.src, p.flags, p.repl, p.maxMatch, p.mode, p.gen);
+
+  /* 取消在跑的那一轮（如果有），并让它的回包作废 */
+  function dispatchCancel() {
+    ++gen;
+    if (!cur) return;
+    clearTimeout(cur.timer); clearTimeout(cur.soft);
+    if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+    cur = null;
+  }
+
+  /* 派发一轮计算；opt.untimed 为真时不挂超时（用户明确要求「慢慢算」） */
+  function dispatch(payload, opt) {
+    opt = opt || {};
+    dispatchCancel();
+    const g = ++gen;
+    payload.gen = g;
+    const w = ensureWorker();
+    if (!w) { applyResult(computeLocal(payload)); return; }
+    cur = { gen: g, p: payload, timer: 0, soft: 0 };
+    if (payload.mode !== "replace") {
+      cur.soft = setTimeout(() => { if (cur && cur.gen === g) $("statMatch").textContent = "匹配中…"; }, 250);
+    }
+    if (!opt.untimed) {
+      cur.timer = setTimeout(() => { if (cur && cur.gen === g) abortRun(); }, TIME_BUDGET);
+    }
+    w.postMessage(payload);
+  }
+
+  function abortRun() {
+    const c = cur;
+    if (!c) return;
+    cur = null;
+    clearTimeout(c.timer); clearTimeout(c.soft);
+    /* ★ 关键：整条线程干掉，正则回溯里的死循环随之结束 */
+    if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+    const secs = TIME_BUDGET / 1000;
+    if (c.p.mode === "replace") {
+      $("repOut").value = "";
+      $("repOut").classList.remove("filled");
+      $("repNote").innerHTML = '<span class="err-tip">替换超过 ' + secs + " 秒仍未结束，已中止。</span>";
+      return;
+    }
+    state.matches = [];
+    state.cap = false;
+    state.truncated = false;
+    resetOutputs();
+    $("statMatch").textContent = "已中止";
+    $("reNote").innerHTML = '<span class="err-tip">匹配超过 ' + secs + ' 秒仍未结束，已中止（页面不会因此卡死）。</span><br>'
+      + "多半是 <b>嵌套量词</b>引起的灾难性回溯，比如 <code>/" + eh(c.p.src) + "/" + eh(c.p.flags) + "</code>；"
+      + "改成等价的非嵌套写法（<code>(a+)+</code> → <code>a+</code>）通常立刻就好。"
+      + '<div class="ops" style="margin:8px 0 0"><button class="mini" id="btnUntimed">不设超时，继续算</button></div>';
+    const b = $("btnUntimed");
+    if (b) b.addEventListener("click", () => run({ force: true, untimed: true }));
+  }
+
+  function applyResult(d) {
+    if (d.err) {
+      if (d.mode === "replace") {
+        $("repOut").value = "";
+        $("repOut").classList.remove("filled");
+        $("repNote").innerHTML = '<span class="err-tip">替换失败：' + eh(d.err) + "</span>";
+      } else {
+        state.matches = [];
+        paint(null, []);
+        renderDetail([]);
+        $("reNote").innerHTML = '<span class="err-tip">匹配失败：' + eh(d.err) + "</span>";
+        $("statMatch").textContent = "匹配失败";
+      }
+      return;
+    }
+    if (d.mode === "replace") { applyReplace(d.out); return; }
+
+    state.matches = d.matches;
+    state.cap = d.cap;
+    const text = state.text;
+    state.truncated = text.length > MAX_HL;
+    const hlText = state.truncated ? text.slice(0, MAX_HL) : text;
+    const vis = state.truncated ? d.matches.filter(m => m.index < MAX_HL) : d.matches;
+    paint(hlText, vis);
+    renderDetail(d.matches);
+    applyReplace(d.out);
+    $("statMatch").textContent = d.matches.length
+      ? d.matches.length + (state.cap ? "+ 匹配" : " 匹配")
+      : "0 匹配";
+    $("reNote").innerHTML = noteText(d.matches, state.flags, text);
+  }
+
+  /* ============================================================
+     主流程
+     ============================================================ */
+  function run(opt) {
+    opt = opt || {};
+    const r = buildRe();
+    const box = $("reBox");
+    const text = $("reTxt").value;
+    state.text = text;
+    state.err = "";
+    state.has = false;
+    state.matches = [];
+    state.truncated = false;
+    state.cap = false;
+
+    if (r && r.err) {
+      box.classList.add("bad");
+      state.err = r.err;
+      /* ★ 必须同时把 flags 置空并清掉明细/替换：否则正则改坏之后，
+         上一轮的匹配行和替换结果还挂在页面上，看起来像「这条错误的正则也匹配上了」。 */
+      state.flags = "";
+      dispatchCancel();
+      resetOutputs();
+      $("reNote").innerHTML = '<span class="err-tip">正则语法错误：' + eh(r.err) + "</span>";
+      $("statMatch").textContent = "语法错误";
+      return;
+    }
+    box.classList.remove("bad");
+
+    if (!r) {
+      state.flags = "";
+      dispatchCancel();
+      resetOutputs();
+      $("reNote").innerHTML = '<span class="empty-tip">输入正则表达式后自动匹配</span>';
+      $("statMatch").textContent = "—";
+      return;
+    }
+    state.flags = r.flags;
+    state.has = true;
+
+    if (!text) {
+      dispatchCancel();
+      paint(null, []);
+      $("reNote").innerHTML = '<span class="empty-tip">表达式已就绪（<code>/' + eh($("reSrc").value) + "/" + r.flags + "</code>），把要测试的文本粘进来</span>";
+      $("statMatch").textContent = "0 匹配";
+      return;
+    }
+    if (text.length > MAX_AUTO && !opt.force) {
+      dispatchCancel();
+      paint(null, []);
+      $("reNote").innerHTML = '<span class="err-tip">文本超过 200 KB，为避免复杂正则卡住页面，已暂停自动匹配。</span>'
+        + "确认表达式不会灾难性回溯后，点下面的按钮继续。"
+        + '<div class="ops" style="margin:8px 0 0"><button class="mini" id="btnForce">仍要匹配</button></div>';
+      const b = $("btnForce");
+      if (b) b.addEventListener("click", () => run({ force: true }));
+      $("statMatch").textContent = "已暂停";
+      return;
+    }
+
+    dispatch({
+      text: text,
+      src: $("reSrc").value,
+      flags: r.flags,
+      repl: $("repTo").value,
+      maxMatch: MAX_MATCH,
+      mode: "all"
+    }, opt);
+  }
+
+  /* 没有有效正则时，三块输出必须一起清空（高亮 / 明细 / 替换） */
+  function resetOutputs() {
+    paint(null, []);
+    renderDetail([]);
+    applyReplace(null);
+  }
+
+  function noteText(matches, flags, text) {
+    const parts = [];
+    parts.push("有效表达式：<code>/" + eh($("reSrc").value) + "/" + flags + "</code>"
+      + "（内部另加 <code>d</code> 标志以取得捕获组位置）");
+    if (matches.length) {
+      const total = matches.reduce((a, m) => a + m.len, 0);
+      parts.push("共 <b>" + matches.length + "</b> 处匹配，覆盖 <b>" + total + "</b> 个字符，"
+        + "占全文 " + (text.length ? (total / text.length * 100).toFixed(1) : "0") + "%");
+    }
+    if (state.cap) parts.push('<span class="err-tip">匹配数已达上限 ' + MAX_MATCH + ' 条，后面的没有继续收集。</span>');
+    if (state.truncated) parts.push('<span class="err-tip">文本超过 200 KB，下方高亮只渲染了前 200 KB；匹配明细仍是完整的。</span>');
+    if (!matches.length && text) parts.push("没有任何匹配。可以试试放宽表达式，或检查是否漏了 <code>i</code>（忽略大小写）、<code>m</code>（多行）标志。");
+    return parts.join("<br>");
+  }
+
+  /* ============================================================
+     高亮渲染
+     ============================================================ */
+  function paint(text, matches) {
+    const pv = $("pv");
+    if (text == null) {
+      pv.innerHTML = '<span class="empty">还没有可预览的内容</span>';
+      return;
+    }
+    if (!text) {
+      pv.innerHTML = '<span class="empty">还没有可预览的内容</span>';
+      return;
+    }
+    let out = "", pos = 0, i = 0;
+    for (const m of matches) {
+      const s = m.index, e = s + m.len;
+      if (s < pos) continue;                      // 理论上不会发生，保险
+      out += eh(text.slice(pos, s));
+      if (e === s) {
+        out += '<mark class="' + (i % 2 ? "alt" : "") + '"></mark>';   // 零宽匹配（\b、^ 等）
+      } else {
+        out += '<mark class="' + (i % 2 ? "alt" : "") + '">' + eh(text.slice(s, e)) + "</mark>";
+      }
+      pos = e;
+      i++;
+    }
+    out += eh(text.slice(pos));
+    pv.innerHTML = out;
+  }
+
+  /* ============================================================
+     匹配明细
+     ============================================================ */
+  function renderDetail(matches) {
+    const tbl = $("mTbl");
+    if (!matches.length) { tbl.innerHTML = ""; $("mNote").innerHTML = ""; return; }
+    const rows = matches.slice(0, 200).map((m, i) => {
+      /* 捕获组：编号 + 内容 + 起止位置 */
+      const gs = [];
+      for (let g = 0; g < m.g.length; g++) {
+        const idx = m.idx && m.idx[g];
+        const val = m.g[g];
+        if (val === undefined) gs.push("<code>$" + (g + 1) + "</code> 未参与匹配");
+        else gs.push("<code>$" + (g + 1) + "</code> = " + (val === "" ? "（空串）" : JSON.stringify(val))
+              + (idx ? " @ " + idx[0] + "-" + idx[1] : ""));
+      }
+      const named = m.named
+        ? Object.keys(m.named).map(k => "<code>$&lt;" + eh(k) + "&gt;</code> = " + JSON.stringify(m.named[k])).join(" · ")
+        : "";
+      const extra = gs.concat(named ? [named] : []).join("<br>");
+      return '<tr><td class="u">' + (i + 1) + '</td>'
+           + '<td class="r u">' + m.index + "</td>"
+           + '<td class="r u">' + m.len + "</td>"
+           + '<td class="wrap n">' + (m.len === 0 ? '<span class="sub">（零宽匹配）</span>' : eh(m.v))
+           + (extra ? '<div class="sub">' + extra + "</div>" : "") + "</td></tr>";
+    }).join("");
+    tbl.innerHTML = '<thead><tr><th>#</th><th class="r">位置</th><th class="r">长度</th><th>匹配 / 捕获组</th></tr></thead><tbody>'
+      + rows + "</tbody>";
+    $("mNote").innerHTML = matches.length > 200
+      ? '<span class="err-tip">只列出前 200 条（共 ' + matches.length + " 条），避免表格过大拖慢页面。</span>"
+      : "";
+  }
+
+  /* ============================================================
+     替换（结果由 Worker 算好回传，这里只渲染）
+     ============================================================ */
+  function applyReplace(out) {
+    const el = $("repOut");
+    if (out == null || !state.has || !state.text) {
+      el.value = "";
+      el.classList.remove("filled");
+      $("repNote").innerHTML = "";
+      return;
+    }
+    el.value = out;
+    el.classList.toggle("filled", true);
+    const n = state.matches.length;
+    $("repNote").innerHTML = n
+      ? "替换了 <b>" + n + "</b> 处"
+        + (state.flags.indexOf("g") < 0 && state.flags.indexOf("y") < 0
+            ? '；<span class="err-tip">当前正则没有 <code>g</code> 标志，所以只替换了第一处</span>'
+            : "")
+        + "。替换串里 <code>$&amp;</code> 代表整个匹配，<code>$1</code>~<code>$9</code> 是捕获组，"
+        + "<code>$&lt;名&gt;</code> 是具名组，<code>$$</code> 是字面量 <code>$</code>。"
+      : '<span class="empty-tip">没有匹配，所以原样输出</span>';
+  }
+
+  /* ============================================================
+     常用正则
+     ============================================================ */
+  const PRESETS = [
+    ["邮箱", "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "gi", "常见邮箱地址，不做 RFC 全量校验"],
+    ["中国大陆手机号", "1[3-9]\\d{9}", "g", "11 位，1 开头，第二位 3-9"],
+    ["中国大陆固话", "0\\d{2,3}-?\\d{7,8}", "g", "区号 3-4 位，可选连字符"],
+    ["URL", "https?://[^\\s\"'<>]+", "gi", "http/https 链接，遇空白或引号止"],
+    ["IPv4", "\\b(?:(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\b", "g", "每段 0-255，不做前导零校验"],
+    ["IPv6", "(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}", "g", "完整展开写法"],
+    ["日期 YYYY-MM-DD", "\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])", "g", "含月份与日期的范围校验"],
+    ["时间 HH:MM(:SS)", "(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?", "g", "24 小时制"],
+    ["日期时间 ISO", "\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(?::\\d{2})?(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})?", "g", "兼容 ISO 8601 与常见变体"],
+    ["身份证号", "[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]", "g", "18 位，不校验校验码"],
+    ["中文汉字", "[\\u4e00-\\u9fa5]", "g", "基本汉字区（不含扩展区与生僻字）"],
+    ["十六进制颜色", "#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\\b", "g", "#abc 或 #aabbcc"],
+    ["数字（含小数负号）", "-?\\d+(?:\\.\\d+)?", "g", "整数、小数、负数"],
+    ["千分位数字", "\\d{1,3}(?:,\\d{3})+", "g", "1,234,567 这种写法"],
+    ["行尾空白", "[ \\t]+$", "gm", "批量清理行尾多余空格"],
+    ["连续空行", "\\n{3,}", "g", "合并成最多一个空行"],
+    ["重复单词", "\\b(\\w+)\\s+\\1\\b", "gi", "the the 这类重复"],
+    ["HTML 标签", "</?[a-zA-Z][^>]*>", "g", "简易剥离，不能处理嵌套引号里的 >"],
+    ["UUID", "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "g", "标准 8-4-4-4-12"],
+    ["密码强度（8-20 位含大小写数字）", "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,20}$", "g", "用零宽断言做「必须包含」"],
+    ["SemVer 版本号", "\\bv?(\\d+)\\.(\\d+)\\.(\\d+)(?:-([0-9A-Za-z.-]+))?(?:\\+([0-9A-Za-z.-]+))?\\b", "g", "带捕获组的语义化版本"],
+    ["中国大陆车牌", "[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-HJ-NP-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9挂学警港澳]", "g", "蓝牌 / 新能源 7 位"]
+  ];
+  $("presetTbl").innerHTML = "<thead><tr><th>名称</th><th>正则</th><th class=\"hide-sm\">说明</th></tr></thead><tbody>"
+    + PRESETS.map(([n, re, f, d], i) =>
+        '<tr class="pick" data-i="' + i + '"><td>' + eh(n) + "</td>"
+        + '<td class="wrap n">/' + eh(re) + "/" + eh(f) + "</td>"
+        + '<td class="wrap u hide-sm">' + eh(d) + "</td></tr>").join("")
+    + "</tbody>";
+
+  document.addEventListener("click", e => {
+    const tr = e.target.closest("#presetTbl tr.pick");
+    if (!tr) return;
+    const [n, re, f] = PRESETS[Number(tr.dataset.i)];
+    $("reSrc").value = re;
+    document.querySelectorAll(".flag").forEach(c => { c.checked = f.indexOf(c.value) >= 0; });
+    run();
+    toast("已填入「" + n + "」");
+  });
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  let timer = 0;
+  const soon = () => { clearTimeout(timer); timer = setTimeout(() => run(), 160); };
+
+  $("reSrc").addEventListener("input", soon);
+  $("reTxt").addEventListener("input", soon);
+  $("flagRow").addEventListener("change", () => run());
+  /* 改替换串只重算替换：匹配结果没变，没必要连匹配一起重跑 */
+  $("repTo").addEventListener("input", () => {
+    if (!state.has || !state.text) { applyReplace(null); return; }
+    dispatch({
+      text: state.text,
+      src: $("reSrc").value,
+      flags: state.flags,
+      repl: $("repTo").value,
+      maxMatch: MAX_MATCH,
+      mode: "replace"
+    });
+  });
+
+  $("btnSample").addEventListener("click", () => {
+    $("reSrc").value = "([\\w.+-]+)@([\\w-]+\\.[\\w.]+)";
+    document.querySelectorAll(".flag").forEach(c => { c.checked = c.value === "g"; });
+    $("reTxt").value = [
+      "联系方式：",
+      "  张三 <zhangsan@example.com>",
+      "  李四 <li.si+work@mail.example.co.uk>",
+      "  无效行：not-an-email@@x",
+      "  ADMIN@EXAMPLE.COM"
+    ].join("\n");
+    run();
+    toast("已填入示例");
+  });
+
+  $("btnCopyMatch").addEventListener("click", () => {
+    if (!state.matches.length) { toast("还没有匹配结果"); return; }
+    copyText(state.matches.map(m => m.v).join("\n"), "已复制 " + state.matches.length + " 条匹配");
+  });
+  $("btnCopyRep").addEventListener("click", () => {
+    if (!$("repOut").value) { toast("还没有可复制的结果"); return; }
+    copyText($("repOut").value, "已复制替换结果");
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("reSrc").value = "";
+    $("reTxt").value = "";
+    $("repTo").value = "";
+    $("repOut").value = "";
+    $("repOut").classList.remove("filled");
+    document.querySelectorAll(".flag").forEach(c => { c.checked = c.value === "g"; });
+    run();
+    toast("已清空");
+  });
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  run();
+})();
+</script>
+</body>
+</html>

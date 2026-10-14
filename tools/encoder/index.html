@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>编码转换</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 与触底加载会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  /* 顶栏：左侧放信息，操作按钮推到最右 */
+  #btnClear { margin-left: auto; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄：顶栏与 .ops 都是 flex 容器，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根竖条。空间不够请让它换行，不要压扁。
+     注意不要加给 input —— 输入框要靠可收缩来占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="number"] { cursor: text; font-variant-numeric: tabular-nums; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+  select optgroup { color: var(--text-3); font-size: 11px; }
+
+  /* ===== Tab 栏 =====
+     一类编码一个 tab，切过去只显示那一个面板。横滚而不是换行/隐藏 ——
+     类型以后还会加，横向滚动能容纳任意多个，也不用断点藏控件。 */
+  .tabs {
+    flex: none; display: flex; gap: 6px; align-items: center;
+    padding: 6px 10px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* ★ 每个 tab 是独立的圆角块。只靠间距是分不开的 —— 标题里本来就带空格
+     （「Hex字节」这种），和 tab 之间的空隙在视觉上没法区分，必须让「每一块」
+     有自己的形状：悬停浅底、选中靛蓝淡底 + 靛蓝字。 */
+  .tab {
+    flex: none;
+    background: none; border: 0; border-radius: 7px;
+    padding: 6px 11px; cursor: pointer;
+    font: inherit; font-size: 12.5px; color: var(--text-2);
+    white-space: nowrap;
+    transition: color .15s, background .15s;
+  }
+  .tab:hover { background: var(--hover); border-color: transparent; color: var(--accent); }
+  .tab[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ===== 主体 =====
+     一次只显示一个面板，所以不再是多列 grid —— 单列 + 收窄容器。
+     直接铺满 1440px 会让文本框长得不像话，也给表格留出足够宽度。 */
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.panel { max-width: 860px; margin: 0 auto; }
+  .card.panel[hidden] { display: none; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* ===== 输入 / 输出文本域 =====
+     输入用浅底、输出用白底虚线框，一眼能分清哪个能改。
+     刻意不给 textarea 设 flex-shrink:0 —— 它要靠收缩适配窄屏。 */
+  .io {
+    display: block; width: 100%; min-height: 76px; resize: vertical;
+    font: 12.5px/1.65 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    word-break: break-all; white-space: pre-wrap;
+    transition: background .15s, border-color .15s, box-shadow .15s;
+  }
+  .io:focus { background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .io.out { background: var(--panel); border-style: dashed; }
+  .io.out.filled { border-style: solid; border-color: var(--border-2); }
+  .io.tall { min-height: 132px; }
+
+  /* 操作按钮行 */
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  /* 表单行。标签列 84px 必须与 .kv > .k 一致，否则同一张卡片里
+     「输入框起始 x」与「结果值起始 x」会错开，看上去就是排版乱。 */
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 620px; }
+  .row + .row { margin-top: 8px; }
+  .row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  .row > select { flex: 0 0 auto; max-width: 46%; }
+
+  /* ===== 表格 ===== */
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; white-space: pre-wrap; }
+  /* 首列按内容宽度收紧。不加这条时两列会按 max-content 比例均分整表宽度，
+     一个 130px 的标签列会被撑到 438px，标签和值被拉开一大截、中间全是空白。 */
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+  .tbl .sub { color: var(--text-3); font-size: 11px; }
+
+  /* ===== 提示 ===== */
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2);
+    word-break: break-word;
+  }
+  /* 空提示不占位：否则每张卡片底部都挂一个空灰框，看着像坏了 */
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .note .tbl-wrap { margin-top: 6px; }
+  .note table.tbl th, .note table.tbl td { padding: 3px 8px; font-size: 11.5px; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 窄屏：tab 栏收紧内距，多出来的 tab 横向滚动 */
+  @media (max-width: 900px) {
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    .tabs { padding: 5px 6px; gap: 4px; }
+    .tab { padding: 6px 9px; font-size: 12px; }
+    main { padding: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .row > label { width: 60px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, input[type="text"], input[type="number"], select { font-size: 16px; }
+    .io { min-height: 66px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Encode<span>Convert</span></div>
+  <span class="sep"></span>
+  <span class="stat"><b id="tabCount">6</b> 类编码转换</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内计算，不上传任何内容</span>
+  <button class="mini" id="btnClear" title="清空所有类型下的输入与结果">清空全部</button>
+</header>
+
+<!-- tab 列表由 JS 从这里的 [role="tab"] 读出，不用另维护一份清单。
+     标题里中英之间不留空格：tab 是紧凑的导航标签，混排空格会和 tab 之间的
+     空隙混淆、让人看不出边界在哪（面板内的 <h2> 标题仍保留空格）。 -->
+<div class="tabs" role="tablist" aria-label="编码类型">
+  <button class="tab" type="button" role="tab" data-tab="b64"  id="tab-b64"  aria-controls="panel-b64"  aria-selected="true">Base64</button>
+  <button class="tab" type="button" role="tab" data-tab="url"  id="tab-url"  aria-controls="panel-url"  aria-selected="false" tabindex="-1">URL编码</button>
+  <button class="tab" type="button" role="tab" data-tab="uni"  id="tab-uni"  aria-controls="panel-uni"  aria-selected="false" tabindex="-1">Unicode转义</button>
+  <button class="tab" type="button" role="tab" data-tab="html" id="tab-html" aria-controls="panel-html" aria-selected="false" tabindex="-1">HTML实体</button>
+  <button class="tab" type="button" role="tab" data-tab="hex"  id="tab-hex"  aria-controls="panel-hex"  aria-selected="false" tabindex="-1">Hex字节</button>
+  <button class="tab" type="button" role="tab" data-tab="base" id="tab-base" aria-controls="panel-base" aria-selected="false" tabindex="-1">进制转换</button>
+</div>
+
+<main>
+
+  <!-- ============ 1. Base64 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-b64" data-tab="b64" aria-labelledby="tab-b64">
+    <h2>
+      Base64
+      <span class="hint">文本 ↔ Base64，按 UTF-8 编码</span>
+      <span class="right">
+        <button class="mini" data-act="b64-swap">交换</button>
+        <button class="mini" data-act="b64-ex">示例</button>
+        <button class="mini" data-act="b64-copy">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="b64In" spellcheck="false" autocomplete="off"
+      placeholder="输入要编码的文本，或粘贴 Base64…"></textarea>
+    <div class="ops">
+      <button data-act="b64-enc">编码 →</button>
+      <button data-act="b64-dec">← 解码</button>
+      <label class="chk sp"><input type="checkbox" id="b64Url">URL-safe（- _ 且无填充）</label>
+    </div>
+    <textarea class="io out" id="b64Out" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="note" id="b64Note"></div>
+  </section>
+
+  <!-- ============ 2. URL ============ -->
+  <section class="card panel" role="tabpanel" id="panel-url" data-tab="url" aria-labelledby="tab-url" hidden>
+    <h2>
+      URL 编码
+      <span class="hint">百分号转义，附查询串解析</span>
+      <span class="right">
+        <button class="mini" data-act="url-swap">交换</button>
+        <button class="mini" data-act="url-ex">示例</button>
+        <button class="mini" data-act="url-copy">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="urlIn" spellcheck="false" autocomplete="off"
+      placeholder="输入文本或整条 URL…"></textarea>
+    <div class="ops">
+      <button data-act="url-enc">编码 →</button>
+      <button data-act="url-dec">← 解码</button>
+      <select class="sp" id="urlMode" title="转义范围">
+        <option value="component">encodeURIComponent</option>
+        <option value="uri">encodeURI</option>
+      </select>
+    </div>
+    <textarea class="io out" id="urlOut" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="note" id="urlNote"></div>
+  </section>
+
+  <!-- ============ 3. Unicode 转义 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-uni" data-tab="uni" aria-labelledby="tab-uni" hidden>
+    <h2>
+      Unicode 转义
+      <span class="hint">\uXXXX / \u{XXXXX} / \xXX 与普通文本互转</span>
+      <span class="right">
+        <button class="mini" data-act="uni-swap">交换</button>
+        <button class="mini" data-act="uni-ex">示例</button>
+        <button class="mini" data-act="uni-copy">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="uniIn" spellcheck="false" autocomplete="off"
+      placeholder="输入文本或转义串…"></textarea>
+    <div class="ops">
+      <button data-act="uni-enc">转义 →</button>
+      <button data-act="uni-dec">← 还原</button>
+      <select id="uniMode" title="转义写法">
+        <option value="u4">\uXXXX</option>
+        <option value="brace">\u{XXXXX}</option>
+        <option value="x">\xXX（&lt;256 时）</option>
+      </select>
+      <label class="chk sp"><input type="checkbox" id="uniOnly" checked>仅转义非 ASCII</label>
+    </div>
+    <textarea class="io out" id="uniOut" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="note" id="uniNote"></div>
+  </section>
+
+  <!-- ============ 4. HTML 实体 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-html" data-tab="html" aria-labelledby="tab-html" hidden>
+    <h2>
+      HTML 实体
+      <span class="hint">命名实体与数字实体双向转换</span>
+      <span class="right">
+        <button class="mini" data-act="html-swap">交换</button>
+        <button class="mini" data-act="html-ex">示例</button>
+        <button class="mini" data-act="html-copy">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="htmlIn" spellcheck="false" autocomplete="off"
+      placeholder="输入文本或含 &amp;…; 实体的片段…"></textarea>
+    <div class="ops">
+      <button data-act="html-enc">转义 →</button>
+      <button data-act="html-dec">← 还原</button>
+      <label class="chk sp"><input type="checkbox" id="htmlNum">非 ASCII 也转成数字实体</label>
+    </div>
+    <textarea class="io out" id="htmlOut" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="note" id="htmlNote"></div>
+  </section>
+
+  <!-- ============ 5. Hex 字节 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-hex" data-tab="hex" aria-labelledby="tab-hex" hidden>
+    <h2>
+      Hex 字节
+      <span class="hint">文本 ↔ 十六进制字节，按 UTF-8</span>
+      <span class="right">
+        <button class="mini" data-act="hex-swap">交换</button>
+        <button class="mini" data-act="hex-ex">示例</button>
+        <button class="mini" data-act="hex-copy">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="hexIn" spellcheck="false" autocomplete="off"
+      placeholder="输入文本或十六进制字节串…"></textarea>
+    <div class="ops">
+      <button data-act="hex-enc">转字节 →</button>
+      <button data-act="hex-dec">← 还原文本</button>
+      <select class="sp" id="hexSep" title="字节分隔方式">
+        <option value="space">空格分隔</option>
+        <option value="none">不分隔</option>
+        <option value="colon">冒号分隔</option>
+        <option value="comma">逗号分隔</option>
+        <option value="0x">0x 前缀</option>
+        <option value="0x,">0x + 逗号</option>
+        <option value="\x">\x 前缀</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="hexUpper">大写</label>
+    </div>
+    <textarea class="io out" id="hexOut" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="note" id="hexNote"></div>
+  </section>
+
+  <!-- ============ 6. 进制转换 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-base" data-tab="base" aria-labelledby="tab-base" hidden>
+    <h2>
+      进制转换
+      <span class="hint">2 ~ 36 进制整数互转，BigInt 不限长度</span>
+      <span class="right">
+        <button class="mini" data-act="base-ex">示例</button>
+        <button class="mini" data-act="base-copy">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="baseVal">数值</label>
+      <input type="text" id="baseVal" spellcheck="false" autocomplete="off" value="255" placeholder="整数，可带 - 号" />
+      <select id="baseFrom" title="输入数值的进制">
+        <option value="2">2 进制</option>
+        <option value="8">8 进制</option>
+        <option value="10" selected>10 进制</option>
+        <option value="16">16 进制</option>
+        <option value="32">32 进制</option>
+        <option value="36">36 进制</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table class="tbl fit" id="baseTbl"></table></div>
+    <div class="note" id="baseNote"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const U8 = new TextEncoder();
+  const CHUNK = 0x8000;   // fromCharCode.apply 一次最多约 64K 参数，超出会 RangeError
+
+  /* ============================================================
+     基础编解码原语
+     ============================================================ */
+
+  /* UTF-8 解码。fatal=true 时遇到非法字节序列会抛错 —— 用它来判断
+     「这段字节到底是不是合法 UTF-8」，而不是靠替换字符 U+FFFD 猜。 */
+  function u8dec(bytes, fatal) {
+    try { return new TextDecoder("utf-8", { fatal: !!fatal }).decode(bytes); }
+    catch (e) { return null; }
+  }
+
+  /* 字节 → Base64。必须分块，否则大文本会 RangeError。 */
+  function bytesToB64(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
+  }
+  function b64ToBytes(str) {
+    const bin = atob(str);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  const toUrlSafe = b => b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  /* 宽松解析：容忍换行、空格、URL-safe 变体、缺失的 = 填充。
+     返回 null 表示「确实不是 Base64」。 */
+  function normalizeB64(s) {
+    s = s.replace(/[\s\r\n]+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (!s) return null;
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(s)) return null;
+    const pad = s.length % 4;
+    if (pad === 1) return null;                 // 长度 %4==1 永远非法
+    if (pad) s += "=".repeat(4 - pad);
+    return s;
+  }
+
+  /* ============================================================
+     各卡片
+     ============================================================ */
+
+  const CARDS = {
+    /* ---------- Base64 ---------- */
+    b64: {
+      in: "b64In", out: "b64Out", note: "b64Note", dir: "enc",
+      enc() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">输入文本后自动编码</span>' };
+        const bytes = U8.encode(s);
+        let b = bytesToB64(bytes);
+        if ($("b64Url").checked) b = toUrlSafe(b);
+        return {
+          text: b,
+          note: '<b>' + bytes.length + '</b> 字节（UTF-8）→ <b>' + b.length + '</b> 个字符'
+              + ($("b64Url").checked
+                  ? '，已按 URL-safe 变体输出（<code>+</code>→<code>-</code>、<code>/</code>→<code>_</code>、去掉尾部 <code>=</code>）'
+                  : '。标准变体带 <code>+ / =</code>，直接放进 URL 或文件名会出问题，那种场合请勾选 URL-safe')
+        };
+      },
+      dec() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">粘贴 Base64 后自动解码</span>' };
+        const n = normalizeB64(s);
+        if (!n) return { err: "不是合法的 Base64：含非法字符，或长度对不上（长度 ÷ 4 余 1）" };
+        let bytes;
+        try { bytes = b64ToBytes(n); } catch (e) { return { err: "Base64 解码失败：" + e.message }; }
+        const ok = u8dec(bytes, true) !== null;
+        return {
+          text: u8dec(bytes, false),
+          note: '解码得到 <b>' + bytes.length + '</b> 字节'
+              + (ok ? '' : '；<span class="err-tip">字节序列不是合法 UTF-8</span>，已按替换字符 <code>U+FFFD</code> 显示。'
+                          + '若这是一段二进制数据，请用「Hex 字节」卡片查看原始字节。')
+        };
+      }
+    },
+
+    /* ---------- URL ---------- */
+    url: {
+      in: "urlIn", out: "urlOut", note: "urlNote", dir: "enc",
+      enc() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">输入文本后自动编码</span>' };
+        const comp = $("urlMode").value === "component";
+        return {
+          text: comp ? encodeURIComponent(s) : encodeURI(s),
+          note: (comp
+              ? 'encodeURIComponent：把 <code>: / ? # & = +</code> 等结构字符<b>也</b>转义，适合拼进查询参数的值'
+              : 'encodeURI：保留 <code>: / ? # & =</code> 等结构字符，适合编码整条 URL 而不破坏它的结构')
+            + queryNote(s)
+        };
+      },
+      dec() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">粘贴已编码的内容后自动解码</span>' };
+        const comp = $("urlMode").value === "component";
+        try {
+          return {
+            text: comp ? decodeURIComponent(s) : decodeURI(s),
+            note: (comp ? 'decodeURIComponent：还原所有百分号转义' : 'decodeURI：不还原保留字符的转义，其余照常还原')
+              + queryNote(s)
+          };
+        } catch (e) {
+          return { err: "解码失败：存在不完整的百分号转义（例如落单的 % 或 %2）" };
+        }
+      }
+    },
+
+    /* ---------- Unicode 转义 ---------- */
+    uni: {
+      in: "uniIn", out: "uniOut", note: "uniNote", dir: "enc",
+      enc() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">输入文本后自动转义</span>' };
+        const mode = $("uniMode").value, only = $("uniOnly").checked;
+        return {
+          text: escUnicode(s, mode, only),
+          note: '按 <b>Unicode 码位</b>逐个处理'
+              + (only ? '，ASCII 可见字符原样保留' : '，所有字符都转义')
+              + '。超出 BMP 的字符（emoji 等）会写成一对代理项 <code>\\uD83D\\uDE00</code>，'
+              + '这是 JavaScript 字符串的真实内部表示。'
+        };
+      },
+      dec() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">粘贴转义串后自动还原</span>' };
+        const t = unescUnicode(s);
+        return {
+          text: t,
+          note: '支持 <code>\\uXXXX</code>、<code>\\u{XXXXX}</code>、<code>\\xXX</code> '
+              + '以及 <code>\\n \\r \\t \\b \\f \\v \\0 \\\\ \\\' \\"</code> 等常用转义。'
+        };
+      }
+    },
+
+    /* ---------- HTML 实体 ---------- */
+    html: {
+      in: "htmlIn", out: "htmlOut", note: "htmlNote", dir: "enc",
+      enc() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">输入文本后自动转义</span>' };
+        const all = $("htmlNum").checked;
+        return {
+          text: htmlEsc(s, all),
+          note: all
+            ? '已把 <code>&amp; &lt; &gt; " \'</code> 与<b>所有非 ASCII 字符</b>都转成十进制数字实体，'
+              + '整串只含 ASCII，在编码声明缺失、被二次转码的场合最不容易出问题。'
+            : '只转义 <code>&amp; &lt; &gt; " \'</code> 这 5 个有歧义的字符，中文等原样保留、可读性更好。'
+        };
+      },
+      dec() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">粘贴含实体的文本后自动还原</span>' };
+        return {
+          text: htmlUnesc(s),
+          note: '命名实体（<code>&amp;nbsp;</code>、<code>&amp;copy;</code>、<code>&amp;hellip;</code> …）'
+              + '与数字实体（<code>&amp;#39;</code>、<code>&amp;#x27;</code>）都会还原。'
+              + '还原走浏览器原生解析，命名实体表是完整的。'
+        };
+      }
+    },
+
+    /* ---------- Hex 字节 ---------- */
+    hex: {
+      in: "hexIn", out: "hexOut", note: "hexNote", dir: "enc",
+      enc() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">输入文本后自动转字节</span>' };
+        const bytes = U8.encode(s);
+        const txt = bytesToHex(bytes, $("hexSep").value, $("hexUpper").checked);
+        return {
+          text: txt,
+          note: '<b>' + bytes.length + '</b> 字节（UTF-8）'
+              + (bytes.length > 1 && s.length !== bytes.length
+                  ? '；输入有 ' + s.length + ' 个字符，含多字节字符，所以字节数更多'
+                  : '')
+              + '<br>同一份字节的 Base64：<code>' + bytesToB64(bytes) + '</code>'
+        };
+      },
+      dec() {
+        const s = $(this.in).value;
+        if (!s) return { text: "", note: '<span class="empty-tip">粘贴十六进制字节串后自动还原</span>' };
+        const r = hexToBytes(s);
+        if (r.err) return { err: r.err };
+        const ok = u8dec(r.bytes, true) !== null;
+        let note = '解析出 <b>' + r.bytes.length + '</b> 字节';
+        if (!ok) {
+          note += '；<span class="err-tip">不是合法 UTF-8</span>，下面是按 Latin-1 逐字节映射的结果，'
+                + '仅用于确认字节内容。';
+        } else if (r.bytes.length && r.bytes.every(b => b < 0x80)) {
+          note += '，全部落在 ASCII 范围内。';
+        }
+        return { text: ok ? u8dec(r.bytes, false) : latin1(r.bytes), note: note };
+      }
+    }
+  };
+
+  /* ---------- Unicode 转义实现 ---------- */
+  function escUnicode(s, mode, onlyNonAscii) {
+    let out = "";
+    for (const ch of s) {                       // for...of 按码位迭代，emoji 不会被拆开
+      const cp = ch.codePointAt(0);
+      if (onlyNonAscii && cp < 0x80) { out += ch; continue; }
+      if (mode === "brace") {
+        out += "\\u{" + cp.toString(16).toUpperCase() + "}";
+      } else if (mode === "x" && cp < 0x100) {
+        out += "\\x" + cp.toString(16).toUpperCase().padStart(2, "0");
+      } else if (cp > 0xFFFF) {
+        /* 超出 BMP：JavaScript 内部就是一对代理项，按对写出来最贴近真实 */
+        for (let i = 0; i < ch.length; i++) {
+          out += "\\u" + ch.charCodeAt(i).toString(16).toUpperCase().padStart(4, "0");
+        }
+      } else {
+        out += "\\u" + cp.toString(16).toUpperCase().padStart(4, "0");
+      }
+    }
+    return out;
+  }
+
+  const SIMPLE_ESC = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", v: "\v", "0": "\0", "'": "'", '"': '"', "\\": "\\", "/": "/" };
+  function unescUnicode(s) {
+    return s.replace(
+      /\\u\{([0-9a-fA-F]{1,6})\}|\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})|\\([nrtbfv0'"\\/])/g,
+      (m, brace, u4, x2, simple) => {
+        if (brace) {
+          const cp = parseInt(brace, 16);
+          return cp <= 0x10FFFF ? String.fromCodePoint(cp) : m;
+        }
+        if (u4) return String.fromCharCode(parseInt(u4, 16));
+        if (x2) return String.fromCharCode(parseInt(x2, 16));
+        return SIMPLE_ESC[simple] != null ? SIMPLE_ESC[simple] : m;
+      }
+    );
+  }
+
+  /* ---------- HTML 实体实现 ---------- */
+  function htmlEsc(s, all) {
+    const MIN = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+    if (!all) return s.replace(/[&<>"']/g, c => MIN[c]);
+    let out = "";
+    for (const ch of s) {
+      const cp = ch.codePointAt(0);
+      out += (cp < 0x80 && !MIN[ch]) ? ch : "&#" + cp + ";";
+    }
+    return out;
+  }
+  /* ★ 用 <textarea> 的 innerHTML 做反转义：按 HTML 规范，textarea 的片段解析走
+     RCDATA 状态 —— 字符引用会被还原，而 <b> 这类标签<b>不会</b>被当成元素。
+     换成 <div> 就会把标签吃掉，返回的文本丢掉原始尖括号。 */
+  function htmlUnesc(s) {
+    const t = document.createElement("textarea");
+    t.innerHTML = s;
+    return t.value;
+  }
+
+  /* ---------- Hex 实现 ---------- */
+  const HEX_SEP = {
+    "none":  { pre: "",   mid: ""   },
+    "space": { pre: "",   mid: " "  },
+    "colon": { pre: "",   mid: ":"  },
+    "comma": { pre: "",   mid: ","  },
+    "0x":    { pre: "0x", mid: " "  },
+    "0x,":   { pre: "0x", mid: ","  },
+    "\\x":   { pre: "\\x", mid: ""  }
+  };
+  function bytesToHex(bytes, sep, upper) {
+    const s = HEX_SEP[sep] || HEX_SEP.space;
+    const parts = [];
+    for (let i = 0; i < bytes.length; i++) {
+      let h = bytes[i].toString(16).padStart(2, "0");
+      if (upper) h = h.toUpperCase();
+      parts.push(s.pre + h);
+    }
+    return parts.join(s.mid);
+  }
+  function hexToBytes(str) {
+    /* 先去掉 0x 前缀再剔除非十六进制字符：这样 "0x41 0x42"、"41:42"、"\x41\x42"
+       三种写法都能走同一条路径。 */
+    const clean = str.replace(/0x/gi, "").replace(/[^0-9a-fA-F]/g, "");
+    if (!clean) return { err: "没找到任何十六进制数字" };
+    if (clean.length % 2) return { err: "十六进制位数为奇数（" + clean.length + " 位），无法按整字节解析" };
+    const bytes = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+    return { bytes: bytes };
+  }
+  const latin1 = bytes => Array.prototype.map.call(bytes, b => String.fromCharCode(b)).join("");
+
+  /* ---------- 查询串解析（URL 卡片附加） ---------- */
+  function queryNote(s) {
+    const q = s.indexOf("?");
+    if (q < 0) return "";
+    const qs = s.slice(q + 1).replace(/#.*$/, "");
+    if (!qs) return "";
+    let pairs;
+    try { pairs = Array.from(new URLSearchParams(qs).entries()); } catch (e) { return ""; }
+    if (!pairs.length) return "";
+    const rows = pairs.map(([k, v]) =>
+      "<tr><td>" + eh(k) + '</td><td class="wrap">' + eh(v) + "</td></tr>").join("");
+    return '<br>查询参数 <b>' + pairs.length + '</b> 项（已自动解码，<code>+</code> 视作空格）：'
+         + '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>参数</th><th>值</th></tr></thead><tbody>'
+         + rows + "</tbody></table></div>";
+  }
+
+  /* ============================================================
+     进制转换（BigInt，任意长度）
+     ============================================================ */
+
+  const DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
+  const BASE_PREF = { 2: /^0b/i, 8: /^0o/i, 16: /^0x/i };
+
+  function parseBig(str, base) {
+    str = str.trim().replace(/[\s_,]/g, "");
+    if (!str) return { empty: true };
+    let neg = false;
+    if (str[0] === "-" || str[0] === "+") { neg = str[0] === "-"; str = str.slice(1); }
+    if (BASE_PREF[base] && BASE_PREF[base].test(str)) str = str.slice(2);
+    str = str.toLowerCase();
+    if (!str) return { empty: true };
+    const B = BigInt(base);
+    let v = 0n;
+    for (const ch of str) {
+      const d = DIGITS.indexOf(ch);
+      if (d < 0 || d >= base) {
+        return { err: "「" + ch + "」不是 " + base + " 进制的合法数字（该进制可用 0-9" + (base > 10 ? " 与 a-" + DIGITS[base - 1] : "") + "）" };
+      }
+      v = v * B + BigInt(d);
+    }
+    return { v: neg ? -v : v };
+  }
+
+  function toBase(v, base, upper) {
+    if (v === 0n) return "0";
+    const neg = v < 0n;
+    if (neg) v = -v;
+    const B = BigInt(base);
+    let out = "";
+    while (v > 0n) { out = DIGITS[Number(v % B)] + out; v /= B; }
+    if (upper) out = out.toUpperCase();
+    return (neg ? "-" : "") + out;
+  }
+  /* 二进制按 8 位一组（从右往左）便于肉眼数字节 */
+  function groupBits(bits) {
+    const neg = bits[0] === "-";
+    let s = neg ? bits.slice(1) : bits;
+    const parts = [];
+    while (s.length > 8) { parts.unshift(s.slice(-8)); s = s.slice(0, -8); }
+    parts.unshift(s);
+    return (neg ? "-" : "") + parts.join(" ");
+  }
+
+  function runBase() {
+    const el = $("baseVal"), tbl = $("baseTbl");
+    const base = Number($("baseFrom").value);
+    const r = parseBig(el.value, base);
+    if (r.err) {
+      el.classList.add("bad");
+      tbl.innerHTML = "";
+      $("baseNote").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>";
+      baseText = "";
+      return;
+    }
+    el.classList.remove("bad");
+    if (r.empty) {
+      tbl.innerHTML = "";
+      $("baseNote").innerHTML = '<span class="empty-tip">输入一个整数后自动换算</span>';
+      baseText = "";
+      return;
+    }
+    const v = r.v;
+    const rows = [
+      ["2", "二进制", toBase(v, 2)],
+      ["2g", "二进制 · 每 8 位分组", groupBits(toBase(v, 2))],
+      ["8", "八进制", "0o" + toBase(v, 8)],
+      ["10", "十进制", toBase(v, 10)],
+      ["16", "十六进制", "0x" + toBase(v, 16, true)],
+      ["32", "32 进制", toBase(v, 32, true)],
+      ["36", "36 进制", toBase(v, 36, true)]
+    ];
+    tbl.innerHTML = "<thead><tr><th>进制</th><th>值</th></tr></thead><tbody>"
+      + rows.map(([id, cn, val]) => {
+          const hit = String(base) === id.replace(/g$/, "") ? " style=\"background:var(--accent-soft)\"" : "";
+          return "<tr" + hit + '><td class="u">' + eh(cn) + '</td><td class="wrap n">' + eh(val) + "</td></tr>";
+        }).join("")
+      + "</tbody>";
+
+    const bits = v === 0n ? 1 : (v < 0n ? -v : v).toString(2).length;
+    const bytes = Math.ceil(bits / 8);
+    baseText = rows.map(([, cn, val]) => cn + "：" + val).join("\n");
+
+    const notes = ['<b>' + toBase(v, 10) + '</b>（十进制）需要 <b>' + bits + '</b> 个二进制位，即 <b>' + bytes + '</b> 字节。'];
+    if (bits > 53) notes.push('已超过 JavaScript 的 <code>Number.MAX_SAFE_INTEGER</code>（2<sup>53</sup>-1），本工具全程用 <code>BigInt</code> 计算，结果仍然精确。');
+    if (v < 0n) notes.push('负数按「符号 + 绝对值」输出，不是补码。补码表示需要先确定字长（如 32 / 64 位）。');
+    if (bits > 8) notes.push('二进制的「每 8 位分组」一列从右往左每 8 位断开，方便对着字节数。');
+    $("baseNote").innerHTML = notes.join("<br>");
+  }
+
+  /* ============================================================
+     调度：跑卡片 / 按钮 / 复制
+     ============================================================ */
+
+  let baseText = "";
+
+  function setNote(id, html) {
+    const el = $(id);
+    el.innerHTML = html || "";
+  }
+
+  function run(id) {
+    const c = CARDS[id];
+    if (!c) return;
+    const r = c[c.dir]();
+    const out = $(c.out);
+    if (r.err) {
+      out.value = "";
+      out.classList.remove("filled");
+      setNote(c.note, '<span class="err-tip">' + eh(r.err) + "</span>");
+      return;
+    }
+    out.value = r.text;
+    out.classList.toggle("filled", !!r.text);
+    setNote(c.note, r.note || "");
+  }
+
+  /* 输入时防抖重跑：大文本下每次按键都重算会明显卡顿 */
+  const timers = {};
+  function runSoon(id) {
+    clearTimeout(timers[id]);
+    timers[id] = setTimeout(() => run(id), 120);
+  }
+
+  const EXAMPLES = {
+    b64:  ["你好，世界！Hello, World! 👋", "enc"],
+    url:  ["https://example.com/搜索?q=编码 转换&page=2&tag=a+b", "enc"],
+    uni:  ["中文混排 emoji 😀 与符号 ©", "enc"],
+    html: ["<a href=\"x\">5 > 3 & 2 < 4</a> — © 2026", "enc"],
+    hex:  ["Hello 世界", "enc"],
+    base: ["255", "10"]
+  };
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const act = b.dataset.act;
+    const m = /^([a-z0-9]+)-(enc|dec|copy|swap|ex)$/.exec(act);
+    if (!m) return;
+    const id = m[1], kind = m[2];
+
+    if (id === "base") {
+      if (kind === "ex") { $("baseVal").value = "1000000"; $("baseFrom").value = "2"; runBase(); toast("示例：二进制 1000000"); }
+      else if (kind === "copy") copyText(baseText, "已复制换算结果");
+      return;
+    }
+
+    const c = CARDS[id];
+    if (!c) return;
+
+    if (kind === "ex") {
+      const [v, dir] = EXAMPLES[id];
+      $(c.in).value = v;
+      c.dir = dir;
+      run(id);
+      toast("已填入示例");
+    } else if (kind === "enc" || kind === "dec") {
+      c.dir = kind;
+      run(id);
+    } else if (kind === "copy") {
+      const v = $(c.out).value;
+      if (!v) { toast("还没有可复制的结果"); return; }
+      copyText(v, "已复制结果");
+    } else if (kind === "swap") {
+      const iv = $(c.in).value;
+      $(c.in).value = $(c.out).value;
+      $(c.out).value = iv;
+      c.dir = c.dir === "enc" ? "dec" : "enc";
+      run(id);
+    }
+  });
+
+  /* ============================================================
+     Tab 切换
+     ============================================================ */
+  /* tab 清单直接从 DOM 读 —— 以后加一类编码只需三步：
+       ① 上面 .tabs 里加一个 <button role="tab" data-tab="xxx">
+       ② <main> 里加一个 <section class="card panel" data-tab="xxx">
+       ③ 在 CARDS 里加一条。
+     不再维护第二份清单，也就不会出现「按钮和面板对不上」。 */
+  const tabsEl = document.querySelector(".tabs");
+  const tabBtns = Array.prototype.slice.call(tabsEl.querySelectorAll('[role="tab"]'));
+  const tabIds = tabBtns.map(b => b.dataset.tab);
+  const panels = Array.prototype.slice.call(document.querySelectorAll("main .panel"));
+  const mainEl = document.querySelector("main");
+  $("tabCount").textContent = tabIds.length;
+
+  function showTab(id, doFocus, writeHash) {
+    if (tabIds.indexOf(id) < 0) id = tabIds[0];
+    tabBtns.forEach(b => {
+      const on = b.dataset.tab === id;
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;   /* roving tabindex：Tab 进栏，方向键在栏内走 */
+      if (on && doFocus) b.focus();
+    });
+    panels.forEach(p => { p.hidden = p.dataset.tab !== id; });
+    mainEl.scrollTop = 0;         /* 换一类就从顶部看起 */
+    /* 记进 hash（replaceState 不留历史、也不触发锚点滚动），刷新或分享能回到同一类。
+       首次按 hash 定位时传 false，免得在干净 URL 上凭空写出一段 hash。 */
+    if (writeHash !== false) {
+      try { history.replaceState(null, "", "#" + id); } catch (e) { location.hash = id; }
+    }
+  }
+
+  tabsEl.addEventListener("click", e => {
+    const b = e.target.closest('[role="tab"]');
+    if (b) showTab(b.dataset.tab, false);
+  });
+
+  /* ARIA tablist 的标准键盘行为：←/→ 循环，Home/End 跳首尾 */
+  tabsEl.addEventListener("keydown", e => {
+    const b = e.target.closest('[role="tab"]');
+    if (!b) return;
+    let d = 0;
+    if (e.key === "ArrowRight") d = 1;
+    else if (e.key === "ArrowLeft") d = -1;
+    else if (e.key === "Home") { e.preventDefault(); showTab(tabIds[0], true); return; }
+    else if (e.key === "End") { e.preventDefault(); showTab(tabIds[tabIds.length - 1], true); return; }
+    if (!d) return;
+    e.preventDefault();
+    const i = tabIds.indexOf(b.dataset.tab);
+    showTab(tabIds[(i + d + tabIds.length) % tabIds.length], true);
+  });
+
+  /* 地址栏里手改 hash 也跟着切 */
+  window.addEventListener("hashchange", () => {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (tabIds.indexOf(h) > -1) showTab(h);
+  });
+
+  /* 输入 / 选项变化都重跑当前方向 */
+  Object.keys(CARDS).forEach(id => {
+    const c = CARDS[id];
+    $(c.in).addEventListener("input", () => runSoon(id));
+  });
+  $("b64Url").addEventListener("change", () => run("b64"));
+  $("urlMode").addEventListener("change", () => run("url"));
+  $("uniMode").addEventListener("change", () => run("uni"));
+  $("uniOnly").addEventListener("change", () => run("uni"));
+  $("htmlNum").addEventListener("change", () => run("html"));
+  $("hexSep").addEventListener("change", () => run("hex"));
+  $("hexUpper").addEventListener("change", () => run("hex"));
+  $("baseVal").addEventListener("input", runBase);
+  $("baseFrom").addEventListener("change", runBase);
+
+  $("btnClear").addEventListener("click", () => {
+    Object.keys(CARDS).forEach(id => {
+      const c = CARDS[id];
+      $(c.in).value = "";
+      $(c.out).value = "";
+      $(c.out).classList.remove("filled");
+      setNote(c.note, "");
+    });
+    $("baseVal").value = "";
+    $("baseTbl").innerHTML = "";
+    setNote("baseNote", "");
+    baseText = "";
+    toast("已清空全部 " + tabIds.length + " 类");
+  });
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  /* file:// 下 clipboard API 不可用（不是安全上下文），退回 textarea + execCommand */
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  /* 先按 hash 定 tab（带 #hex 打开就直接落在 Hex 那一类） */
+  const hashTab = (location.hash || "").replace(/^#/, "");
+  showTab(tabIds.indexOf(hashTab) > -1 ? hashTab : tabIds[0], false, false);
+
+  /* 隐藏面板里的卡片也要跑一遍 —— 各卡片的空态提示文案各不相同，
+     提前渲染好，切过去立刻有内容，不用等一次输入才出现。 */
+  run("b64"); run("url"); run("uni"); run("html"); run("hex");
+  runBase();
+})();
+</script>
+</body>
+</html>

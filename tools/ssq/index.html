@@ -261,7 +261,7 @@
 
 <!-- 前端库已本地化到 vendor/（jquery 3.6.4 / tesseract.js 7.0.0 / Compressor.js 1.2.1）。
      策略：本地优先，文件缺失或损坏时才回退 CDN（同样锁版本）—— 两个方向都保住。
-     OCR 的 worker / core / 语言包同样是本地文件，在 initTesseractWorker() 里指定。
+     OCR 的 worker / core / 语言包同样是本地文件（本目录 vendor/），在 initTesseractWorker() 里指定。
      开奖数据仍走线上接口（由爬虫定期重新生成，本地化会让数据冻结在打包那一刻）。 -->
 <script src="vendor/jquery-3.6.4.min.js"></script>
 <script>window.jQuery || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"><\/script>');</script>
@@ -370,7 +370,7 @@
     // 全局Tesseract worker变量
     let ocrWorker = null;
 
-    /* OCR 运行时资源（本地文件，见 vendor/）：
+    /* OCR 运行时资源（本地文件，见 ssq/vendor/ —— 约 18MB，只有本页在用）：
        - workerPath：worker 脚本本身
        - corePath  ：传「目录」，tesseract 会按设备能力自动挑
                      tesseract-core-relaxedsimd-lstm / -simd-lstm / -lstm 三个变体之一（都已下载）
@@ -457,31 +457,16 @@
 
         loadMore(30);
 
-        const t1 = window.performance.now();
-
-        try {
-            // 初始化OCR worker
-            await initTesseractWorker();
-
-            var t2 = window.performance.now();
-            console.log('初始化耗时:', ((t2 - t1) / 1000).toFixed(3), '秒');
-
-            $('#up-btn').removeAttr('disabled');
-            $('#up-btn').removeAttr('init');
-            dataContainer.html(idleHtml);
-        } catch (error) {
-            console.error('初始化OCR失败:', error);
-            /* CDN 加载失败/网络异常时必须给可见反馈：此前只打 console，
-               按钮永远灰着「初始化中」，页面看起来像死机。
-               注意用 warn 而不是 err —— 用户此刻还没做任何操作，不该看到报错；
-               ocrWorker 失败时不会缓存，上传时会自动重试。 */
-            $('#up-btn').removeAttr('disabled');
-            $('#up-btn').removeAttr('init');
-            dataContainer.html(idleHtml
-                + '<div class="alert warn">识别引擎预热失败（'
-                + esc(error && error.message ? error.message : String(error))
-                + '），上传图片时会自动重试；若持续失败请刷新页面。</div>');
-        }
+        /* ★ 不再在页面加载时 await initTesseractWorker()。
+           那样等于每次打开这个页面（哪怕只是看开奖结果）都要先下完
+           语言包 chi_sim+eng ≈4.5MB 再加 core/worker 引擎才放开按钮，
+           而这个页面的主要用途是查号码，多数访问根本用不到票据识别。
+           改为「首次上传时按需加载」——#up-btn 的 click 流程里已有
+           await initTesseractWorker()，并且失败时会给出可见的 .alert.err，
+           所以这里直接放开按钮即可，功能与错误提示都不丢。 */
+        $('#up-btn').removeAttr('disabled');
+        $('#up-btn').removeAttr('init');
+        dataContainer.html(idleHtml);
     }
 
     $(document).ready(function () {

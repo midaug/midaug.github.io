@@ -240,6 +240,11 @@
     .spd > .tag { flex: 1 1 100%; text-align: left; }
     .spd > .grp + .grp { border-left: 0; padding-left: 0; }
   }
+  /* 触屏下输入控件字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大。
+     控件用的是 font: inherit（跟随正文 13px），所以这里必须显式覆盖。 */
+  @media (max-width: 640px) {
+    input, textarea, select { font-size: 16px; }
+  }
 </style>
 </head>
 <body>

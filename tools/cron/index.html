@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cron 解析</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  code { font-family: var(--mono); }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 否则 main 会失去滚动容器身份 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"] { cursor: text; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  input::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .row + .row { margin-top: 8px; }
+  .row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  .row > select { flex: 0 0 auto; }
+
+  /* 表达式输入：等宽大字号 */
+  #cronIn {
+    font: 16px/1.6 var(--mono); letter-spacing: 1px; padding: 9px 12px;
+    text-align: center;
+  }
+
+  /* 五段拆解视图 */
+  .seg { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .seg .box {
+    flex: 1 1 0; min-width: 62px; text-align: center;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 4px; cursor: default;
+  }
+  .seg .box .v { font-size: 15px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .seg .box .n { font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
+  .seg .box.bad { border-color: var(--err); background: rgba(209,36,47,.06); }
+  .seg .box.bad .v { color: var(--err); }
+
+  .hero {
+    margin: 12px 0 2px; padding: 12px 14px; border-radius: 10px;
+    background: var(--accent-soft); border: 1px solid rgba(79,107,237,.22);
+  }
+  .hero .t { font-size: 17px; font-weight: 700; color: var(--accent); line-height: 1.5; }
+  .hero .s { margin-top: 5px; font-size: 11.5px; color: var(--text-2); line-height: 1.7; }
+  .hero.bad { background: rgba(209,36,47,.07); border-color: rgba(209,36,47,.25); }
+  .hero.bad .t { color: var(--err); font-size: 13px; }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl th.r, .tbl td.r { text-align: right; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; }
+  .tbl tbody tr.pick { cursor: pointer; }
+  .tbl tbody tr.pick:hover td { background: var(--accent-soft); }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+  .tbl .sub { color: var(--text-3); font-size: 11px; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+  .warn-tip { color: var(--num); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .row > label { width: 58px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    input[type="text"] { font-size: 16px; }
+    select { font-size: 16px; }
+    #cronIn { font-size: 16px; letter-spacing: .5px; }
+    .seg .box { min-width: 52px; }
+    .seg .box .v { font-size: 13px; }
+    .hero .t { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Cron<span>Parse</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">—</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">支持 5 / 6 段、范围、步长、列表、# 与 L</span>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 表达式 ============ -->
+  <section class="card wide">
+    <h2>
+      表达式
+      <span class="hint">分 时 日 月 周（6 段时第一段是秒）</span>
+      <span class="right">
+        <button class="mini" id="btnSample">示例</button>
+        <button class="mini" id="btnCopy">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="cronIn">Cron</label>
+      <input type="text" id="cronIn" spellcheck="false" autocomplete="off" value="0 9 * * 1-5" />
+      <select id="tzSel" title="按哪个时区计算">
+        <option value="local" selected>本地时区</option>
+        <option value="utc">UTC</option>
+      </select>
+    </div>
+    <div class="ops" id="quick"></div>
+    <div class="seg" id="seg"></div>
+    <div class="hero" id="hero"></div>
+    <div class="tbl-wrap"><table class="tbl fit" id="fieldTbl"></table></div>
+    <div class="note" id="note1"></div>
+  </section>
+
+  <!-- ============ 2. 未来执行时间 ============ -->
+  <section class="card">
+    <h2>
+      未来执行时间
+      <span class="hint" id="tzHint">本地时区</span>
+      <span class="right"><button class="mini" id="btnCopy2">复制</button></span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="nextTbl"></table></div>
+    <div class="note" id="note2"></div>
+  </section>
+
+  <!-- ============ 3. 常见表达式 ============ -->
+  <section class="card">
+    <h2>
+      常见表达式速查
+      <span class="hint">点任意一行即可填入</span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="presetTbl"></table></div>
+  </section>
+
+  <!-- ============ 4. 语法说明 ============ -->
+  <section class="card wide">
+    <h2>语法说明</h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="syntaxTbl"></table></div>
+    <div class="note">
+      <b>「日」和「周」同时限定时是「或」的关系，不是「与」</b> —— 这是 crontab 里最容易踩的坑。
+      <code>0 0 1 * 1</code> 不是「每月 1 号且是周一」，而是「每月 1 号<b>或</b>每个周一」都会触发。
+      只有其中一个写成 <code>*</code> 时，才按「与」理解。本工具按 Vixie cron 的行为实现。<br>
+      <b>星期天有两种写法</b>：<code>0</code> 与 <code>7</code> 都表示周日，本工具会自动归一。<br>
+      <b>为什么要给时区</b>：crontab 按服务器的本地时区执行。如果你的服务器是 UTC 而人在东八区，
+      <code>0 9 * * *</code> 实际会在北京时间 17:00 触发 —— 换算一次比上线后发现错了强。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pad2 = n => String(n).padStart(2, "0");
+  const WEEK = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const MONTHS = ["1 月", "2 月", "3 月", "4 月", "5 月", "6 月", "7 月", "8 月", "9 月", "10 月", "11 月", "12 月"];
+
+  /* ============================================================
+     字段解析
+     ============================================================ */
+  const MONTH_NAMES = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+  const DOW_NAMES = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
+
+  function parseField(spec, o) {
+    const res = { set: [], star: false, question: false, last: false, nth: [], step: null, raw: spec, err: "" };
+    let s = String(spec).trim().toUpperCase();
+    if (s === "" ) { res.err = "字段为空"; return res; }
+    if (s === "?" ) { res.question = true; s = "*"; }
+    if (s === "*") {
+      res.star = true;
+      for (let i = o.min; i <= o.max; i++) res.set.push(i);
+      return res;
+    }
+    const parts = s.split(",");
+    const seen = new Set();
+    for (const raw of parts) {
+      let p = raw.trim();
+      if (!p) { res.err = "出现空的分段（多余的逗号）"; return res; }
+
+      /* L：日的「最后一天」；周的「最后一个工作日」，Quartz 里等于周六 */
+      if (p === "L") {
+        if (o.field === "dom") { res.last = true; continue; }
+        if (o.field === "dow") { seen.add(6); continue; }
+        res.err = "L 只能用在「日」或「周」字段上";
+        return res;
+      }
+      /* #：周字段的「第 n 个星期几」，如 5#2 = 每月第二个周五 */
+      if (p.indexOf("#") >= 0) {
+        if (o.field !== "dow") { res.err = "# 只能用在「周」字段上"; return res; }
+        const m = /^([A-Z]{3}|\d{1,2})#([1-5])$/.exec(p);
+        if (!m) { res.err = "「" + raw + "」写法不正确，应为 星期#序号（如 5#2）"; return res; }
+        const d = nameOrNum(m[1], o);
+        if (d === null || d > 7) { res.err = "「" + raw + "」里的星期取值不合法"; return res; }
+        res.nth.push({ dow: d === 7 ? 0 : d, n: Number(m[2]) });
+        continue;
+      }
+      let step = 1, range = p;
+      const sl = p.indexOf("/");
+      if (sl >= 0) {
+        range = p.slice(0, sl).trim();
+        const sv = p.slice(sl + 1).trim();
+        if (!/^\d+$/.test(sv) || Number(sv) < 1) { res.err = "「" + raw + "」的步长必须是正整数"; return res; }
+        step = Number(sv);
+      }
+
+      /* ★ 不能对整个 token 直接 indexOf("L")：月份名 JUL 里就带一个 L，
+         那样「0 0 1 JUL *」会被误判成 L 语法而报错。必须按「-」拆成端点，
+         逐个检查，并且先把合法的月份名 / 星期名排除掉。 */
+      for (const seg0 of range.split("-")) {
+        const t0 = seg0.trim().toUpperCase();
+        if (o.names && o.names[t0] != null) continue;
+        if (t0.indexOf("W") >= 0) { res.err = "不支持 W（最近工作日）语法"; return res; }
+        if (t0.indexOf("L") >= 0) { res.err = "L 只能单独使用，且不能与其他值组合"; return res; }
+      }
+
+      let a, b;
+      if (range === "*") { a = o.min; b = o.max; }
+      else if (range.indexOf("-") > 0) {
+        const seg = range.split("-");
+        if (seg.length !== 2) { res.err = "「" + raw + "」范围写法不正确"; return res; }
+        a = nameOrNum(seg[0], o); b = nameOrNum(seg[1], o);
+      } else {
+        a = nameOrNum(range, o);
+        /* a/n 这种写法（Quartz 风格）表示「从 a 开始，每 n 一个，直到字段上限」 */
+        b = sl >= 0 ? o.max : a;
+      }
+      if (a === null || b === null) { res.err = "「" + raw + "」里的取值无法识别"; return res; }
+      if (a < o.min || b > o.max) {
+        res.err = "「" + raw + "」超出允许范围 " + o.min + "~" + o.max;
+        return res;
+      }
+      if (a > b) { res.err = "「" + raw + "」的起始值大于结束值"; return res; }
+      if (res.step === null && sl >= 0) res.step = step;
+      for (let i = a; i <= b; i += step) seen.add(i);
+    }
+    res.set = Array.from(seen).sort((x, y) => x - y);
+    if (!res.set.length && !res.last && !res.nth.length) { res.err = "解析后没有任何取值"; return res; }
+    return res;
+  }
+  function nameOrNum(t, o) {
+    t = String(t).trim().toUpperCase();
+    if (o.names && o.names[t] != null) return o.names[t];
+    if (/^\d{1,3}$/.test(t)) return Number(t);
+    return null;
+  }
+
+  /* ============================================================
+     表达式解析
+     ============================================================ */
+  const MACROS = {
+    "@yearly": "0 0 1 1 *", "@annually": "0 0 1 1 *", "@monthly": "0 0 1 * *",
+    "@weekly": "0 0 * * 0", "@daily": "0 0 * * *", "@midnight": "0 0 * * *", "@hourly": "0 * * * *"
+  };
+
+  function parseCron(text) {
+    let s = String(text).trim().replace(/\s+/g, " ");
+    if (!s) return { empty: true };
+    let macroNote = "";
+    const low = s.toLowerCase();
+    if (low.charAt(0) === "@") {
+      if (!MACROS[low]) return { err: "不认识这个宏：只支持 @yearly @annually @monthly @weekly @daily @midnight @hourly" };
+      macroNote = "已把 " + low + " 展开为 " + MACROS[low];
+      s = MACROS[low];
+    }
+    const f = s.split(" ");
+    if (f.length === 7) return { err: "不支持 7 段写法（Quartz 的年份字段）—— 请去掉最后一段年份" };
+    if (f.length !== 5 && f.length !== 6) {
+      return { err: "字段数不对：需要 5 段（分 时 日 月 周）或 6 段（秒 分 时 日 月 周），当前有 " + f.length + " 段" };
+    }
+    const sec6 = f.length === 6;
+    const o = {
+      seconds: { min: 0, max: 59, field: "sec" },
+      minutes: { min: 0, max: 59, field: "min" },
+      hours: { min: 0, max: 23, field: "hour" },
+      dom: { min: 1, max: 31, field: "dom" },
+      month: { min: 1, max: 12, field: "month", names: MONTH_NAMES },
+      /* ★ 周的允许范围放宽到 0~7：7 也是周日，解析完再把 7 归一成 0，
+         否则「5-7」这种跨越周六到周日的写法会被判成起始大于结束。 */
+      dow: { min: 0, max: 7, field: "dow", names: DOW_NAMES }
+    };
+    const idx = sec6 ? 1 : 0;
+    const p = {
+      sec6: sec6,
+      seconds: sec6 ? parseField(f[0], o.seconds) : null,
+      minutes: parseField(f[idx], o.minutes),
+      hours: parseField(f[idx + 1], o.hours),
+      dom: parseField(f[idx + 2], o.dom),
+      month: parseField(f[idx + 3], o.month),
+      dow: parseField(f[idx + 4], o.dow),
+      raw: s, macroNote: macroNote
+    };
+    /* 周日归一 */
+    const fix7 = f2 => { const i = f2.set.indexOf(7); if (i >= 0) { f2.set.splice(i, 1); if (f2.set.indexOf(0) < 0) f2.set.push(0); f2.set.sort((a, b) => a - b); } };
+    fix7(p.dow);
+    for (const k of ["minutes", "hours", "dom", "month", "dow"]) if (p[k].err) return { err: "「" + FIELD_CN[k] + "」字段：" + p[k].err, field: k };
+    if (sec6 && p.seconds.err) return { err: "「秒」字段：" + p.seconds.err, field: "seconds" };
+    if (!p.seconds) p.seconds = { set: [0], star: true, last: false, nth: [], raw: "0", step: null };
+    return p;
+  }
+
+  const FIELD_CN = { seconds: "秒", minutes: "分", hours: "时", dom: "日", month: "月", dow: "周" };
+
+  /* ============================================================
+     匹配
+     ============================================================ */
+  function accessors(utc) {
+    return utc ? {
+      y: d => d.getUTCFullYear(), mo: d => d.getUTCMonth() + 1, da: d => d.getUTCDate(),
+      h: d => d.getUTCHours(), mi: d => d.getUTCMinutes(), s: d => d.getUTCSeconds(), dow: d => d.getUTCDay(),
+      mk: (y, mo, da, h, mi, s) => Date.UTC(y, mo - 1, da, h, mi, s),
+      mkDay: (y, mo, da) => Date.UTC(y, mo - 1, da),
+      nextDay: (y, mo, da) => { const d = new Date(Date.UTC(y, mo - 1, da + 1)); return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()]; },
+      daysInMonth: (y, mo) => new Date(Date.UTC(y, mo, 0)).getUTCDate()
+    } : {
+      y: d => d.getFullYear(), mo: d => d.getMonth() + 1, da: d => d.getDate(),
+      h: d => d.getHours(), mi: d => d.getMinutes(), s: d => d.getSeconds(), dow: d => d.getDay(),
+      mk: (y, mo, da, h, mi, s) => new Date(y, mo - 1, da, h, mi, s).getTime(),
+      mkDay: (y, mo, da) => new Date(y, mo - 1, da).getTime(),
+      nextDay: (y, mo, da) => { const d = new Date(y, mo - 1, da + 1); return [d.getFullYear(), d.getMonth() + 1, d.getDate()]; },
+      daysInMonth: (y, mo) => new Date(y, mo, 0).getDate()
+    };
+  }
+
+  /* 「日」与「周」都受限时取「或」，这是 Vixie cron 的行为，也是 crontab 里最容易误解的地方 */
+  function dayMatches(p, y, mo, da, dow, A) {
+    const domRestricted = !p.dom.star;
+    const dowRestricted = !p.dow.star && !p.dow.nth.length;
+    const domOK = domRestricted
+      ? (p.dom.set.indexOf(da) >= 0 || (p.dom.last && da === A.daysInMonth(y, mo)))
+      : true;
+    let dowOK = true;
+    if (p.dow.nth.length) {
+      const nthHit = p.dow.nth.some(r => r.dow === dow && Math.floor((da - 1) / 7) + 1 === r.n);
+      dowOK = p.dow.set.indexOf(dow) >= 0 || nthHit;
+    } else if (p.dow.star) {
+      dowOK = true;
+    } else {
+      dowOK = p.dow.set.indexOf(dow) >= 0;
+    }
+    if (p.month.set.indexOf(mo) < 0) return false;
+    if (domRestricted && dowRestricted) return domOK || dowOK;
+    return domOK && dowOK;
+  }
+
+  function computeNext(p, fromTs, n, utc) {
+    const A = accessors(utc);
+    const out = [];
+    const stepMs = p.sec6 ? 1000 : 60000;
+    /* 起点：向下取整到步长，再加一步 —— 保证「从现在开始的下一次」不包含当前这一秒/分 */
+    let base = Math.floor(fromTs / stepMs) * stepMs + stepMs;
+    let d = new Date(base);
+    let [y, mo, da] = [A.y(d), A.mo(d), A.da(d)];
+    const MAX_DAYS = 366 * 5;
+    const hours = p.hours.set, minutes = p.minutes.set, seconds = p.seconds.set;
+    for (let i = 0; i < MAX_DAYS && out.length < n; i++) {
+      const probe = new Date(A.mkDay(y, mo, da));
+      const dow = utc ? probe.getUTCDay() : probe.getDay();
+      if (dayMatches(p, y, mo, da, dow, A)) {
+        for (const h of hours) {
+          for (const mi of minutes) {
+            for (const s of seconds) {
+              const t = A.mk(y, mo, da, h, mi, s);
+              if (t < base) continue;
+              out.push(t);
+              if (out.length >= n) return out;
+            }
+          }
+        }
+      }
+      [y, mo, da] = A.nextDay(y, mo, da);
+    }
+    return out;
+  }
+
+  /* ============================================================
+     描述
+     ============================================================ */
+  const listCN = arr => arr.length > 6
+    ? arr.slice(0, 5).join("、") + " 等 " + arr.length + " 个值"
+    : arr.join("、");
+  /* 星期的展示顺序按「周一…周日」的直觉来 —— 集合内部是按 0..6 升序存的，
+     直接输出会得到「周日、周五、周六」这种别扭的次序（0=周日排在最前）。 */
+  const dowOrder = set => [1, 2, 3, 4, 5, 6, 0].filter(d => set.indexOf(d) >= 0);
+  const listRange = (arr, unit) => {
+    /* 连续区间压缩成 a-b，读起来比一串逗号舒服 */
+    if (arr.length < 3) return arr.map(x => x + unit).join("、");
+    let cont = true;
+    for (let i = 1; i < arr.length; i++) if (arr[i] !== arr[i - 1] + 1) { cont = false; break; }
+    if (cont) return arr[0] + "-" + arr[arr.length - 1] + unit;
+    return arr.map(x => x + unit).join("、");
+  };
+
+  function timeDesc(p) {
+    const h = p.hours, mi = p.minutes, s = p.seconds;
+    const hs = h.set, ms = mi.set, ss = s.set;
+    const everySec = p.sec6 && s.star;
+    if (h.star && mi.star && everySec) return { t: "每秒", s: "秒、分、时都是 *" };
+    if (h.star && mi.star) {
+      return {
+        t: p.sec6 ? "每分钟第 " + listRange(ss, " 秒") : "每分钟",
+        s: p.sec6 ? "小时与分钟都是 *，只有秒受限" : "分与时都是 *，也就是每分钟都触发一次"
+      };
+    }
+    if (h.star && !mi.star) {
+      const st = mi.step ? "每 " + mi.step + " 分钟" : "每小时的第 " + listRange(ms, " 分");
+      return { t: st + (p.sec6 && !s.star ? " 的第 " + listRange(ss, " 秒") : ""), s: "小时是 *，所以每个小时都按这个分钟规则触发" };
+    }
+    if (!h.star && mi.star) {
+      return { t: "在 " + listRange(hs, " 点") + " 内的每分钟", s: "分钟是 *，所以这几个小时里每分钟都触发" };
+    }
+    /* 时与分都受限时，直接排成 09:00、18:00 这样的时刻表最好读；
+       组合太多、或者带步长时，才退回「每 N 小时的第 M 分」这种描述。 */
+    if (h.step) {
+      return { t: "每 " + h.step + " 小时的第 " + listRange(ms, " 分") + (p.sec6 ? " " + listRange(ss, " 秒") : ""), s: "" };
+    }
+    if (!mi.step && (!p.sec6 || ss.length === 1) && hs.length * ms.length <= 6) {
+      const times = [];
+      for (const hh of hs) for (const mm of ms) {
+        times.push(pad2(hh) + ":" + pad2(mm) + (p.sec6 ? ":" + pad2(ss[0]) : ""));
+      }
+      return { t: times.join("、"), s: "" };
+    }
+    return { t: listRange(hs, " 点") + " " + listRange(ms, " 分") + (p.sec6 ? " " + listRange(ss, " 秒") : ""), s: "" };
+  }
+
+  function dateDesc(p) {
+    const out = [];
+    if (!p.month.star) out.push(listRange(p.month.set, " 月"));
+    const domRestricted = !p.dom.star;
+    const dowRestricted = !p.dow.star || p.dow.nth.length;
+    if (p.dom.last) out.push("每月最后一天");
+    else if (domRestricted) out.push("每月 " + listRange(p.dom.set, " 日"));
+    if (p.dow.nth.length) {
+      out.push(p.dow.nth.map(r => "每月第 " + r.n + " 个" + WEEK[r.dow]).join("、"));
+    } else if (!p.dow.star) {
+      out.push("每" + dowOrder(p.dow.set).map(d => WEEK[d]).join("、"));
+    }
+    if (!out.length) out.push("每天");
+    let s = out.join(" 且 ");
+    if (domRestricted && dowRestricted) s += "（日与周同时限定时按「或」处理）";
+    return s;
+  }
+
+  /* ============================================================
+     渲染
+     ============================================================ */
+  let summary = "", nextSummary = "";
+
+  function run() {
+    const text = $("cronIn").value;
+    const utc = $("tzSel").value === "utc";
+    $("tzHint").textContent = utc ? "UTC" : "本地时区（" + tzName() + "）";
+    const p = parseCron(text);
+
+    if (p.empty) {
+      $("cronIn").classList.remove("bad");
+      $("seg").innerHTML = ""; $("fieldTbl").innerHTML = ""; $("nextTbl").innerHTML = "";
+      $("hero").className = "hero";
+      $("hero").innerHTML = '<div class="t">等待输入</div><div class="s">支持 5 段（分 时 日 月 周）与 6 段（秒 分 时 日 月 周），也支持 @daily 这类宏。</div>';
+      $("note1").innerHTML = '<span class="empty-tip">输入表达式后自动解析</span>';
+      $("note2").innerHTML = "";
+      $("stat").textContent = "—";
+      summary = ""; nextSummary = "";
+      return;
+    }
+    if (p.err) {
+      $("cronIn").classList.add("bad");
+      $("seg").innerHTML = ""; $("fieldTbl").innerHTML = ""; $("nextTbl").innerHTML = "";
+      $("hero").className = "hero bad";
+      $("hero").innerHTML = '<div class="t">表达式无法解析</div><div class="s">' + eh(p.err) + "</div>";
+      $("note1").innerHTML = "";
+      $("note2").innerHTML = "";
+      $("stat").textContent = "语法错误";
+      summary = ""; nextSummary = "";
+      return;
+    }
+    $("cronIn").classList.remove("bad");
+
+    const td = timeDesc(p), dd = dateDesc(p);
+    const title = dd + " " + td.t;
+    /* 每个「命中的日子」会触发几次 —— 比重复一遍时刻表更有信息量 */
+    const perDay = p.hours.set.length * p.minutes.set.length * p.seconds.set.length;
+    $("hero").className = "hero";
+    $("hero").innerHTML = '<div class="t">' + eh(title) + '</div>'
+      + '<div class="s">' + (p.macroNote ? eh(p.macroNote) + "<br>" : "")
+      + eh(td.s || ("每个命中的日子触发 " + perDay + " 次")) + "</div>";
+    $("stat").textContent = (p.sec6 ? "6 段" : "5 段") + " · " + (utc ? "UTC" : "本地");
+
+    /* 五段拆解 */
+    const fields = p.sec6
+      ? [["秒", p.seconds], ["分", p.minutes], ["时", p.hours], ["日", p.dom], ["月", p.month], ["周", p.dow]]
+      : [["分", p.minutes], ["时", p.hours], ["日", p.dom], ["月", p.month], ["周", p.dow]];
+    $("seg").innerHTML = fields.map(([n, f]) =>
+      '<div class="box' + (f.err ? " bad" : "") + '"><div class="v">' + eh(f.raw) + '</div><div class="n">' + n + "</div></div>"
+    ).join("");
+
+    /* 字段明细表 */
+    $("fieldTbl").innerHTML = "<thead><tr><th>字段</th><th>原始值</th><th>含义</th><th>解析结果</th></tr></thead><tbody>"
+      + fields.map(([n, f]) => {
+          const range = { 秒: "0-59", 分: "0-59", 时: "0-23", 日: "1-31", 月: "1-12", 周: "0-7（0 与 7 都是周日）" }[n];
+          let meaning;
+          if (f.star) meaning = f.question ? "? 视作 *（不限）" : "* 不限";
+          else if (f.last) meaning = "L 本月最后一天";
+          else if (f.nth.length) meaning = "第 n 个星期几";
+          else if (f.step) meaning = "从 " + f.set[0] + " 开始每 " + f.step + " 一个";
+          else meaning = "枚举";
+          let vals;
+          if (n === "周") vals = f.nth.length ? f.nth.map(r => "第 " + r.n + " 个" + WEEK[r.dow]).join("、") : listCN(dowOrder(f.set).map(d => WEEK[d]));
+          else if (n === "月") vals = f.star ? "1-12（每月）" : listCN(f.set.map(m => MONTHS[m - 1]));
+          else vals = f.star ? range : listCN(f.set);
+          return '<tr><td class="u">' + n + '</td><td class="n">' + eh(f.raw) + '</td>'
+               + '<td class="u">' + eh(meaning) + '</td><td class="wrap">' + eh(vals) + "</td></tr>";
+        }).join("")
+      + "</tbody>";
+
+    /* 未来执行时间 */
+    const nexts = computeNext(p, Date.now(), 10, utc);
+    if (!nexts.length) {
+      $("nextTbl").innerHTML = "";
+      $("note2").innerHTML = '<span class="err-tip">未来 5 年内都没有匹配的时间。</span>'
+        + "常见原因：日期组合不可能出现（例如 2 月 31 日），或者「日」与「周」同时限定时被「或」规则排除。";
+      nextSummary = "";
+    } else {
+      const now = Date.now();
+      $("nextTbl").innerHTML = "<thead><tr><th>#</th><th>时间</th><th class=\"r\">距今</th></tr></thead><tbody>"
+        + nexts.map((t, i) => '<tr' + (i === 0 ? ' class="hit"' : "") + '><td class="u">' + (i + 1) + "</td>"
+            + '<td class="n">' + fmtTime(t, utc) + "</td>"
+            + '<td class="r u">' + rel(t - now) + "</td></tr>").join("")
+        + "</tbody>";
+      $("note2").innerHTML = "共列出 <b>" + nexts.length + "</b> 次（最多 10 次，最多向后找 5 年）。"
+        + "第 1 次在 <b>" + fmtTime(nexts[0], utc) + "</b>，也就是 " + rel(nexts[0] - now) + "。";
+      nextSummary = nexts.map(t => fmtTime(t, utc)).join("\n");
+    }
+
+    summary = [text, title, "", "未来执行时间：", nextSummary].join("\n");
+    $("note1").innerHTML = '解析成功。共 <b>' + (p.sec6 ? 6 : 5) + '</b> 个字段，'
+      + '下次触发在 <b>' + (nexts.length ? fmtTime(nexts[0], utc) : "5 年内无") + "</b>。"
+      + (p.sec6 ? "<br>这是 6 段写法，第一段是秒 —— 注意标准 crontab 只有 5 段，多写一段会被当成秒。"
+                : "<br>这是标准 5 段写法，最小粒度是分钟。");
+  }
+
+  function tzName() {
+    try {
+      const s = new Intl.DateTimeFormat("zh-CN", { timeZoneName: "short" }).format(new Date());
+      const m = /(GMT[+-]\d+(?::\d+)?|UTC[+-]?\d*|[A-Z]{2,5})$/.exec(s);
+      return m ? m[1] : (Intl.DateTimeFormat().resolvedOptions().timeZone || "本地");
+    } catch (e) { return Intl.DateTimeFormat().resolvedOptions().timeZone || "本地"; }
+  }
+  function fmtTime(ts, utc) {
+    const d = new Date(ts);
+    const p = n => String(n).padStart(2, "0");
+    const g = utc
+      ? [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCDay()]
+      : [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getDay()];
+    return g[0] + "-" + p(g[1]) + "-" + p(g[2]) + " " + p(g[3]) + ":" + p(g[4]) + ":" + p(g[5]) + " " + WEEK[g[6]];
+  }
+  function rel(ms) {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return s + " 秒后";
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + " 分钟后";
+    const h = Math.floor(m / 60), mm = m % 60;
+    if (h < 24) return h + " 小时" + (mm ? " " + mm + " 分" : "") + "后";
+    const d = Math.floor(h / 24), hh = h % 24;
+    return d + " 天" + (hh ? " " + hh + " 小时" : "") + "后";
+  }
+
+  /* ============================================================
+     速查 / 语法表
+     ============================================================ */
+  const PRESETS = [
+    ["每分钟", "* * * * *"], ["每 5 分钟", "*/5 * * * *"], ["每 30 分钟", "*/30 * * * *"],
+    ["每小时整点", "0 * * * *"], ["每天 0 点", "0 0 * * *"], ["每天 9 点", "0 9 * * *"],
+    ["每天 9 点与 18 点", "0 9,18 * * *"], ["每天凌晨 2:30", "30 2 * * *"],
+    ["工作日 9 点", "0 9 * * 1-5"], ["每周一 3 点", "0 3 * * 1"],
+    ["每周日 0 点", "0 0 * * 0"], ["每月 1 号 0 点", "0 0 1 * *"],
+    ["每月最后一天 23:59", "59 23 L * *"], ["每季度首日", "0 0 1 1,4,7,10 *"],
+    ["每年 1 月 1 日", "0 0 1 1 *"], ["每 2 小时", "0 */2 * * *"],
+    ["每月第二个周五", "0 0 * * 5#2"], ["每 15 分钟（6 段）", "0 */15 * * * *"],
+    ["每 10 秒（6 段）", "*/10 * * * * *"], ["@daily", "@daily"], ["@weekly", "@weekly"]
+  ];
+  $("presetTbl").innerHTML = "<thead><tr><th>说明</th><th>表达式</th></tr></thead><tbody>"
+    + PRESETS.map(([n, e], i) => '<tr class="pick" data-i="' + i + '"><td>' + eh(n) + '</td><td class="n wrap">' + eh(e) + "</td></tr>").join("")
+    + "</tbody>";
+
+  $("quick").innerHTML = PRESETS.slice(0, 10).map(([n, e], i) =>
+    '<button class="mini" data-q="' + i + '">' + eh(n) + "</button>").join("");
+
+  const SYNTAX = [
+    ["*", "任意值", "分字段写 * 表示每一分钟都触发", "0 * * * *"],
+    ["?", "不限（同 *）", "Quartz 语法，本工具视作 *，只在「日」和「周」里有实际意义", "0 0 ? * 1"],
+    [",", "枚举", "列出多个不连续的值", "0 9,12,18 * * *"],
+    ["-", "范围", "连续的区间，含两端", "0 9-17 * * 1-5"],
+    ["/", "步长", "从起点开始每隔 n 个取一个", "*/15 * * * *"],
+    ["a/n", "从 a 起每 n 个", "Quartz 风格，等价于 a-max/n", "0 0/6 * * *"],
+    ["L", "最后一天", "用在「日」是本月最后一天；用在「周」表示周六", "0 0 L * *"],
+    ["#", "第 n 个星期几", "只在「周」字段可用，5#2 = 每月第二个周五", "0 0 * * 5#2"],
+    ["W", "最近工作日", "本工具不支持（需要跨月推算，各实现差异大）", "0 0 15W * *"],
+    ["JAN-DEC", "月份名", "等价于 1-12，不区分大小写", "0 0 1 JAN *"],
+    ["SUN-SAT", "星期名", "SUN=0 … SAT=6，不区分大小写", "0 0 * * MON"],
+    ["@daily 等", "宏", "支持 @yearly @annually @monthly @weekly @daily @midnight @hourly", "@hourly"]
+  ];
+  $("syntaxTbl").innerHTML = "<thead><tr><th>写法</th><th>含义</th><th class=\"hide-sm\">说明</th><th>示例</th></tr></thead><tbody>"
+    + SYNTAX.map(([a, b, c, d]) => '<tr><td class="n">' + eh(a) + '</td><td>' + eh(b) + '</td>'
+        + '<td class="u hide-sm">' + eh(c) + '</td><td class="n">' + eh(d) + "</td></tr>").join("")
+    + "</tbody>";
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  document.addEventListener("click", e => {
+    const tr = e.target.closest("#presetTbl tr.pick");
+    if (tr) {
+      $("cronIn").value = PRESETS[Number(tr.dataset.i)][1];
+      run();
+      toast("已填入 " + PRESETS[Number(tr.dataset.i)][0]);
+      return;
+    }
+    const q = e.target.closest("[data-q]");
+    if (q) {
+      $("cronIn").value = PRESETS[Number(q.dataset.q)][1];
+      run();
+    }
+  });
+
+  let timer = 0;
+  $("cronIn").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 200); });
+  $("tzSel").addEventListener("change", run);
+
+  $("btnSample").addEventListener("click", () => { $("cronIn").value = "0 30 2 * * 1-5"; run(); toast("示例：工作日凌晨 2:30"); });
+  $("btnCopy").addEventListener("click", () => { if (!summary) { toast("还没有可复制的结果"); return; } copyText(summary, "已复制解析结果"); });
+  $("btnCopy2").addEventListener("click", () => { if (!nextSummary) { toast("还没有可复制的结果"); return; } copyText(nextSummary, "已复制执行时间"); });
+
+  $("btnClear").addEventListener("click", () => { $("cronIn").value = ""; run(); toast("已清空"); });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  run();
+})();
+</script>
+</body>
+</html>

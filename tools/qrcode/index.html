@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>二维码</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速 / Cron」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  code { font-family: var(--mono); }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 否则 main 会失去滚动容器身份 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input, textarea {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input / textarea —— 它们要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:disabled:hover { background: var(--panel); color: var(--text); border-color: var(--border-2); }
+  input[type="text"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+  textarea { cursor: text; resize: vertical; width: 100%; font-family: var(--mono); line-height: 1.6; }
+  input[type="color"] {
+    width: 38px; height: 28px; padding: 2px 3px; cursor: pointer; flex: none;
+  }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* 表单 + 预览：宽屏两栏，窄屏上下堆叠 */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 248px; gap: 16px; align-items: start; }
+  /* 识别卡反过来：图区窄、结果区宽 —— 结果常常是一长串网址，挤在 248px 里没法看 */
+  .split.rev { grid-template-columns: 300px minmax(0, 1fr); }
+  .split > * { min-width: 0; }
+
+  .ops { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ops + .ops { margin-top: 8px; }
+  .ops .sp { margin-left: auto; }
+  .fld { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .fld select { padding: 4px 6px; }
+  .chk { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); white-space: nowrap; cursor: pointer; }
+  .chk input { flex: none; margin: 0; cursor: pointer; }
+
+  #qrText { min-height: 66px; font-size: 13px; }
+
+  /* 预览台：棋盘格底 —— 透明背景时能一眼看出来 */
+  .stage {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 248px; padding: 8px; border-radius: 10px;
+    border: 1px solid var(--border); background:
+      repeating-conic-gradient(var(--panel-2) 0% 25%, transparent 0% 50%) 50% / 14px 14px;
+  }
+  #qrCanvas { display: block; max-width: 100%; image-rendering: pixelated; border-radius: 4px; }
+  .stage .ph { color: var(--text-3); font-size: 12px; text-align: center; padding: 0 10px; }
+
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    min-height: 248px; padding: 14px; border-radius: 10px;
+    border: 1.5px dashed var(--border-2); background: var(--panel-2);
+    text-align: center; color: var(--text-2); font-size: 12px; line-height: 1.8;
+    transition: border-color .15s, background .15s;
+  }
+  .drop.hot { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .drop .big { font-size: 13px; font-weight: 600; color: var(--text); }
+  .drop img, .drop canvas { display: block; max-width: 100%; max-height: 220px; border-radius: 4px; }
+
+  .kv { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .kv:last-child { border-bottom: 0; }
+  .kv > :first-child { flex: none; width: 76px; color: var(--text-3); }
+  .kv > :last-child { flex: 1 1 auto; min-width: 0; word-break: break-all; }
+  .kv > :last-child.n { color: var(--accent); font-weight: 600; }
+
+  #rdOut { min-height: 104px; font-size: 13px; }
+  #rdOut[readonly] { background: var(--panel-2); cursor: text; }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 4px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .note ul { margin: 4px 0 0; padding-left: 18px; }
+  .note li { margin: 2px 0; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+  .warn-tip { color: var(--num); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    input[type="text"], textarea, select { font-size: 16px; }
+    #qrText, #rdOut { font-size: 16px; }
+    /* ★ 宽屏的两栏在窄屏改成上下堆叠，不是把两栏压窄 */
+    .split, .split.rev { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .stage, .drop { min-height: 208px; }
+    .kv > :first-child { width: 64px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">QR<span>Code</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">—</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">生成与识别全部在本地完成，内容不会上传</span>
+</header>
+
+<main>
+
+  <!-- ============ 1. 生成 ============ -->
+  <section class="card wide">
+    <h2>
+      生成二维码
+      <span class="hint">输入即生成，支持中文与 emoji</span>
+      <span class="right">
+        <button class="mini" id="btnSample">示例</button>
+        <button class="mini" id="btnCopyTxt">复制内容</button>
+      </span>
+    </h2>
+    <div class="split">
+      <div>
+        <textarea id="qrText" spellcheck="false" placeholder="输入网址、文本、WiFi 配置……支持中文与 emoji"></textarea>
+        <div class="ops">
+          <span class="fld">容错
+            <select id="qrEcl" title="容错级别越高越耐污损，但容量越小">
+              <option value="L">L · 约 7%</option>
+              <option value="M" selected>M · 约 15%</option>
+              <option value="Q">Q · 约 25%</option>
+              <option value="H">H · 约 30%</option>
+            </select>
+          </span>
+          <span class="fld">尺寸
+            <select id="qrSize" title="导出图片的边长">
+              <option value="256">256 px</option>
+              <option value="384" selected>384 px</option>
+              <option value="512">512 px</option>
+              <option value="768">768 px</option>
+              <option value="1024">1024 px</option>
+            </select>
+          </span>
+          <span class="fld">边距
+            <select id="qrMargin" title="四周留白，单位是模块">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="4" selected>4</option>
+              <option value="6">6</option>
+            </select>
+          </span>
+        </div>
+        <div class="ops">
+          <span class="fld">前景 <input type="color" id="qrFg" value="#0f172a" /></span>
+          <span class="fld">背景 <input type="color" id="qrBg" value="#ffffff" /></span>
+          <label class="chk"><input type="checkbox" id="qrTrans" /><span>透明背景</span></label>
+          <span class="fld">模式
+            <select id="qrMode" title="自动按内容挑选更省空间的编码模式">
+              <option value="auto" selected>自动</option>
+              <option value="Byte">字节</option>
+              <option value="Alphanumeric">字母数字</option>
+              <option value="Numeric">纯数字</option>
+            </select>
+          </span>
+        </div>
+        <div class="ops">
+          <button id="btnGen">生成</button>
+          <button id="btnPng">下载 PNG</button>
+          <button id="btnSvg">下载 SVG</button>
+        </div>
+        <div class="note" id="note1"></div>
+      </div>
+      <div>
+        <div class="stage" id="qrStage"><canvas id="qrCanvas"></canvas></div>
+        <div class="note" id="note2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. 识别 ============ -->
+  <section class="card wide">
+    <h2>
+      识别二维码
+      <span class="hint">拖入图片、选择文件，或直接 Ctrl/⌘+V 粘贴截图</span>
+      <span class="right">
+        <button class="mini" id="btnPick">选择图片</button>
+        <button class="mini" id="btnRdClear">清空</button>
+      </span>
+    </h2>
+    <input type="file" id="rdFile" accept="image/*" hidden />
+    <div class="split rev">
+      <div>
+        <div class="drop" id="rdDrop">
+          <div class="big">把二维码图片拖到这里</div>
+          <div>也可以点「选择图片」，或直接粘贴截图<br>PNG · JPG · WebP · GIF</div>
+        </div>
+      </div>
+      <div>
+        <textarea id="rdOut" readonly spellcheck="false" placeholder="识别结果会出现在这里"></textarea>
+        <div class="ops">
+          <button class="mini" id="btnCopyRd">复制结果</button>
+          <button class="mini" id="btnRdOpen" disabled>打开链接</button>
+          <span class="sp"></span>
+        </div>
+        <div id="rdKv"></div>
+        <div class="note" id="note3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. 纠错等级与容量 ============ -->
+  <section class="card">
+    <h2>纠错等级与容量</h2>
+    <div class="tbl-wrap">
+      <table class="tbl fit" id="eclTbl"></table>
+    </div>
+    <div class="note">
+      二维码有 <b>40 个版本</b>，第 n 版的边长是 <code>n × 4 + 17</code> 个模块（版本 1 是 21×21）。
+      内容越多版本越高、模块越密，同样尺寸下就越难扫。
+      上表最后一列是<b>版本 40（177×177）在字节模式下的上限</b>，实际可用容量还跟内容编码模式有关：
+      纯数字最省，字母数字次之，中文按 UTF-8 占 3 字节。
+    </div>
+  </section>
+
+  <!-- ============ 4. 说明 ============ -->
+  <section class="card">
+    <h2>说明</h2>
+    <div class="note">
+      <b>为什么内容不会外泄</b>：生成用的是 <code>qrcode-generator</code>，识别用的是 <code>jsqr</code>，
+      两个库都在本机 <code>vendor/</code> 目录里，全程没有任何请求发出去 —— 断网也能用。
+      所以拿它处理 WiFi 密码、内网地址这类内容也没问题。<br>
+      <b>扫不出来怎么办</b>：
+      <ul>
+        <li>二维码在图片里太小 —— 裁剪到只剩二维码再试，识别前会先按最长边缩放。</li>
+        <li>图片是反色（白码黑底）或对比度很低 —— 本工具会额外尝试反色解码一次。</li>
+        <li>屏幕截图带缩放模糊 —— 尽量用原图，不要经过聊天软件二次压缩。</li>
+        <li>码本身有损坏 —— 换个容错等级重新生成；<code>H</code> 能扛住约 30% 的面积缺失。</li>
+      </ul>
+      <b>关于边距</b>：二维码四周必须留白（规范要求至少 4 个模块），留白不够会让扫描器找不到边界。
+      做成贴边的图时记得手动补白。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="vendor/qrcode-generator-1.4.4.js"></script>
+<script>window.qrcode || document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>');</script>
+<script src="vendor/jsqr-1.4.0.js"></script>
+<script>window.jsQR || document.write('<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"><\/script>');</script>
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pad2 = n => String(n).padStart(2, "0");
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  /* ★ 这个库自带的 stringToBytes 只是把每个 UTF-16 码元 & 0xff —— 中文会被直接截成
+     乱码（「中」= 0x4E2D → 0x2D）。必须换成真正的 UTF-8 编码，TextEncoder 一行搞定。
+     不做这一步，中文内容生成的二维码扫出来就是乱码。 */
+  const TE = new TextEncoder();
+  const utf8Bytes = s => Array.from(TE.encode(s));
+  const byteLen = s => TE.encode(s).length;
+  if (window.qrcode) window.qrcode.stringToBytes = utf8Bytes;
+
+  /* 版本 40、字节模式下的容量上限（字节） */
+  const CAP = { L: 2953, M: 2331, Q: 1663, H: 1273 };
+  const ECL_INFO = [
+    ["L", "约 7%", "最省空间，适合内容长、环境干净的场景"],
+    ["M", "约 15%", "默认，容量与容错兼顾"],
+    ["Q", "约 25%", "要印刷、或者可能被遮挡时用"],
+    ["H", "约 30%", "容错最高，可以叠 logo，但容量最小"]
+  ];
+
+  /* ============================================================
+     生成
+     ============================================================ */
+  let cur = null;        /* 当前 qrcode 实例 */
+  let curText = "";      /* 当前已生成的内容 */
+  let curOpt = null;     /* 当前参数快照，下载时复用 */
+
+  /* 自动挑编码模式：数字最省、字母数字次之，其余按字节。
+     ★ 手动指定了模式但内容不匹配时必须退回字节模式 —— 把「你好」按 Numeric 编码，
+     库不会报错，只会产出一张扫不出来的废码。 */
+  function pickMode(s, want) {
+    if (want === "Numeric") return /^[0-9]*$/.test(s) ? "Numeric" : "Byte";
+    if (want === "Alphanumeric") return /^[0-9A-Z $%*+\-./:]*$/.test(s) ? "Alphanumeric" : "Byte";
+    if (want === "Byte") return "Byte";
+    if (/^[0-9]+$/.test(s)) return "Numeric";
+    if (/^[0-9A-Z $%*+\-./:]+$/.test(s)) return "Alphanumeric";
+    return "Byte";
+  }
+
+  function readOpt() {
+    return {
+      ecl: $("qrEcl").value,
+      target: Number($("qrSize").value),
+      margin: Number($("qrMargin").value),
+      fg: $("qrFg").value,
+      bg: $("qrBg").value,
+      trans: $("qrTrans").checked,
+      mode: $("qrMode").value
+    };
+  }
+
+  function build(text, o) {
+    const q = window.qrcode(0, o.ecl);   /* 0 = 自动挑版本 */
+    q.addData(text, pickMode(text, o.mode));
+    q.make();
+    return q;
+  }
+
+  /* 每个模块的像素数取整 —— 否则模块边界落在半个像素上，图会糊 */
+  function cellOf(q, o) {
+    const n = q.getModuleCount() + o.margin * 2;
+    return Math.max(1, Math.floor(o.target / n));
+  }
+
+  function drawCanvas(q, o) {
+    const n = q.getModuleCount();
+    const cs = cellOf(q, o);
+    const size = (n + o.margin * 2) * cs;
+    const cv = $("qrCanvas");
+    cv.width = size; cv.height = size;
+    /* 显示尺寸封顶，导出尺寸不受影响 */
+    const disp = Math.min(size, 232);
+    cv.style.width = disp + "px"; cv.style.height = disp + "px";
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, size, size);
+    if (!o.trans) { ctx.fillStyle = o.bg; ctx.fillRect(0, 0, size, size); }
+    ctx.fillStyle = o.fg;
+    const off = o.margin * cs;
+    /* 同一行里连续的暗模块合成一个矩形 —— 比逐格画少一大半调用 */
+    for (let r = 0; r < n; r++) {
+      let c = 0;
+      while (c < n) {
+        if (!q.isDark(r, c)) { c++; continue; }
+        let e = c;
+        while (e < n && q.isDark(r, e)) e++;
+        ctx.fillRect(off + c * cs, off + r * cs, (e - c) * cs, cs);
+        c = e;
+      }
+    }
+    return { size: size, cell: cs };
+  }
+
+  function svgText(q, o) {
+    const n = q.getModuleCount();
+    const cs = cellOf(q, o);
+    const size = (n + o.margin * 2) * cs;
+    const d = [];
+    for (let r = 0; r < n; r++) {
+      let c = 0;
+      while (c < n) {
+        if (!q.isDark(r, c)) { c++; continue; }
+        let e = c;
+        while (e < n && q.isDark(r, e)) e++;
+        d.push("M" + (o.margin + c) * cs + " " + (o.margin + r) * cs
+             + "h" + (e - c) * cs + "v" + cs + "h-" + (e - c) * cs + "z");
+        c = e;
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '"'
+      + ' viewBox="0 0 ' + size + " " + size + '" shape-rendering="crispEdges">'
+      + (o.trans ? "" : '<rect width="' + size + '" height="' + size + '" fill="' + o.bg + '"/>')
+      + '<path d="' + d.join("") + '" fill="' + o.fg + '"/></svg>';
+  }
+
+  /* ★ 空态 / 错误态要把 stage 换成文字提示，那会把 <canvas> 从 DOM 里摘掉；
+     所以这些分支里绝不能再碰 canvas 引用（$("qrCanvas") 会是 null），
+     只有成功路径才确保 canvas 存在。 */
+  function stageMsg(msg) { $("qrStage").innerHTML = '<div class="ph">' + eh(msg) + "</div>"; }
+
+  function render() {
+    const text = $("qrText").value;
+    const o = readOpt();
+
+    if (!text) {
+      cur = null; curText = ""; curOpt = null;
+      stageMsg("输入内容后自动生成");
+      $("note1").innerHTML = '<span class="empty-tip">支持文本、网址、Wi-Fi 配置等任意内容</span>';
+      $("note2").innerHTML = "";
+      $("stat").textContent = "—";
+      $("btnPng").disabled = $("btnSvg").disabled = true;
+      return;
+    }
+    if (!window.qrcode) {
+      cur = null; curText = ""; curOpt = null;
+      stageMsg("生成库未加载");
+      $("note1").innerHTML = '<span class="err-tip">生成库未加载：vendor/qrcode-generator-1.4.4.js 不可用，且 CDN 兜底也失败了。</span>';
+      $("note2").innerHTML = "";
+      $("stat").textContent = "库缺失";
+      $("btnPng").disabled = $("btnSvg").disabled = true;
+      return;
+    }
+
+    const bytes = byteLen(text);
+    if (bytes > CAP[o.ecl]) {
+      cur = null; curText = ""; curOpt = null;
+      stageMsg("内容超出容量");
+      $("note1").innerHTML = '<span class="err-tip">内容有 <b>' + bytes + '</b> 字节，超过 ' + o.ecl
+        + ' 级的容量上限 ' + CAP[o.ecl] + ' 字节。请缩短内容，或把容错级别降到 L。</span>';
+      $("note2").innerHTML = "";
+      $("stat").textContent = "超出容量";
+      $("btnPng").disabled = $("btnSvg").disabled = true;
+      return;
+    }
+
+    let q;
+    try {
+      q = build(text, o);
+    } catch (e) {
+      cur = null; curText = ""; curOpt = null;
+      stageMsg("生成失败");
+      $("note1").innerHTML = '<span class="err-tip">生成失败：' + eh(e && e.message || e) + "</span>";
+      $("note2").innerHTML = "";
+      $("stat").textContent = "生成失败";
+      $("btnPng").disabled = $("btnSvg").disabled = true;
+      return;
+    }
+
+    if (!$("qrCanvas")) $("qrStage").innerHTML = '<canvas id="qrCanvas"></canvas>';
+    const info = drawCanvas(q, o);
+    cur = q; curText = text; curOpt = o;
+
+    const n = q.getModuleCount();
+    const ver = (n - 17) / 4;
+    const mode = pickMode(text, o.mode);
+    const fellBack = o.mode !== "auto" && o.mode !== mode;
+    $("stat").innerHTML = "版本 <b>" + ver + "</b> · " + n + "×" + n;
+    $("note1").innerHTML = "编码模式 <b>" + mode + "</b>"
+      + (fellBack ? "（指定的「" + eh(o.mode) + "」跟内容不匹配，已自动退回字节模式）" : "")
+      + "，内容 <b>" + bytes + "</b> 字节，版本 <b>" + ver + "</b>（" + n + "×" + n + " 模块），每模块 " + info.cell + " px。"
+      + (o.trans ? "<br>已开启透明背景 —— 深色底上请先把前景色改成浅色，否则扫不出来。" : "");
+    $("note2").innerHTML = "导出尺寸 <b>" + info.size + "×" + info.size + " px</b>"
+      + (info.size !== o.target ? "（已按整模块对齐到 " + info.size + "，避免模块边缘发虚）" : "")
+      + "。容错 " + o.ecl + " 级。";
+    $("btnPng").disabled = $("btnSvg").disabled = false;
+  }
+
+  /* ============================================================
+     识别
+     ============================================================ */
+  let lastData = "";
+  let busy = false;
+  /* 清空时要把拖拽区还原成初始样子 —— 文案只写一处，免得两处走样 */
+  const RD_HINT = '<div class="big">把二维码图片拖到这里</div>'
+    + "<div>也可以点「选择图片」，或直接粘贴截图<br>PNG · JPG · WebP · GIF</div>";
+
+  function kv(rows) {
+    $("rdKv").innerHTML = rows.map(([k, v, cls]) =>
+      '<div class="kv"><span>' + eh(k) + '</span><span' + (cls ? ' class="' + cls + '"' : "") + ">" + v + "</span></div>").join("");
+  }
+
+  async function blobToBitmap(b) {
+    if (window.createImageBitmap) {
+      try { return await createImageBitmap(b); } catch (e) { /* 落到 <img> 分支 */ }
+    }
+    return await new Promise((res, rej) => {
+      const img = new Image();
+      const u = URL.createObjectURL(b);
+      img.onload = () => { URL.revokeObjectURL(u); res(img); };
+      img.onerror = () => { URL.revokeObjectURL(u); rej(new Error("图片无法解码")); };
+      img.src = u;
+    });
+  }
+
+  /* 在指定缩放下解一次码，返回 { data, loc, ms } 或 null */
+  function tryDecode(bmp, maxSide) {
+    const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+    const scale = maxSide ? Math.min(1, maxSide / Math.max(w, h)) : 1;
+    const cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+    const cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, cw, ch);
+    const px = ctx.getImageData(0, 0, cw, ch);
+    const t = performance.now();
+    const r = window.jsQR(px.data, cw, ch, { inversionAttempts: "attemptBoth" });
+    return { r: r, cv: cv, cw: cw, ch: ch, ms: Math.round(performance.now() - t), w: w, h: h };
+  }
+
+  function showPreview(cv, cw, ch) {
+    const box = $("rdDrop");
+    box.innerHTML = "";
+    const disp = Math.min(220, cw);
+    cv.style.width = disp + "px";
+    cv.style.height = Math.round(ch * disp / cw) + "px";
+    box.appendChild(cv);
+  }
+
+  async function decodeBlob(b) {
+    if (busy) return;
+    busy = true;
+    $("btnPick").disabled = true;
+    $("note3").innerHTML = '<span class="empty-tip">正在识别……</span>';
+    $("rdOut").value = "";
+    lastData = "";
+    $("btnRdOpen").disabled = true;
+    try {
+      const bmp = await blobToBitmap(b);
+      const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+      /* 先按最长边 1280 缩一次（快），没解出来再用原图（准） */
+      let hit = tryDecode(bmp, 1280);
+      let pass = "缩放";
+      if (!hit.r && Math.max(w, h) > 1280) { hit = tryDecode(bmp, 0); pass = "原图"; }
+      showPreview(hit.cv, hit.cw, hit.ch);
+      if (hit.r) {
+        lastData = hit.r.data;
+        $("rdOut").value = lastData;
+        const ver = hit.r.version;
+        const n = ver * 4 + 17;
+        $("stat").innerHTML = "已识别 · 版本 <b>" + ver + "</b>";
+        kv([
+          ["状态", '<span class="ok-tip">识别成功</span>'],
+          ["版本", ver + "（" + n + "×" + n + " 模块）", "n"],
+          ["内容长度", byteLen(lastData) + " 字节 / " + [...lastData].length + " 字符"],
+          ["图片尺寸", w + "×" + h + " px" + (hit.w !== hit.cw ? "（按 " + pass + " " + hit.cw + "×" + hit.ch + " 解码）" : "")],
+          ["解码耗时", hit.ms + " ms"]
+        ]);
+        $("note3").innerHTML = "识别成功。定位点：" + fmtLoc(hit.r.location, hit.cw, hit.ch) + "。";
+        $("btnRdOpen").disabled = !/^https?:\/\//i.test(lastData);
+      } else {
+        $("stat").textContent = "未识别到二维码";
+        kv([
+          ["状态", '<span class="err-tip">没有找到二维码</span>'],
+          ["图片尺寸", w + "×" + h + " px"],
+          ["解码耗时", hit.ms + " ms"]
+        ]);
+        $("note3").innerHTML = '<span class="err-tip">这张图里没有找到二维码。</span>'
+          + "可以试试：裁剪到只剩二维码、换一张更清晰的原图、或者先把图片反色再试。";
+      }
+    } catch (e) {
+      $("stat").textContent = "识别失败";
+      kv([["状态", '<span class="err-tip">' + eh(e && e.message || e) + "</span>"]]);
+      $("note3").innerHTML = '<span class="err-tip">图片读不出来。</span>请确认是常见的图片格式（PNG / JPG / WebP / GIF）。';
+    } finally {
+      $("btnPick").disabled = false;
+      busy = false;
+    }
+  }
+
+  function fmtLoc(loc, cw, ch) {
+    if (!loc) return "未提供";
+    const c = loc.topLeftCorner, r = loc.bottomRightCorner;
+    const f = p => Math.round(p.x) + "," + Math.round(p.y);
+    return "左上 " + f(c) + " → 右下 " + f(r) + "（画布 " + cw + "×" + ch + "）";
+  }
+
+  /* ============================================================
+     表格
+     ============================================================ */
+  $("eclTbl").innerHTML = "<thead><tr><th>等级</th><th>可纠错</th><th class=\"hide-sm\">适用场景</th><th>容量上限</th></tr></thead><tbody>"
+    + ECL_INFO.map(([k, p, d]) => '<tr><td class="n">' + k + '</td><td>' + p + '</td>'
+        + '<td class="u hide-sm">' + d + '</td><td>' + CAP[k] + " 字节</td></tr>").join("")
+    + "</tbody>";
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  let timer = 0;
+  const soon = () => { clearTimeout(timer); timer = setTimeout(render, 180); };
+  $("qrText").addEventListener("input", soon);
+  ["qrEcl", "qrSize", "qrMargin", "qrFg", "qrBg", "qrMode"].forEach(id =>
+    $(id).addEventListener("change", render));
+  $("qrTrans").addEventListener("change", render);
+  $("btnGen").addEventListener("click", () => { render(); toast("已生成"); });
+
+  $("btnSample").addEventListener("click", () => {
+    $("qrText").value = "你好，世界 🌏\nhttps://example.com/tools/qrcode/";
+    render();
+    toast("示例已填入");
+  });
+  $("btnCopyTxt").addEventListener("click", () => {
+    if (!curText) { toast("还没有内容"); return; }
+    copyText(curText, "已复制内容");
+  });
+
+  function download(name, blob) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+  const baseName = () => "qrcode-" + (cur ? cur.getModuleCount() : 0) + "m-" + (curOpt ? curOpt.target : 0) + "px";
+
+  $("btnPng").addEventListener("click", () => {
+    if (!cur) { toast("先输入内容"); return; }
+    const cv = $("qrCanvas");
+    if (cv.toBlob) {
+      cv.toBlob(b => { if (b) { download(baseName() + ".png", b); toast("已下载 PNG"); } else toast("导出失败"); }, "image/png");
+    } else {
+      const url = cv.toDataURL("image/png");
+      const a = document.createElement("a"); a.href = url; a.download = baseName() + ".png"; a.click();
+      toast("已下载 PNG");
+    }
+  });
+  $("btnSvg").addEventListener("click", () => {
+    if (!cur) { toast("先输入内容"); return; }
+    const svg = svgText(cur, curOpt);
+    download(baseName() + ".svg", new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    toast("已下载 SVG");
+  });
+
+  /* ---- 识别：选择文件 / 拖拽 / 粘贴 ---- */
+  $("btnPick").addEventListener("click", () => $("rdFile").click());
+  $("rdFile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) decodeBlob(f);
+    e.target.value = "";   /* 清掉，否则同一张图选第二次不触发 change */
+  });
+  $("btnRdClear").addEventListener("click", () => {
+    $("rdDrop").innerHTML = RD_HINT;
+    $("rdOut").value = "";
+    $("rdKv").innerHTML = "";
+    $("note3").innerHTML = "";
+    $("btnRdOpen").disabled = true;
+    lastData = "";
+    $("stat").textContent = cur ? "版本 " + (cur.getModuleCount() - 17) / 4 + " · " + cur.getModuleCount() + "×" + cur.getModuleCount() : "—";
+    toast("已清空");
+  });
+  $("btnCopyRd").addEventListener("click", () => {
+    if (!lastData) { toast("还没有识别结果"); return; }
+    copyText(lastData, "已复制识别结果");
+  });
+  $("btnRdOpen").addEventListener("click", () => {
+    if (/^https?:\/\//i.test(lastData)) window.open(lastData, "_blank", "noopener");
+  });
+
+  const drop = $("rdDrop");
+  ["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => {
+    e.preventDefault(); drop.classList.add("hot");
+  }));
+  ["dragleave", "dragend"].forEach(t => drop.addEventListener(t, () => drop.classList.remove("hot")));
+  drop.addEventListener("drop", e => {
+    e.preventDefault(); drop.classList.remove("hot");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) decodeBlob(f); else toast("没读到文件");
+  });
+  /* 页面别处拖进来也别让浏览器直接打开图片 */
+  window.addEventListener("dragover", e => e.preventDefault());
+  window.addEventListener("drop", e => {
+    if (!drop.contains(e.target)) e.preventDefault();
+  });
+
+  document.addEventListener("paste", e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    /* DataTransferItemList 不是所有浏览器都可迭代，先转成数组 */
+    for (const it of Array.from(items)) {
+      if (it.type && it.type.indexOf("image/") === 0) {
+        const f = it.getAsFile();
+        if (f) { e.preventDefault(); decodeBlob(f); toast("已粘贴图片"); }
+        return;
+      }
+    }
+  });
+
+  /* ============================================================
+     通用
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  /* 默认填本工具的地址 —— 打开就能看到一个能扫的码 */
+  try { $("qrText").value = location.origin + "/tools/qrcode/"; } catch (e) { $("qrText").value = ""; }
+  render();
+})();
+</script>
+</body>
+</html>

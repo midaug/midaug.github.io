@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JSON 转代码</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  code { font-family: var(--mono); }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 否则 main 会失去滚动容器身份 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="number"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+  /* 语言下拉最长项是「Python · Pydantic」这类标签，给一个上限免得把整行顶开 */
+  #lang { max-width: 200px; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .io {
+    display: block; width: 100%; resize: vertical;
+    font: 12.5px/1.7 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+  .io.soft { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .io.out { background: var(--panel); border-style: dashed; }
+  .io.out.filled { border-style: solid; }
+  .io.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  #jsonIn { min-height: 210px; }
+  #codeOut { min-height: 360px; }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+  .field { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+  .field > input[type="text"] { width: 130px; padding: 4px 8px; cursor: text; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .note .snip {
+    display: block; margin-top: 6px; padding: 6px 8px; border-radius: 6px;
+    background: var(--panel); border: 1px solid var(--border);
+    font-family: var(--mono); white-space: pre; overflow-x: auto; color: var(--text);
+  }
+  .note .snip .caret { color: var(--err); font-weight: 700; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl td.wrap { word-break: break-all; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    .field > input[type="text"] { width: 96px; }
+    #lang { max-width: 150px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, input[type="text"], select { font-size: 16px; }
+    #jsonIn { min-height: 150px; }
+    #codeOut { min-height: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">JSON<span>2Code</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">—</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内生成，数据不会上传</span>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 输入与选项 ============ -->
+  <section class="card wide">
+    <h2>
+      输入 JSON
+      <span class="hint">结构会按样例反推，数组元素自动取并集</span>
+      <span class="right">
+        <button class="mini" id="btnSample">示例</button>
+        <button class="mini" id="btnMin">压缩</button>
+      </span>
+    </h2>
+    <textarea class="io" id="jsonIn" spellcheck="false" autocomplete="off"
+      placeholder='{"name": "张三", "age": 30, "tags": ["a", "b"]}'></textarea>
+    <div class="ops">
+      <label class="field">语言
+        <select id="lang"></select>
+      </label>
+      <label class="field">根类型名 <input type="text" id="rootName" value="Root" spellcheck="false" autocomplete="off" /></label>
+      <label class="field">字段名
+        <select id="naming">
+          <option value="keep" selected>原样</option>
+          <option value="camel">camelCase</option>
+          <option value="pascal">PascalCase</option>
+          <option value="snake">snake_case</option>
+        </select>
+      </label>
+      <label class="field">缩进
+        <select id="indent">
+          <option value="2" selected>2 空格</option>
+          <option value="4">4 空格</option>
+          <option value="tab">Tab</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="optOptional" checked>可选字段标记</label>
+      <label class="chk"><input type="checkbox" id="optTag" checked>附加序列化标签</label>
+    </div>
+    <div class="note" id="inNote"></div>
+  </section>
+
+  <!-- ============ 2. 生成结果 ============ -->
+  <section class="card wide">
+    <h2>
+      生成结果
+      <span class="hint" id="outHint">—</span>
+      <span class="right">
+        <button class="mini" id="btnCopy">复制</button>
+        <button class="mini" id="btnDl">下载</button>
+      </span>
+    </h2>
+    <textarea class="io out" id="codeOut" readonly spellcheck="false" placeholder="生成结果"></textarea>
+    <div class="note" id="outNote"></div>
+  </section>
+
+  <!-- ============ 3. 类型概览 ============ -->
+  <section class="card wide">
+    <h2>类型概览</h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="typeTbl"></table></div>
+    <div class="note" id="typeNote"></div>
+  </section>
+
+  <!-- ============ 4. 说明 ============ -->
+  <section class="card wide">
+    <h2>生成规则</h2>
+    <div class="note" style="margin-top:0">
+      <b>类型是怎么推出来的：</b>遍历样例 JSON，对象取键的并集 —— 在<b>所有</b>同类对象里都出现的键是必填，
+      只出现一部分的键标记为可选；数组把所有元素的类型<b>合并</b>成一个（例如 <code>[1, "a"]</code> → <code>number | string</code>），
+      空数组因为没有线索，一律按 <code>any</code> / <code>interface{}</code> 处理。<br>
+      <b>嵌套类型命名：</b>按字段名推导 —— 字段 <code>users</code>（对象数组）会生成 <code>User</code>（自动去复数），
+      字段 <code>address</code> 会生成 <code>Address</code>。重名时自动加数字后缀。<br>
+      <b>数字类型：</b>JSON 规范里只有一种数字（双精度浮点），没有整型概念。这里按「样例里这个字段是否全是整数」
+      来挑 <code>int64</code> / <code>int</code> / <code>float64</code> —— 如果线上数据可能出现小数，请手动改成浮点类型。<br>
+      <b>样例不代表全集：</b>反推出来的类型只反映你粘进来的这一份数据。字段可能为 <code>null</code>、
+      数组可能为空、对象可能多出别的键，这些都推不出来，生成后请人工过一遍。<br>
+      <b>联合类型：</b>JSON 里同一个字段混了多种类型（<code>[1, "a"]</code>）时，静态语言大多没有对应写法，
+      会退化成该语言的「任意值」类型：Go/C# 用 <code>interface{}</code>/<code>object</code>、Rust/Scala/C++ 用
+      <code>serde_json::Value</code>/<code>Json</code>/<code>nlohmann::json</code>、Python 用 <code>Union[...]</code>。<br>
+      <b>各语言差异（挑几个容易踩的）：</b>Go 的字段名必须导出（首字母大写），原键名保留在 json tag 里；
+      Python 的 <code>dataclass</code> 要求「有默认值的字段必须排在后面」，所以可选字段会被自动挪到末尾；
+      Rust 用 <code>#[serde(rename)]</code>；Java/C# 把字段名改成驼峰/帕斯卡并用 <code>@JsonProperty</code>、
+      <code>[JsonPropertyName]</code> 映射回原键名；Swift 靠 <code>CodingKeys</code> 映射；Dart 会连
+      <code>fromJson</code>/<code>toJson</code> 一起生成；C 用指针表示可选与嵌套，数组额外配一个 <code>_len</code> 字段。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const MAX_AUTO = 2 * 1024 * 1024;
+
+  /* ============================================================
+     命名工具
+     ============================================================ */
+  const words = s => String(s).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[^A-Za-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  function pascal(s) {
+    const w = words(s);
+    return w.length ? w.map(x => x[0].toUpperCase() + x.slice(1)).join("") : "Item";
+  }
+  function camel(s) {
+    const p = pascal(s);
+    return p[0].toLowerCase() + p.slice(1);
+  }
+  function snake(s) {
+    const w = words(s);
+    return w.length ? w.map(x => x.toLowerCase()).join("_") : "field";
+  }
+  /* 粗略单数化：够用即可，不做完整英文词法。注意 status / analysis 这类以 s 结尾但非复数的词要放过。 */
+  function singular(s) {
+    if (/(ss|us|is|sis)$/i.test(s)) return s;
+    if (/ies$/i.test(s)) return s.replace(/ies$/i, "y");
+    if (/(ses|xes|zes|ches|shes)$/i.test(s)) return s.replace(/es$/i, "");
+    if (/s$/i.test(s)) return s.slice(0, -1);
+    return s;
+  }
+  const isIdent = s => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(s);
+  const isIdentStrict = s => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
+
+  /* 各目标语言的关键字表 —— 命中就加下划线。只收最常撞上的那些。 */
+  const RESERVED = {
+    ts: [],
+    zod: [],
+    jsdoc: [],
+    go: ["type", "func", "range", "map", "var", "const", "select", "interface", "struct", "package", "import", "return", "go", "defer", "chan", "default", "case", "switch", "break", "continue", "for", "if", "else", "goto", "fallthrough"],
+    java: ["class", "interface", "enum", "public", "private", "protected", "static", "final", "void", "int", "long", "double", "float", "boolean", "char", "byte", "short", "new", "return", "package", "import", "extends", "implements", "this", "super", "null", "true", "false", "for", "while", "if", "else", "switch", "case", "break", "continue", "try", "catch", "finally", "throw", "throws", "abstract", "synchronized", "volatile", "transient", "native", "instanceof", "assert"],
+    cs: ["class", "interface", "struct", "enum", "public", "private", "protected", "internal", "static", "readonly", "const", "void", "int", "long", "double", "float", "bool", "string", "object", "decimal", "new", "return", "namespace", "using", "this", "base", "null", "true", "false", "for", "foreach", "while", "do", "if", "else", "switch", "case", "break", "continue", "try", "catch", "finally", "throw", "abstract", "sealed", "virtual", "override", "async", "await", "in", "is", "as", "operator", "params", "ref", "out"],
+    kt: ["class", "interface", "object", "fun", "val", "var", "package", "import", "return", "if", "else", "when", "for", "while", "do", "try", "catch", "finally", "throw", "this", "super", "null", "true", "false", "is", "in", "as", "typealias", "companion", "init", "constructor", "override", "open", "sealed", "data", "enum", "abstract", "internal", "private", "protected", "public", "suspend", "where", "by", "get", "set"],
+    scala: ["type", "val", "var", "def", "class", "object", "trait", "case", "match", "if", "else", "while", "for", "try", "catch", "finally", "throw", "return", "import", "package", "new", "this", "super", "null", "true", "false", "implicit", "lazy", "sealed", "final", "override", "abstract", "with", "yield", "do", "extends", "forSome", "private", "protected"],
+    swift: ["class", "struct", "enum", "protocol", "extension", "func", "var", "let", "import", "return", "if", "else", "guard", "for", "while", "repeat", "switch", "case", "default", "break", "continue", "try", "catch", "throw", "throws", "self", "super", "nil", "true", "false", "init", "deinit", "where", "in", "as", "is", "some", "any", "static", "final", "open", "public", "internal", "fileprivate", "private", "typealias", "associatedtype", "operator", "subscript"],
+    dart: ["class", "abstract", "implements", "extends", "with", "mixin", "enum", "const", "final", "var", "void", "int", "double", "num", "bool", "String", "dynamic", "Object", "new", "return", "import", "library", "part", "this", "super", "null", "true", "false", "for", "in", "while", "do", "if", "else", "switch", "case", "default", "break", "continue", "try", "catch", "finally", "throw", "rethrow", "static", "factory", "get", "set", "operator", "async", "await", "yield", "late", "required", "covariant"],
+    /* PHP 的变量名与属性名都以 $ 开头，是独立的变量 token，不受保留字约束
+       （$class / $empty / $list 全部合法），所以留空表即可 ——
+       否则会把 empty、list 这类完全合法的字段名无谓改成 empty_、list_。 */
+    php: [],
+    rb: ["class", "module", "def", "end", "if", "elsif", "else", "unless", "while", "until", "for", "in", "do", "begin", "rescue", "ensure", "retry", "return", "yield", "break", "next", "redo", "super", "self", "nil", "true", "false", "and", "or", "not", "then", "case", "when", "require", "require_relative", "include", "extend", "attr_accessor", "attr_reader", "attr_writer"],
+    py: ["class", "def", "import", "from", "return", "lambda", "None", "True", "False", "global", "nonlocal", "pass", "in", "is", "and", "or", "not", "if", "else", "elif", "for", "while", "try", "except", "finally", "with", "as", "yield", "del", "raise", "assert", "async", "await", "match"],
+    rs: ["type", "struct", "enum", "fn", "let", "mut", "pub", "use", "mod", "impl", "trait", "match", "loop", "move", "ref", "self", "crate", "super", "where", "as", "async", "await", "dyn", "box", "const", "static", "unsafe", "extern", "true", "false", "if", "else", "while", "for", "in", "return", "break", "continue"],
+    cpp: ["class", "struct", "union", "enum", "namespace", "template", "typename", "public", "private", "protected", "virtual", "override", "final", "static", "const", "constexpr", "mutable", "explicit", "operator", "new", "delete", "this", "return", "using", "friend", "inline", "auto", "void", "int", "long", "double", "float", "bool", "char", "true", "false", "nullptr", "if", "else", "for", "while", "do", "switch", "case", "default", "break", "continue", "try", "catch", "throw", "sizeof", "extern", "register", "volatile", "typedef"],
+    c: ["auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "bool", "true", "false", "NULL"],
+    ex: ["def", "defmodule", "defstruct", "defp", "do", "end", "fn", "case", "cond", "if", "unless", "when", "and", "or", "not", "in", "nil", "true", "false", "raise", "rescue", "after", "try", "catch", "import", "alias", "use", "require", "quote", "unquote", "receive", "send", "super", "self"],
+    hs: ["data", "type", "newtype", "class", "instance", "where", "let", "in", "case", "of", "if", "then", "else", "do", "module", "import", "deriving", "forall", "infix", "default", "foreign"],
+    jl: ["struct", "mutable", "abstract", "primitive", "type", "function", "macro", "module", "baremodule", "import", "using", "export", "end", "if", "else", "elseif", "for", "while", "try", "catch", "finally", "return", "break", "continue", "const", "global", "local", "let", "do", "begin", "quote", "where"],
+    nim: ["type", "object", "proc", "func", "method", "iterator", "template", "macro", "const", "let", "var", "import", "export", "if", "elif", "else", "case", "of", "when", "for", "while", "block", "try", "except", "finally", "raise", "return", "yield", "discard", "nil", "true", "false", "and", "or", "not", "in", "is", "ref", "ptr"],
+    cr: ["class", "module", "struct", "union", "enum", "def", "end", "if", "elsif", "else", "unless", "while", "until", "case", "when", "do", "begin", "rescue", "ensure", "return", "yield", "break", "next", "self", "nil", "true", "false", "and", "or", "not", "in", "as", "is", "with", "require", "include", "extend", "abstract", "private", "protected"],
+    schema: [],
+    graphql: []
+  };
+  /* ★ pydantic 必须复用 Python 的关键字表 —— 漏掉的话 class / None / True 会原样
+     生成出去，产物直接是 SyntaxError（reset 前实测就是 `class: int`）。 */
+  RESERVED.pydantic = RESERVED.py;
+
+  /* 非「原样」风格遇到非法键名时的兜底命名习惯：按语言惯例挑一个。 */
+  const CASE_HINT = {
+    ts: "camel", zod: "camel", jsdoc: "camel", js: "camel",
+    go: "pascal", cs: "pascal", java: "camel", kt: "camel", scala: "camel",
+    swift: "camel", dart: "camel", php: "camel", hs: "camel", nim: "camel",
+    rb: "snake", py: "snake", pydantic: "snake", rs: "snake", cpp: "snake",
+    c: "snake", ex: "snake", jl: "snake", cr: "snake"
+  };
+
+  function styleName(key, style) {
+    if (style === "keep") return key;
+    if (style === "camel") return camel(key);
+    if (style === "pascal") return pascal(key);
+    if (style === "snake") return snake(key);
+    return key;
+  }
+  /* 目标语言要求合法标识符时，把不合法字符抹掉并规避关键字。
+     ★ 必须无条件过一遍：像 Python 的 class / Rust 的 type / Java 的 class
+     本身就是「合法标识符」，只靠 isIdentStrict 判不出来，会直接漏进产物里变成语法错误。 */
+  function safeIdent(name, lang, fallback) {
+    let s = String(name).replace(/[^A-Za-z0-9_$]/g, "_").replace(/^([0-9])/, "_$1");
+    if (!s) s = fallback || "field";
+    if (RESERVED[lang] && RESERVED[lang].indexOf(s) >= 0) s += "_";
+    return s;
+  }
+  /* 字段名的统一入口：选风格 → 保底合法标识符 → 规避关键字。
+     非法键名的兜底风格要跟语言习惯一致：Go/C# 用 Pascal、Java/Swift 用 camel、Python/Rust 用 snake。 */
+  function fieldIdent(key, lang, style, hint) {
+    const styled = styleName(key, style);
+    const base = isIdentStrict(styled) ? styled : styleName(key, hint || CASE_HINT[lang] || "snake");
+    return safeIdent(base, lang, "field");
+  }
+
+  /* 把某个类型的字段一次性解析成中间结构（命名 + 去重 + 可选标记），
+     各语言 emitter 直接消费，避免每个 emitter 重抄一遍去重逻辑。
+     cfg.raw = true 表示该语言允许任意字符串当键（TS/Zod/JSDoc），此时不强制合法标识符。 */
+  const SEP_LANG = { py: 1, pydantic: 1, rs: 1, rb: 1 };
+  function fields(t, lang, o, cfg) {
+    cfg = cfg || {};
+    const used = {};
+    const out = [];
+    for (const f of t.fields) {
+      let name, quoted = false;
+      if (cfg.raw) {
+        const styled = styleName(f.key, o.naming);
+        if (isIdent(styled)) name = styled;
+        else { name = f.key; quoted = true; }
+      } else {
+        name = fieldIdent(f.key, lang, cfg.style || o.naming, cfg.hint);
+      }
+      const base = name;
+      let i = 2;
+      while (used[name]) { name = base + (SEP_LANG[lang] ? "_" : "") + i; i++; }
+      used[name] = true;
+      out.push({ key: f.key, name: name, quoted: quoted, opt: !!(o.optional && f.optional), shape: f.shape });
+    }
+    return out;
+  }
+
+  /* ============================================================
+     形状推导（不带名字，纯结构）
+     ============================================================ */
+  function shapeOf(v) {
+    if (v === null) return { k: "null" };
+    if (Array.isArray(v)) {
+      if (!v.length) return { k: "array", el: { k: "any" } };
+      return { k: "array", el: mergeShapes(v.map(shapeOf)) };
+    }
+    if (typeof v === "object") {
+      return { k: "object", fields: Object.keys(v).map(k => ({ key: k, shape: shapeOf(v[k]), optional: false })) };
+    }
+    if (typeof v === "number") return { k: "number", int: Number.isInteger(v) && Math.abs(v) <= 9007199254740991 };
+    if (typeof v === "boolean") return { k: "boolean" };
+    return { k: "string" };
+  }
+
+  function mergeShapes(list) {
+    const out = [];
+    const objs = [];
+    let num = null;
+    const seen = {};
+    /* 按「首次出现」的顺序收集，联合类型的书写顺序才跟样例一致：
+       [1, "x"] 应该是 number | string，而不是被固定顺序排成 string | number。 */
+    for (const t of list) {
+      if (t.k === "object") { objs.push(t); continue; }
+      if (t.k === "number") {
+        if (!num) { num = { k: "number", int: true }; out.push(num); }
+        num.int = num.int && t.int;
+        continue;
+      }
+      if (!seen[t.k]) { seen[t.k] = { k: t.k }; out.push(seen[t.k]); }
+    }
+    if (objs.length) out.unshift(mergeObjects(objs));
+    if (!out.length) return { k: "any" };
+    return out.length === 1 ? out[0] : { k: "union", of: out };
+  }
+
+  function mergeObjects(objs) {
+    const keys = [];
+    objs.forEach(o => o.fields.forEach(f => { if (keys.indexOf(f.key) < 0) keys.push(f.key); }));
+    const fields = keys.map(key => {
+      const present = objs.filter(o => o.fields.some(f => f.key === key));
+      const shapes = present.map(o => o.fields.filter(f => f.key === key)[0].shape);
+      return { key: key, shape: mergeShapes(shapes), optional: present.length < objs.length };
+    });
+    return { k: "object", fields: fields };
+  }
+
+  /* ============================================================
+     命名阶段：给每个对象形状分配唯一类型名
+     ============================================================ */
+  function namer() {
+    const used = {};
+    return {
+      list: [],
+      take(hint, forced) {
+        let base = forced || pascal(singular(hint)) || "Item";
+        let name = base, i = 2;
+        while (used[name]) { name = base + i; i++; }
+        used[name] = true;
+        return name;
+      }
+    };
+  }
+  function assignNames(shape, hint, nm) {
+    if (shape.k === "object") {
+      if (shape.name) return;                       // 已命名过，避免重复
+      shape.name = nm.take(hint);
+      nm.list.push(shape);
+      shape.fields.forEach(f => assignNames(f.shape, f.key, nm));
+    } else if (shape.k === "array") {
+      assignNames(shape.el, hint, nm);
+    } else if (shape.k === "union") {
+      shape.of.forEach(t => assignNames(t, hint, nm));
+    }
+  }
+
+  /* ============================================================
+     类型方案：每种语言只声明「标量怎么叫 + 数组/联合怎么拼」
+     ============================================================ */
+  function mkT(sp) {
+    return function rec(s) {
+      switch (s.k) {
+        case "string": return sp.string;
+        case "boolean": return sp.bool;
+        case "number": return s.int ? sp.int : sp.float;
+        case "null": return sp["null"] !== undefined ? sp["null"] : sp.any;
+        case "any": return sp.any;
+        /* sp.object 允许语言改写「引用一个具名类型」的写法（Zod 要加 Schema 后缀、JSON Schema 要 $ref）。 */
+        case "object": return sp.object ? sp.object(s.name) : s.name;
+        case "array": return sp.array(rec(s.el));
+        case "union": return sp.union(s.of.map(rec));
+        default: return sp.any;
+      }
+    };
+  }
+
+  const TY = {
+    ts: mkT({ string: "string", int: "number", float: "number", bool: "boolean", any: "any", "null": "null",
+              array: t => (/[|]/.test(t) ? "(" + t + ")[]" : t + "[]"),
+              union: p => p.join(" | ") }),
+    zod: mkT({ string: "z.string()", int: "z.number().int()", float: "z.number()", bool: "z.boolean()", any: "z.any()", "null": "z.null()",
+               object: n => n + "Schema",
+               array: t => "z.array(" + t + ")",
+               union: p => (p.indexOf("z.any()") >= 0 ? "z.any()" : "z.union([" + p.join(", ") + "])") }),
+    jsdoc: mkT({ string: "string", int: "number", float: "number", bool: "boolean", any: "*", "null": "null",
+                 array: t => (/[|]/.test(t) ? "(" + t + ")[]" : t + "[]"),
+                 /* 联合类型本身不加括号（JSDoc 里 number|string 合法），
+                    只有作为数组元素时才由 array 补括号，避免出现 ((number|string))[] */
+                 union: p => (p.indexOf("*") >= 0 ? "*" : p.join("|")) }),
+    go: mkT({ string: "string", int: "int64", float: "float64", bool: "bool", any: "interface{}",
+              array: t => "[]" + t, union: () => "interface{}" }),
+    java: mkT({ string: "String", int: "Long", float: "Double", bool: "Boolean", any: "Object",
+                array: t => "List<" + t + ">", union: () => "Object" }),
+    cs: mkT({ string: "string", int: "long", float: "double", bool: "bool", any: "object",
+              array: t => "List<" + t + ">", union: () => "object" }),
+    kt: mkT({ string: "String", int: "Long", float: "Double", bool: "Boolean", any: "JsonElement",
+              array: t => "List<" + t + ">", union: () => "JsonElement" }),
+    scala: mkT({ string: "String", int: "Long", float: "Double", bool: "Boolean", any: "Json",
+                 array: t => "List[" + t + "]", union: () => "Json" }),
+    swift: mkT({ string: "String", int: "Int", float: "Double", bool: "Bool", any: "AnyCodable",
+                 array: t => "[" + t + "]", union: () => "AnyCodable" }),
+    dart: mkT({ string: "String", int: "int", float: "double", bool: "bool", any: "dynamic",
+                array: t => "List<" + t + ">", union: () => "dynamic" }),
+    php: mkT({ string: "string", int: "int", float: "float", bool: "bool", any: "mixed",
+               array: () => "array", union: () => "mixed" }),
+    rb: mkT({ string: "String", int: "Integer", float: "Float", bool: "Boolean", any: "Object",
+              array: t => "Array<" + t + ">", union: () => "Object" }),
+    py: mkT({ string: "str", int: "int", float: "float", bool: "bool", any: "Any", "null": "Any",
+              array: t => "List[" + t + "]",
+              union: p => (p.indexOf("Any") >= 0 ? "Any" : "Union[" + p.join(", ") + "]") }),
+    rs: mkT({ string: "String", int: "i64", float: "f64", bool: "bool", any: "serde_json::Value",
+              array: t => "Vec<" + t + ">", union: () => "serde_json::Value" }),
+    cpp: mkT({ string: "std::string", int: "std::int64_t", float: "double", bool: "bool", any: "nlohmann::json",
+               array: t => "std::vector<" + t + ">", union: () => "nlohmann::json" }),
+    ex: mkT({ string: "String.t()", int: "integer()", float: "float()", bool: "boolean()", any: "any()",
+              array: t => "[" + t + "]", union: () => "any()" }),
+    hs: mkT({ string: "Text", int: "Int", float: "Double", bool: "Bool", any: "Value",
+              array: t => "[" + t + "]", union: () => "Value" }),
+    jl: mkT({ string: "String", int: "Int64", float: "Float64", bool: "Bool", any: "Any",
+              array: t => "Vector{" + t + "}", union: () => "Any" }),
+    nim: mkT({ string: "string", int: "int64", float: "float64", bool: "bool", any: "JsonNode",
+               array: t => "seq[" + t + "]", union: () => "JsonNode" }),
+    cr: mkT({ string: "String", int: "Int64", float: "Float64", bool: "Bool", any: "JSON::Any",
+              array: t => "Array(" + t + ")", union: () => "JSON::Any" }),
+    schema: mkT({ string: "string", int: "integer", float: "number", bool: "boolean", any: "(任意)",
+                  array: () => "array", union: () => "(联集)" }),
+    graphql: mkT({ string: "String", int: "Int", float: "Float", bool: "Boolean", any: "JSON",
+                   array: t => "[" + t + "!]", union: () => "JSON" })
+  };
+  TY.pydantic = TY.py;
+
+  /* ============================================================
+     各语言发射器 · 前端 / Web
+     ============================================================ */
+
+  /* ---------- TypeScript ---------- */
+  /* TS 的类型没有「改名映射」这回事：属性名换了就直接对不上 JSON。
+     所以选了非「原样」的风格时，把原键名写成 JSDoc 注释，方便回头写映射层。
+     属性名允许任意字符串，非法标识符用引号包起来即可，不必强行改名。 */
+  function emitTS(types, o) {
+    return types.map(t => {
+      const body = fields(t, "ts", o, { raw: true }).map(f => {
+        const nm = f.quoted ? JSON.stringify(f.key) : f.name;
+        const cmt = (f.name !== f.key) ? o.indent + "/** 原键名: " + f.key + " */\n" : "";
+        return cmt + o.indent + nm + (f.opt ? "?" : "") + ": " + TY.ts(f.shape) + ";";
+      }).join("\n");
+      return "export interface " + safeIdent(t.name, "ts", "Root") + " {\n" + (body || o.indent + "// 空对象") + "\n}";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ---------- TypeScript · Zod ---------- */
+  /* 逐个 schema 定义 + 从 schema 反推静态类型，运行时可校验、编译期有类型。 */
+  function emitZod(types, o) {
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "zod", "Root");
+      const rows = fields(t, "zod", o, { raw: true }).map(f => {
+        const key = f.quoted ? JSON.stringify(f.key) : f.name;
+        const cmt = (f.name !== f.key) ? " // 原键名 " + f.key : "";
+        return o.indent + key + ": " + TY.zod(f.shape) + (f.opt ? ".optional()" : "") + "," + cmt;
+      });
+      return "export const " + cn + "Schema = z.object({\n" + (rows.join("\n") || o.indent) + "\n});\n\n"
+        + "export type " + cn + " = z.infer<typeof " + cn + "Schema>;";
+    });
+    return 'import { z } from "zod";\n\n' + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- JavaScript · JSDoc ---------- */
+  /* JS 本身没有类型，用 JSDoc 的 @typedef 让编辑器能给出补全与检查。
+     可选属性写成 [name]（JSDoc 的可选标记语法）。 */
+  function emitJsdoc(types, o) {
+    return types.map(t => {
+      const cn = safeIdent(t.name, "jsdoc", "Root");
+      const rows = fields(t, "jsdoc", o, { raw: true }).map(f => {
+        const nm = f.quoted ? '"' + f.key + '"' : f.name;
+        return " * @property {" + TY.jsdoc(f.shape) + "} " + (f.opt ? "[" + nm + "]" : nm);
+      });
+      return "/**\n * @typedef {Object} " + cn + "\n" + (rows.join("\n") || " * （空对象）") + "\n */";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ============================================================
+     各语言发射器 · 后端 / 通用
+     ============================================================ */
+
+  /* ---------- Go ---------- */
+  function emitGo(types, o) {
+    const head = "package model\n\n";
+    return head + types.map(t => {
+      /* ★ Go 的字段名必须首字母大写（导出）才能被 encoding/json 读写，
+         所以这里强制 PascalCase，不跟随「字段名」选项 —— 保留原样会编不过。
+         原键名交给 json tag 保留。 */
+      const rows = fields(t, "go", o, { style: "pascal" }).map(f => {
+        const tag = o.tag ? " `json:\"" + f.key + (f.opt ? ",omitempty" : "") + "\"`" : "";
+        return "\t" + f.name + " " + TY.go(f.shape) + tag;
+      });
+      return "type " + safeIdent(t.name, "go", "Root") + " struct {\n" + (rows.join("\n") || "\t// 空对象") + "\n}";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ---------- Java ---------- */
+  function emitJava(types, o) {
+    const all = [];
+    const used = {};
+    for (const t of types) {
+      const base = safeIdent(t.name, "java", "Root");
+      let c = base, i = 2;
+      while (used[c]) { c = base + i; i++; }
+      used[c] = true;
+      /* 每行不带缩进，缩进在拼接时统一加 —— 否则「根类的 4 格 + indent 选项」
+         会叠成两层，选 4 空格时字段会缩进 8 格。 */
+      const rows = fields(t, "java", o).map(f => {
+        const lines = [];
+        if (o.tag && f.name !== f.key) lines.push('@JsonProperty("' + f.key + '")');
+        lines.push("private " + TY.java(f.shape) + " " + f.name + ";");
+        return lines.join("\n");
+      });
+      all.push({ name: c, rows: rows });
+    }
+    /* types 是「子类型在前、根在最后」，所以根是最后一个 */
+    const root = all[all.length - 1];
+    const inner = all.slice(0, -1);
+    const flat = all.map(x => x.rows.join("\n")).join("\n");
+    const imports = [];
+    if (flat.indexOf("List<") >= 0) imports.push("import java.util.List;");
+    if (o.tag && flat.indexOf("@JsonProperty") >= 0) imports.push("import com.fasterxml.jackson.annotation.JsonProperty;");
+
+    const put = (rows, pad) => rows.map(r => r.split("\n").map(l => pad + l).join("\n")).join("\n\n");
+    let code = (imports.length ? imports.join("\n") + "\n\n" : "") + "public class " + root.name + " {\n";
+    code += put(root.rows, o.indent);
+    for (const ic of inner) {
+      code += "\n\n" + o.indent + "public static class " + ic.name + " {\n";
+      code += put(ic.rows, o.indent + o.indent) + "\n" + o.indent + "}";
+    }
+    return code + "\n}\n";
+  }
+
+  /* ---------- C# ---------- */
+  /* 属性名按 C# 惯例走 PascalCase，靠 [JsonPropertyName] 映射回原键名
+     （System.Text.Json，.NET 3.0+）。可选字段用可空标注 ?。 */
+  function emitCs(types, o) {
+    const flat = types.map(t => fields(t, "cs", o).map(f => TY.cs(f.shape)).join(" ")).join(" ");
+    const imports = [];
+    if (flat.indexOf("List<") >= 0) imports.push("using System.Collections.Generic;");
+    if (o.tag) imports.push("using System.Text.Json.Serialization;");
+    const hasOpt = o.optional && types.some(t => t.fields.some(f => f.optional));
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "cs", "Root");
+      const rows = fields(t, "cs", o).map(f => {
+        const attr = (o.tag && f.name !== f.key) ? o.indent + '[JsonPropertyName("' + f.key + '")]\n' : "";
+        return attr + o.indent + "public " + TY.cs(f.shape) + (f.opt ? "?" : "") + " " + f.name + " { get; set; }";
+      });
+      return "public class " + cn + "\n{\n" + (rows.join("\n") || o.indent + "// 空对象") + "\n}";
+    });
+    const head = (hasOpt ? "#nullable enable\n\n" : "") + (imports.length ? imports.join("\n") + "\n\n" : "");
+    return head + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Kotlin ---------- */
+  /* kotlinx.serialization：@Serializable + data class，可选字段给 null 默认值。 */
+  function emitKt(types, o) {
+    const flat = types.map(t => fields(t, "kt", o).map(f => TY.kt(f.shape)).join(" ")).join(" ");
+    const imports = [];
+    if (flat.indexOf("JsonElement") >= 0) imports.push("import kotlinx.serialization.json.JsonElement");
+    if (o.tag) imports.push("import kotlinx.serialization.SerialName");
+    imports.push("import kotlinx.serialization.Serializable");
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "kt", "Root");
+      const rows = fields(t, "kt", o).map(f => {
+        const attr = (o.tag && f.name !== f.key) ? o.indent + '@SerialName("' + f.key + '")\n' : "";
+        return attr + o.indent + "val " + f.name + ": " + TY.kt(f.shape) + (f.opt ? "? = null" : "") + ",";
+      });
+      return "@Serializable\ndata class " + cn + "(\n" + (rows.join("\n") || o.indent + "// 空对象") + "\n)";
+    });
+    return Array.from(new Set(imports)).join("\n") + "\n\n" + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Scala ---------- */
+  /* case class + circe 半自动派生。字段名用原键名（必要时加反引号），
+     这样 circe 的 deriveDecoder/deriveEncoder 不需要额外配置就能对上 JSON。 */
+  function emitScala(types, o) {
+    const key = k => (isIdentStrict(k) && !(RESERVED.scala.indexOf(k) >= 0)) ? k : "`" + k + "`";
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "scala", "Root");
+      const rows = t.fields.map(f => {
+        const ty = TY.scala(f.shape);
+        const opt = o.optional && f.optional;
+        return "  " + key(f.key) + ": " + (opt ? "Option[" + ty + "]" : ty);
+      });
+      return "case class " + cn + "(\n" + (rows.join(",\n") || "  // 空对象") + "\n)";
+    });
+    const derived = types.map(t => {
+      const cn = safeIdent(t.name, "scala", "Root");
+      return "object " + cn + " {\n  implicit val decoder: Decoder[" + cn + "] = deriveDecoder\n  implicit val encoder: Encoder[" + cn + "] = deriveEncoder\n}";
+    });
+    return "import io.circe.{Decoder, Encoder, Json}\nimport io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}\n\n"
+      + blocks.join("\n\n") + "\n\n" + derived.join("\n\n") + "\n";
+  }
+
+  /* ---------- Swift ---------- */
+  /* struct + Codable。字段名走 camelCase，与原键名不一致时用 CodingKeys 建立映射
+     （★ CodingKeys 一旦出现，就必须列出全部字段，否则未列出的键不会被解码）。 */
+  function emitSwift(types, o) {
+    const usesAny = types.some(t => t.fields.some(f => TY.swift(f.shape).indexOf("AnyCodable") >= 0));
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "swift", "Root");
+      const fs = fields(t, "swift", o);
+      const rows = fs.map(f => "    let " + f.name + ": " + TY.swift(f.shape) + (f.opt ? "?" : ""));
+      const diff = fs.some(f => f.name !== f.key);
+      let ck = "";
+      if (diff) {
+        ck = "\n\n    enum CodingKeys: String, CodingKey {\n"
+          + fs.map(f => f.name === f.key ? "        case " + f.name : "        case " + f.name + ' = "' + f.key + '"').join("\n")
+          + "\n    }";
+      }
+      return "struct " + cn + ": Codable {\n" + (rows.join("\n") || "    // 空对象") + ck + "\n}";
+    });
+    const head = "import Foundation\n"
+      + (usesAny ? "// 注意：AnyCodable 需引入 https://github.com/Flight-School/AnyCodable，或自行实现\n" : "")
+      + "\n";
+    return head + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Dart ---------- */
+  /* 连 fromJson / toJson 一起生成，Flutter 里可以直接用。 */
+  function dartFrom(s, expr) {
+    switch (s.k) {
+      case "string": return expr + " as String";
+      case "boolean": return expr + " as bool";
+      case "number": return s.int ? expr + " as int" : "((" + expr + ") as num).toDouble()";
+      case "object": return s.name + ".fromJson(" + expr + " as Map<String, dynamic>)";
+      case "array": {
+        /* 元素不需要转换时不要再套一层 .map((e) => e) —— 那是纯噪音 */
+        const inner = dartFrom(s.el, "e");
+        return inner === "e"
+          ? "List<dynamic>.from(" + expr + " as List)"
+          : "(" + expr + " as List).map((e) => " + inner + ").toList()";
+      }
+      default: return expr;
+    }
+  }
+  function dartTo(s, expr) {
+    if (s.k === "object") return expr + ".toJson()";
+    if (s.k === "array") {
+      const inner = dartTo(s.el, "e");
+      return inner === "e" ? expr : expr + ".map((e) => " + inner + ").toList()";
+    }
+    return expr;
+  }
+  function emitDart(types, o) {
+    return types.map(t => {
+      const cn = safeIdent(t.name, "dart", "Root");
+      const fs = fields(t, "dart", o);
+      const props = fs.map(f => "  final " + TY.dart(f.shape) + (f.opt ? "?" : "") + " " + f.name + ";");
+      const ctor = fs.length
+        ? "  " + cn + "({" + fs.map(f => (f.opt ? "" : "required ") + "this." + f.name).join(", ") + "});"
+        : "";
+      const from = fs.map(f => {
+        const raw = "json['" + f.key + "']";
+        const conv = dartFrom(f.shape, raw);
+        return "        " + f.name + ": " + (f.opt ? raw + " == null ? null : " + conv : conv) + ",";
+      }).join("\n");
+      const to = fs.map(f => "        '" + f.key + "': " + dartTo(f.shape, f.name) + ",").join("\n");
+      return "class " + cn + " {\n" + (props.join("\n") || "  // 空对象")
+        + (ctor ? "\n\n" + ctor : "")
+        + "\n\n  factory " + cn + ".fromJson(Map<String, dynamic> json) => " + cn + "(\n" + from + "\n  );"
+        + "\n\n  Map<String, dynamic> toJson() => {\n" + to + "\n  };"
+        + "\n}";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ---------- PHP ---------- */
+  /* PHP 8 的类型化属性。数组没有元素类型，靠 PHPDoc 的 @var T[] 补上；
+     可选字段用可空类型 ?T（mixed 本身含 null，不再加问号）。 */
+  function emitPhp(types, o) {
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "php", "Root");
+      const rows = fields(t, "php", o).map(f => {
+        const ty = TY.php(f.shape);
+        const doc = (f.shape.k === "array") ? o.indent + "/** @var " + TY.php(f.shape.el) + "[] */\n" : "";
+        const q = (f.opt && ty !== "mixed") ? "?" : "";
+        return doc + o.indent + "public " + q + ty + " $" + f.name + ";";
+      });
+      return "class " + cn + "\n{\n" + (rows.join("\n\n") || o.indent + "// 空对象") + "\n}";
+    });
+    return "<?php\n\ndeclare(strict_types=1);\n\n" + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Ruby ---------- */
+  /* Ruby 是动态语言，类型只能用 YARD 注释表达；结构本身用 Struct 一行搞定。 */
+  function emitRb(types, o) {
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "rb", "Root");
+      const fs = fields(t, "rb", o);
+      const doc = fs.map(f => "  # @!attribute [rw] " + f.name + "\n  #   @return [" + TY.rb(f.shape) + (f.opt ? ", nil" : "") + "]").join("\n");
+      const members = fs.map(f => ":" + f.name).join(", ");
+      return "# " + cn + "\n#\n" + doc + "\n"
+        + cn + " = Struct.new(" + (members ? members + ", " : "") + "keyword_init: true)";
+    });
+    return "# frozen_string_literal: true\n\n" + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Python · dataclass ---------- */
+  function emitPy(types, o) {
+    const imports = new Set();
+    const blocks = types.map(t => {
+      /* ★ dataclass 语法要求「有默认值的字段」必须排在无默认值的后面，
+         否则 TypeError: non-default argument follows default argument。
+         所以可选字段统一挪到末尾。 */
+      const ordered = t.fields.slice().sort((a, b) => (a.optional ? 1 : 0) - (b.optional ? 1 : 0));
+      const used = {};
+      const rows = ordered.map(f => {
+        let name = fieldIdent(f.key, "py", o.naming);
+        if (used[name]) { const b = name; let i = 2; while (used[name]) { name = b + "_" + i; i++; } }
+        used[name] = true;
+        const opt = o.optional && f.optional;
+        let ty = TY.py(f.shape);
+        if (opt) { ty = "Optional[" + ty + "]"; imports.add("Optional"); }
+        if (ty.indexOf("List[") >= 0) imports.add("List");
+        if (ty.indexOf("Union[") >= 0) imports.add("Union");
+        if (ty.indexOf("Any") >= 0) imports.add("Any");
+        const cmt = (name !== f.key) ? "  # 原键名 " + f.key : "";
+        return "    " + name + ": " + ty + (opt ? " = None" : "") + cmt;
+      });
+      return "@dataclass\nclass " + safeIdent(t.name, "py", "Root") + ":\n" + (rows.join("\n") || "    pass");
+    });
+    const imp = Array.from(imports).sort();
+    const head = "from dataclasses import dataclass\n"
+      + (imp.length ? "from typing import " + imp.join(", ") + "\n" : "")
+      + "\n\n";
+    return head + blocks.join("\n\n\n") + "\n";
+  }
+
+  /* ---------- Python · Pydantic ---------- */
+  /* Pydantic v2 的 BaseModel。字段名与键名不同时用 Field(alias=...)，
+     注意要配 model_config = ConfigDict(populate_by_name=True) 才能用字段名直接构造。 */
+  function emitPydantic(types, o) {
+    const imports = new Set(["BaseModel"]);
+    const blocks = types.map(t => {
+      const used = {};
+      const rows = t.fields.map(f => {
+        let name = fieldIdent(f.key, "pydantic", o.naming);
+        if (used[name]) { const b = name; let i = 2; while (used[name]) { name = b + "_" + i; i++; } }
+        used[name] = true;
+        const opt = o.optional && f.optional;
+        let ty = TY.py(f.shape);
+        if (opt) { ty = "Optional[" + ty + "]"; imports.add("Optional"); }
+        if (ty.indexOf("List[") >= 0) imports.add("List");
+        if (ty.indexOf("Union[") >= 0) imports.add("Union");
+        if (ty.indexOf("Any") >= 0) imports.add("Any");
+        let rhs = "";
+        if (name !== f.key) {
+          imports.add("Field");
+          rhs = " = Field(" + (opt ? "default=None, " : "") + 'alias="' + f.key + '")';
+        } else if (opt) {
+          rhs = " = None";
+        }
+        return "    " + name + ": " + ty + rhs;
+      });
+      return "class " + safeIdent(t.name, "pydantic", "Root") + "(BaseModel):\n" + (rows.join("\n") || "    pass");
+    });
+    const typ = Array.from(imports).filter(x => x !== "BaseModel" && x !== "Field").sort();
+    const pyd = Array.from(imports).filter(x => x === "BaseModel" || x === "Field").sort();
+    return (typ.length ? "from typing import " + typ.join(", ") + "\n" : "")
+      + "from pydantic import " + pyd.join(", ") + "\n\n\n"
+      + blocks.join("\n\n\n") + "\n";
+  }
+
+  /* ---------- Rust ---------- */
+  function emitRs(types, o) {
+    const usesValue = types.some(t => t.fields.some(f => TY.rs(f.shape) === "serde_json::Value"));
+    const head = "use serde::{Deserialize, Serialize};\n"
+      + (usesValue ? "// json 类型的字段用 serde_json::Value 兜底，需要在 Cargo.toml 里加 serde_json 依赖\n" : "")
+      + "\n";
+    return head + types.map(t => {
+      const rows = fields(t, "rs", o).map(f => {
+        const attrs = [];
+        if (o.tag && f.name !== f.key) attrs.push(o.indent + '#[serde(rename = "' + f.key + '")]');
+        if (f.opt && o.tag) attrs.push(o.indent + '#[serde(skip_serializing_if = "Option::is_none")]');
+        const ty = f.opt ? "Option<" + TY.rs(f.shape) + ">" : TY.rs(f.shape);
+        return attrs.concat([o.indent + "pub " + f.name + ": " + ty + ","]).join("\n");
+      });
+      return "#[derive(Debug, Clone, Serialize, Deserialize)]\npub struct " + safeIdent(t.name, "rs", "Root") + " {\n"
+        + (rows.join("\n") || o.indent + "// 空对象") + "\n}";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ---------- C++ ---------- */
+  /* 结构体 + nlohmann/json 的 to_json / from_json。
+     可选字段用 std::optional，反序列化时判 contains 再取值。 */
+  function emitCpp(types, o) {
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "cpp", "Root");
+      const fs = fields(t, "cpp", o);
+      const rows = fs.map(f => "    " + (f.opt ? "std::optional<" + TY.cpp(f.shape) + ">" : TY.cpp(f.shape)) + " " + f.name + ";");
+      const to = fs.map(f => "        {\"" + f.key + "\", v." + f.name + "}").join(",\n");
+      const from = fs.map(f => f.opt
+        ? "    if (j.contains(\"" + f.key + "\")) j.at(\"" + f.key + "\").get_to(v." + f.name + ");"
+        : "    j.at(\"" + f.key + "\").get_to(v." + f.name + ");").join("\n");
+      return "struct " + cn + " {\n" + (rows.join("\n") || "    // 空对象") + "\n};\n\n"
+        + "inline void to_json(nlohmann::json& j, const " + cn + "& v) {\n    j = nlohmann::json{\n" + to + "\n    };\n}\n\n"
+        + "inline void from_json(const nlohmann::json& j, " + cn + "& v) {\n" + from + "\n}";
+    });
+    const head = "#pragma once\n\n#include <cstdint>\n#include <optional>\n#include <string>\n#include <vector>\n"
+      + "#include <nlohmann/json.hpp>\n\n";
+    return head + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- C ---------- */
+  /* C 没有 JSON 的类型映射，只生成纯数据结构（解析要自己写或上 cJSON 之类）。
+     规则：嵌套对象与可选字段都用指针（NULL 表示「没有」），
+     数组用「元素指针 + 长度」两个字段配对。 */
+  const cName = n => snake(n) + "_t";
+  const cPtr = ty => {
+    const m = /^(.*?)(\s*\**)$/.exec(ty);
+    const base = m[1].trim();
+    const stars = (m[2].match(/\*/g) || []).length + 1;
+    return base + " " + "*".repeat(stars);
+  };
+  function cTy(s) {
+    switch (s.k) {
+      case "string": return "char *";
+      case "number": return s.int ? "int64_t" : "double";
+      case "boolean": return "bool";
+      case "object": return cName(s.name) + " *";
+      case "array": return cPtr(cTy(s.el));
+      default: return "void *";                     // any / null / union
+    }
+  }
+  function emitC(types, o) {
+    const guard = "JSON2CODE_TYPES_H";
+    const tags = types.map(t => cName(t.name));
+    let out = "#ifndef " + guard + "\n#define " + guard + "\n\n"
+      + "#include <stdbool.h>\n#include <stddef.h>\n#include <stdint.h>\n\n"
+      + tags.map(g => "typedef struct " + g + " " + g + ";").join("\n") + "\n\n";
+    out += types.map(t => {
+      const fs = [];
+      const seen = {};
+      for (const f of t.fields) {
+        const nm = fieldIdent(f.key, "c", o.naming);
+        if (seen[nm]) continue;
+        seen[nm] = true;
+        let ty = cTy(f.shape);
+        if (o.optional && f.optional && ty.indexOf("*") < 0) ty = cPtr(ty);
+        /* 指针类型后面不再补空格：char **tags 比 char ** tags 更像 C 代码 */
+        fs.push("    " + ty + (/\*$/.test(ty) ? "" : " ") + nm + ";");
+        if (f.shape.k === "array") fs.push("    size_t " + nm + "_len;");
+      }
+      const cmt = (t === types[types.length - 1]) ? "  /* 根类型 */" : "";
+      return "struct " + cName(t.name) + " {" + cmt + "\n"
+        + (fs.join("\n") || "    char _placeholder;  /* 空对象 */") + "\n};";
+    }).join("\n\n");
+    return out + "\n\n#endif /* " + guard + " */\n";
+  }
+
+  /* ---------- Elixir ---------- */
+  /* defstruct + @type。可选字段在 typespec 里写成「T | nil」。 */
+  function emitEx(types, o) {
+    const all = types.map(t => ({ cn: safeIdent(t.name, "ex", "Root"), fs: fields(t, "ex", o) }));
+    /* Elixir 的 struct 键必须是 atom，没法直接承载 "user-name" 这种键；
+       这里字段名走 snake_case，把映射方式写在文件头（Jason 侧要自己实现）。 */
+    const anyDiff = all.some(x => x.fs.some(f => f.name !== f.key));
+    const head = anyDiff
+      ? '# 注意：Elixir 的字段名做过 snake_case 归一化，与 JSON 键不一致的字段（如 "user-name"）\n'
+        + "# 需要自己实现 Jason.Encoder/Decoder，或引入专门做字段映射的库。\n\n"
+      : "";
+    return head + all.map(x => {
+      const spec = x.fs.map(f => "          " + f.name + ": " + TY.ex(f.shape) + (f.opt ? " | nil" : "")).join(",\n");
+      return "defmodule " + x.cn + " do\n  @moduledoc false\n\n"
+        + "  @type t :: %__MODULE__{\n" + (spec || "          # 空对象") + "\n        }\n\n"
+        + "  defstruct [" + x.fs.map(f => ":" + f.name).join(", ") + "]\nend";
+    }).join("\n\n") + "\n";
+  }
+
+  /* ---------- Haskell ---------- */
+  /* aeson 的 Generic 派生默认拿「字段名」当 JSON 键，而 Haskell 字段名只能小写开头、
+     不能带连字符，键名像 user-name 就必然对不上 —— 所以要用 fieldLabelModifier
+     把归一化后的字段名映射回原键名。没有任何不一致时退回 defaultOptions。 */
+  function emitHs(types, o) {
+    const usesValue = types.some(t => t.fields.some(f => TY.hs(f.shape) === "Value"));
+    const seen = {};
+    const pairs = [];
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "hs", "Root");
+      const fs = fields(t, "hs", o);
+      fs.forEach(f => {
+        if (f.name !== f.key && !seen[f.name]) { seen[f.name] = 1; pairs.push([f.name, f.key]); }
+      });
+      const rows = fs.map((f, i) => (i === 0 ? "  { " : "  , ") + f.name + " :: " + (f.opt ? "Maybe " + TY.hs(f.shape) : TY.hs(f.shape)));
+      return "data " + cn + " = " + cn + "\n" + (rows.join("\n") || "  { }") + "\n  } deriving (Show, Eq, Generic)";
+    });
+    const opts = pairs.length
+      ? "aesonOptions :: Options\naesonOptions = defaultOptions { fieldLabelModifier = \\case\n"
+        + pairs.map(p => '    "' + p[0] + '" -> "' + p[1] + '"').join("\n")
+        + "\n    f -> f }\n"
+      : "aesonOptions :: Options\naesonOptions = defaultOptions\n";
+    const inst = types.map(t => {
+      const cn = safeIdent(t.name, "hs", "Root");
+      return pairs.length
+        ? "instance FromJSON " + cn + " where parseJSON = genericParseJSON aesonOptions\n"
+          + "instance ToJSON " + cn + " where toJSON = genericToJSON aesonOptions"
+        : "instance FromJSON " + cn + "\ninstance ToJSON " + cn;
+    });
+    const ext = "{-# LANGUAGE DeriveGeneric #-}\n" + (pairs.length ? "{-# LANGUAGE LambdaCase #-}\n" : "");
+    const imports = "import Data.Aeson (FromJSON (..), ToJSON (..), Options (..), defaultOptions, genericParseJSON, genericToJSON"
+      + (usesValue ? ", Value" : "") + ")\n"
+      + "import Data.Text (Text)\n"
+      + "import GHC.Generics (Generic)\n";
+    return ext + "\nmodule Model where\n\n" + imports + "\n"
+      + blocks.join("\n\n") + "\n\n" + opts + "\n" + inst.join("\n\n") + "\n";
+  }
+
+  /* ---------- Julia ---------- */
+  /* Base.@kwdef 结构体 + JSON3 的 StructTypes 声明。 */
+  function emitJl(types, o) {
+    const all = types.map(t => ({ cn: safeIdent(t.name, "jl", "Root"), fs: fields(t, "jl", o) }));
+    const blocks = all.map(x =>
+      "Base.@kwdef struct " + x.cn + "\n"
+      + (x.fs.map(f => "    " + f.name + "::" + (f.opt ? "Union{" + TY.jl(f.shape) + ", Nothing}" : TY.jl(f.shape)) + (f.opt ? " = nothing" : "")).join("\n") || "")
+      + "\nend");
+    const decl = all.map(x => "StructTypes.StructType(::Type{" + x.cn + "}) = StructTypes.Struct()");
+    /* JSON3 / StructTypes 默认拿字段名当键，归一化过的字段名要显式映射回原键名 */
+    const names = all.map(x => {
+      if (!x.fs.some(f => f.name !== f.key)) return null;
+      return "StructTypes.names(::Type{" + x.cn + "}) = ("
+        + x.fs.map(f => "(:" + f.name + ", " + (f.name === f.key ? ":" + f.key : 'Symbol("' + f.key + '")') + ")").join(", ")
+        + ")";
+    }).filter(Boolean);
+    return "using JSON3\nimport StructTypes\n\n" + blocks.join("\n\n") + "\n\n" + decl.join("\n") + "\n"
+      + (names.length ? "\n" + names.join("\n") + "\n" : "");
+  }
+
+  /* ---------- Nim ---------- */
+  /* 纯 object 定义，配合 std/json。可选字段用 Option[T]。 */
+  function emitNim(types, o) {
+    /* std/jsonutils 的 {.rename.} 用来把归一化过的字段名映射回原键名 */
+    let anyRename = false;
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "nim", "Root");
+      const rows = fields(t, "nim", o).map(f => {
+        const pr = (f.name !== f.key) ? ' {.rename: "' + f.key + '".}' : "";
+        if (pr) anyRename = true;
+        return "    " + f.name + "*" + pr + ": " + (f.opt ? "Option[" + TY.nim(f.shape) + "]" : TY.nim(f.shape));
+      });
+      return "  " + cn + "* = object\n" + (rows.join("\n") || "    _placeholder*: bool");
+    });
+    const imp = "import std/[json, options" + (anyRename ? ", jsonutils" : "") + "]";
+    return imp + "\n\ntype\n" + blocks.join("\n\n") + "\n";
+  }
+
+  /* ---------- Crystal ---------- */
+  /* JSON::Serializable 自动生成解析；字段名不同时用 @[JSON::Field(key: ...)]。 */
+  function emitCr(types, o) {
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "cr", "Root");
+      const rows = fields(t, "cr", o).map(f => {
+        const attr = (o.tag && f.name !== f.key) ? '  @[JSON::Field(key: "' + f.key + '")]\n' : "";
+        return attr + "  property " + f.name + " : " + TY.cr(f.shape) + (f.opt ? "?" : "") + (f.opt ? " = nil" : "");
+      });
+      return "class " + cn + "\n  include JSON::Serializable\n\n" + (rows.join("\n\n") || "  # 空对象") + "\nend";
+    });
+    return 'require "json"\n\n' + blocks.join("\n\n") + "\n";
+  }
+
+  /* ============================================================
+     各语言发射器 · 模式 / 元语言
+     ============================================================ */
+
+  /* ---------- JSON Schema ---------- */
+  /* 嵌套对象提到 $defs 里，用 $ref 引用；可选字段 = 不进 required。 */
+  function schemaOf(s) {
+    switch (s.k) {
+      case "string": return { type: "string" };
+      case "boolean": return { type: "boolean" };
+      case "number": return { type: s.int ? "integer" : "number" };
+      case "null": return { type: "null" };
+      case "any": return {};
+      case "object": return { $ref: "#/$defs/" + s.name };
+      case "array": return { type: "array", items: schemaOf(s.el) };
+      case "union": return { anyOf: s.of.map(schemaOf) };
+      default: return {};
+    }
+  }
+  function objSchema(t) {
+    const props = {};
+    const req = [];
+    t.fields.forEach(f => {
+      props[f.key] = schemaOf(f.shape);
+      if (!f.optional) req.push(f.key);
+    });
+    const out = { type: "object" };
+    if (Object.keys(props).length) out.properties = props;
+    if (req.length) out.required = req;
+    return out;
+  }
+  function emitSchema(types, o) {
+    const root = types[types.length - 1];
+    const defs = {};
+    types.slice(0, -1).forEach(t => { defs[t.name] = objSchema(t); });
+    const out = { "$schema": "https://json-schema.org/draft/2020-12/schema" };
+    if (Object.keys(defs).length) out.$defs = defs;
+    Object.assign(out, objSchema(root));
+    return JSON.stringify(out, null, o.indent) + "\n";
+  }
+
+  /* ---------- GraphQL SDL ---------- */
+  /* 必填加 !，可选字段留空即可空；任意值用自定义标量 JSON。 */
+  function gqlName(k) {
+    let s = String(k).replace(/[^A-Za-z0-9_]/g, "_");
+    if (!/^[_A-Za-z]/.test(s)) s = "_" + s;
+    return s;
+  }
+  function emitGraphql(types, o) {
+    const usesJson = types.some(t => t.fields.some(f => TY.graphql(f.shape) === "JSON"));
+    const blocks = types.map(t => {
+      const cn = safeIdent(t.name, "graphql", "Root");
+      const rows = t.fields.map(f => {
+        const nm = gqlName(f.key);
+        const cmt = (nm !== f.key) ? "  # 原键名 " + f.key : "";
+        return "  " + nm + ": " + TY.graphql(f.shape) + ((o.optional && f.optional) ? "" : "!") + cmt;
+      });
+      return "type " + cn + " {\n" + (rows.join("\n") || "  _empty: Boolean") + "\n}";
+    });
+    return (usesJson ? "scalar JSON\n\n" : "") + blocks.join("\n\n") + "\n";
+  }
+
+  /* ============================================================
+     语言注册表 —— 加一门新语言：写好 emit 函数，在这里加一行即可
+     ============================================================ */
+  const LANGS = [
+    { id: "ts", group: "前端 / Web", label: "TypeScript", ext: "ts", ty: TY.ts, emit: emitTS,
+      note: "TypeScript 没有「改名映射」这回事，字段名与键名不一致时会加 JSDoc 注释标注原键名。" },
+    { id: "zod", group: "前端 / Web", label: "TypeScript · Zod", ext: "ts", ty: TY.zod, emit: emitZod,
+      note: "生成 z.object() 运行时校验器，并从 schema 反推静态类型（z.infer）。" },
+    { id: "jsdoc", group: "前端 / Web", label: "JavaScript · JSDoc", ext: "js", ty: TY.jsdoc, emit: emitJsdoc,
+      note: "用 @typedef 描述结构，编辑器可据此给出补全与类型检查，运行时零开销。" },
+
+    { id: "go", group: "后端 / 通用", label: "Go", ext: "go", ty: TY.go, emit: emitGo,
+      note: "字段名必须导出（首字母大写），原键名保留在 json tag 里。" },
+    { id: "java", group: "后端 / 通用", label: "Java", ext: "java", ty: TY.java, emit: emitJava,
+      note: "嵌套类型生成为根类的 static 内部类；字段名与键名不一致时用 @JsonProperty 映射回原键名。" },
+    { id: "cs", group: "后端 / 通用", label: "C#", ext: "cs", ty: TY.cs, emit: emitCs,
+      note: "字段名跟随「字段名」选项；与键名不一致时自动补 [JsonPropertyName] 映射（System.Text.Json）。" },
+    { id: "kt", group: "后端 / 通用", label: "Kotlin", ext: "kt", ty: TY.kt, emit: emitKt,
+      note: "kotlinx.serialization 的 @Serializable data class，可选字段给 null 默认值。" },
+    { id: "scala", group: "后端 / 通用", label: "Scala", ext: "scala", ty: TY.scala, emit: emitScala,
+      note: "case class + circe 半自动派生；字段保留原键名（必要时加反引号），派生器才不用额外配置。" },
+    { id: "swift", group: "后端 / 通用", label: "Swift", ext: "swift", ty: TY.swift, emit: emitSwift,
+      note: "struct + Codable；字段改名时自动生成 CodingKeys 建立映射。" },
+    { id: "dart", group: "后端 / 通用", label: "Dart", ext: "dart", ty: TY.dart, emit: emitDart,
+      note: "连 fromJson / toJson 一起生成，Flutter 里可以直接用。" },
+    { id: "php", group: "后端 / 通用", label: "PHP", ext: "php", ty: TY.php, emit: emitPhp,
+      note: "PHP 8 类型化属性；数组没有元素类型，靠 PHPDoc 的 @var T[] 补上。" },
+    { id: "rb", group: "后端 / 通用", label: "Ruby", ext: "rb", ty: TY.rb, emit: emitRb,
+      note: "Struct + YARD 注释描述类型（Ruby 是动态语言，类型只作注释）。" },
+    { id: "py", group: "后端 / 通用", label: "Python · dataclass", ext: "py", ty: TY.py, emit: emitPy,
+      note: "可选字段会被自动挪到末尾 —— dataclass 要求「有默认值的字段必须排在后面」。" },
+    { id: "pydantic", group: "后端 / 通用", label: "Python · Pydantic", ext: "py", ty: TY.py, emit: emitPydantic,
+      note: "Pydantic v2 的 BaseModel，字段名与键名不同时用 Field(alias=...)。" },
+    { id: "rs", group: "后端 / 通用", label: "Rust", ext: "rs", ty: TY.rs, emit: emitRs,
+      note: "serde 派生；字段改名用 #[serde(rename)]，可选字段包一层 Option<T>。" },
+
+    { id: "cpp", group: "系统", label: "C++", ext: "hpp", ty: TY.cpp, emit: emitCpp,
+      note: "结构体 + nlohmann/json 的 to_json / from_json，可选字段用 std::optional。" },
+    { id: "c", group: "系统", label: "C", ext: "h", ty: cTy, emit: emitC,
+      note: "C 不做 JSON 解析，只生成数据结构：嵌套对象与可选字段用指针，数组用「指针 + _len」配对。" },
+
+    { id: "ex", group: "函数式 / 动态", label: "Elixir", ext: "ex", ty: TY.ex, emit: emitEx,
+      note: "defstruct + @type，可选字段在 typespec 里写成「T | nil」。" },
+    { id: "hs", group: "函数式 / 动态", label: "Haskell", ext: "hs", ty: TY.hs, emit: emitHs,
+      note: "aeson 的 Generic 派生；字段名即 JSON 键名，只能小写开头。" },
+    { id: "jl", group: "函数式 / 动态", label: "Julia", ext: "jl", ty: TY.jl, emit: emitJl,
+      note: "Base.@kwdef 结构体 + JSON3 / StructTypes 声明。" },
+    { id: "nim", group: "函数式 / 动态", label: "Nim", ext: "nim", ty: TY.nim, emit: emitNim,
+      note: "纯 object 定义，配合 std/json；可选字段用 Option[T]。" },
+    { id: "cr", group: "函数式 / 动态", label: "Crystal", ext: "cr", ty: TY.cr, emit: emitCr,
+      note: "include JSON::Serializable 自动生成解析；字段改名用 @[JSON::Field(key: ...)]。" },
+
+    { id: "schema", group: "模式 / 元语言", label: "JSON Schema", ext: "schema.json", ty: TY.schema, emit: emitSchema,
+      note: "2020-12 草案；嵌套对象提到 $defs 并用 $ref 引用，可选字段 = 不进 required。" },
+    { id: "graphql", group: "模式 / 元语言", label: "GraphQL SDL", ext: "graphql", ty: TY.graphql, emit: emitGraphql,
+      note: "必填字段加 !，任意值用自定义标量 JSON（头部的 scalar JSON 声明别忘了）。" }
+  ];
+  const LANG = {};
+  LANGS.forEach(x => { LANG[x.id] = x; });
+  const DEF_LANG = "ts";
+  const IND = { "2": "  ", "4": "    ", tab: "\t" };
+
+  (function buildLangSelect() {
+    const sel = $("lang");
+    let grp = null;
+    for (const x of LANGS) {
+      if (!grp || grp.label !== x.group) {
+        grp = document.createElement("optgroup");
+        grp.label = x.group;
+        sel.appendChild(grp);
+      }
+      const op = document.createElement("option");
+      op.value = x.id;
+      op.textContent = x.label;
+      grp.appendChild(op);
+    }
+    sel.value = DEF_LANG;
+  })();
+
+  /* ============================================================
+     JSON 错误定位
+     ★ 自己扫一遍定位错误。新版 V8 的 JSON.parse 报错信息已经改成
+     "Unexpected token '}'，...\"1,\n  \"b\": }\n\" is not valid JSON" ——
+     既没有 position N 也没有 line/column，靠解析错误字符串定位彻底不可用了。
+     这里用一个只做校验、不建对象的递归下降扫描器，直接拿到出错的下标。
+     ============================================================ */
+  function locateJSONError(text) {
+    let i = 0;
+    const n = text.length;
+    const ws = () => { while (i < n && /\s/.test(text[i])) i++; };
+    function fail(msg) { const e = new Error(msg); e.pos = i; throw e; }
+    function value() {
+      ws();
+      if (i >= n) fail("内容意外结束，值还没写完");
+      const c = text[i];
+      if (c === "{") return obj();
+      if (c === "[") return arr();
+      if (c === '"') return str();
+      if (text.startsWith("true", i)) { i += 4; return; }
+      if (text.startsWith("false", i)) { i += 5; return; }
+      if (text.startsWith("null", i)) { i += 4; return; }
+      if (/[-0-9]/.test(c)) return num();
+      fail("出现了不该出现的字符 " + JSON.stringify(c));
+    }
+    function obj() {
+      i++; ws();
+      if (text[i] === "}") { i++; return; }
+      for (;;) {
+        ws();
+        if (text[i] !== '"') fail("对象的键必须是双引号字符串");
+        str(); ws();
+        if (text[i] !== ":") fail("对象的键之后缺少冒号");
+        i++; value(); ws();
+        if (text[i] === ",") { i++; continue; }
+        if (text[i] === "}") { i++; return; }
+        fail("对象里缺少逗号或右花括号");
+      }
+    }
+    function arr() {
+      i++; ws();
+      if (text[i] === "]") { i++; return; }
+      for (;;) {
+        value(); ws();
+        if (text[i] === ",") { i++; continue; }
+        if (text[i] === "]") { i++; return; }
+        fail("数组里缺少逗号或右方括号");
+      }
+    }
+    function str() {
+      i++;
+      while (i < n) {
+        const c = text[i];
+        if (c === "\\") { i += 2; continue; }
+        if (c === '"') { i++; return; }
+        if (c === "\n") fail("字符串里不能直接出现换行");
+        i++;
+      }
+      fail("字符串没有闭合");
+    }
+    function num() {
+      const m = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(text.slice(i));
+      if (!m) fail("数字格式不正确");
+      i += m[0].length;
+    }
+    try {
+      value(); ws();
+      if (i < n) fail("末尾还有多余内容");
+      return null;                       // 校验通过（正常不会走到这里，JSON.parse 已经先成功了）
+    } catch (e) {
+      return { pos: e.pos != null ? e.pos : i, msg: e.message };
+    }
+  }
+
+  function parseJSON(text) {
+    try {
+      return { v: JSON.parse(text) };
+    } catch (e) {
+      const loc = locateJSONError(text);
+      let pos = null, msg = e.message;
+      if (loc) { pos = loc.pos; msg = loc.msg; }
+      else {
+        let m = /position (\d+)/.exec(e.message);
+        if (m) pos = Number(m[1]);
+        else {
+          m = /line (\d+) column (\d+)/.exec(e.message);
+          if (m) {
+            const lines = text.split("\n");
+            pos = 0;
+            for (let k = 0; k < Number(m[1]) - 1 && k < lines.length; k++) pos += lines[k].length + 1;
+            pos += Number(m[2]) - 1;
+          }
+        }
+      }
+      let where = "";
+      if (pos != null && pos <= text.length) {
+        const before = text.slice(0, pos);
+        const line = before.split("\n").length;
+        const col = pos - before.lastIndexOf("\n");
+        where = "第 " + line + " 行第 " + col + " 列";
+        const src = text.split("\n")[line - 1] || "";
+        const cut = src.length > 120 ? Math.max(0, col - 60) : 0;
+        const shown = src.slice(cut, cut + 120);
+        const caret = " ".repeat(Math.max(0, col - 1 - cut)) + "^";
+        return { err: msg, where: where, snip: shown + "\n" + caret };
+      }
+      return { err: msg, where: "" };
+    }
+  }
+
+  /* ============================================================
+     主流程
+     ============================================================ */
+  function makeOpts() {
+    return {
+      indent: IND[$("indent").value],
+      naming: $("naming").value,
+      optional: $("optOptional").checked,
+      tag: $("optTag").checked,
+      root: pascal($("rootName").value || "Root")
+    };
+  }
+
+  let lastCode = "";
+
+  function clearOut() {
+    const out = $("codeOut");
+    out.value = ""; out.classList.remove("filled");
+    lastCode = "";
+    $("outHint").textContent = "—";
+    $("outNote").innerHTML = "";
+    $("typeTbl").innerHTML = "";
+    $("typeNote").innerHTML = "";
+  }
+
+  function run(force) {
+    const text = $("jsonIn").value;
+    const out = $("codeOut");
+    const o = makeOpts();
+    const L = LANG[$("lang").value];
+
+    if (!text.trim()) {
+      clearOut();
+      $("inNote").innerHTML = '<span class="empty-tip">粘贴一段 JSON 后自动生成</span>';
+      $("stat").textContent = "—";
+      return;
+    }
+    if (text.length > MAX_AUTO && !force) {
+      clearOut();
+      $("inNote").innerHTML = '<span class="err-tip">内容超过 2 MB，已暂停自动生成。</span>'
+        + '<div class="ops" style="margin:8px 0 0"><button class="mini" id="btnForce">仍要生成</button></div>';
+      const b = $("btnForce");
+      if (b) b.addEventListener("click", () => run(true));
+      $("stat").textContent = "已暂停";
+      return;
+    }
+
+    const p = parseJSON(text);
+    if (p.err) {
+      $("jsonIn").classList.add("bad");
+      clearOut();
+      $("inNote").innerHTML = '<span class="err-tip">JSON 解析失败' + (p.where ? "（" + eh(p.where) + "）" : "") + "：" + eh(p.err) + "</span>"
+        + (p.snip ? '<span class="snip">' + eh(p.snip) + "</span>" : "");
+      $("stat").textContent = "解析失败";
+      return;
+    }
+    $("jsonIn").classList.remove("bad");
+
+    let shape = shapeOf(p.v);
+    if (shape.k !== "object") {
+      /* 根不是对象也能生成，只是包一层 */
+      $("inNote").innerHTML = '<span class="ok-tip">解析成功</span>，但根节点是 <b>'
+        + (Array.isArray(p.v) ? "数组" : typeof p.v) + "</b> 而不是对象 —— 已按单字段 <code>data</code> 包一层生成。";
+      shape = { k: "object", fields: [{ key: "data", shape: shape, optional: false }] };
+    } else {
+      $("inNote").innerHTML = '<span class="ok-tip">解析成功</span>，根节点是对象，共 <b>'
+        + Object.keys(p.v).length + "</b> 个顶层字段。";
+    }
+
+    const nm = namer();
+    shape.name = nm.take("", o.root);     // 根类型名由用户指定
+    nm.list.push(shape);
+    shape.fields.forEach(f => assignNames(f.shape, f.key, nm));
+
+    /* 子类型先输出：Python 的 class 体在定义时就要求引用的名字已存在 */
+    const types = nm.list.slice().reverse();
+    let code;
+    try {
+      code = L.emit(types, o);
+    } catch (e) {
+      clearOut();
+      $("outNote").innerHTML = '<span class="err-tip">生成失败：' + eh(e.message) + "</span>";
+      return;
+    }
+    out.value = code;
+    out.classList.add("filled");
+    lastCode = code;
+
+    /* 局部变量别叫 fields —— 会和模块级的 fields() 工具函数同名，读起来容易误会。 */
+    const nFields = types.reduce((a, t) => a + t.fields.length, 0);
+    $("stat").textContent = types.length + " 类型 / " + nFields + " 字段";
+    $("outHint").textContent = L.label + " · " + types.length + " 个类型 · " + code.split("\n").length + " 行";
+    $("outNote").innerHTML = '根类型 <b>' + eh(o.root) + "</b>，共生成 <b>" + types.length + "</b> 个类型定义、"
+      + "<b>" + nFields + "</b> 个字段。"
+      + (o.optional ? "在部分样例里缺失的字段已标记为可选。" : "所有字段都按必填生成（可选字段标记已关闭）。")
+      + (o.tag ? "" : "序列化标签已关闭 —— 依赖标签映射原键名的语言（Go / C# / Kotlin / Rust / Swift / Crystal）会丢失映射。")
+      + '<br><b>' + eh(L.label) + '：</b>' + L.note;
+
+    renderTypes(types, o);
+  }
+
+  function renderTypes(types, o) {
+    const L = LANG[$("lang").value];
+    $("typeTbl").innerHTML = "<thead><tr><th>类型</th><th>字段</th><th>来源</th></tr></thead><tbody>"
+      + types.map(t => {
+          const rows = t.fields.map(f => {
+            const ty = L.ty(f.shape);
+            return '<code>' + eh(f.key) + "</code> → " + eh(ty) + ((o.optional && f.optional) ? ' <span class="u">可选</span>' : "");
+          }).join("<br>");
+          return "<tr><td>" + eh(t.name) + '</td><td class="wrap">' + (rows || '<span class="u">（空对象）</span>') + "</td>"
+               + '<td class="u">' + (t === types[types.length - 1] ? "根节点" : "嵌套对象") + "</td></tr>";
+        }).join("")
+      + "</tbody>";
+    const opt = types.reduce((a, t) => a + t.fields.filter(f => f.optional).length, 0);
+    $("typeNote").innerHTML = opt
+      ? "其中 <b>" + opt + "</b> 个字段只在部分同类对象里出现，已按可选处理。"
+      : "所有字段在同类对象里都出现过，没有可选字段。";
+  }
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  let timer = 0;
+  const soon = () => { clearTimeout(timer); timer = setTimeout(() => run(false), 220); };
+  ["jsonIn", "rootName"].forEach(i => $(i).addEventListener("input", soon));
+  ["lang", "naming", "indent", "optOptional", "optTag"].forEach(i => $(i).addEventListener("change", () => run(false)));
+
+  $("btnMin").addEventListener("click", () => {
+    const p = parseJSON($("jsonIn").value);
+    if (p.err) { toast("JSON 有语法错误，先修好再压缩"); return; }
+    $("jsonIn").value = JSON.stringify(p.v);
+    run(false);
+    toast("已压缩");
+  });
+
+  const SAMPLE = {
+    code: 0,
+    message: "ok",
+    data: {
+      userId: 10086,
+      userName: "张三",
+      vip: true,
+      balance: 1234.56,
+      avatarUrl: null,
+      registeredAt: "2024-03-01T08:30:00Z",
+      tags: ["新客", "华东"],
+      profile: { city: "杭州", district: "西湖区", zipCode: "310000" },
+      orders: [
+        { orderId: "A-1001", amount: 99.5, items: 2, paid: true, coupon: "NEW5" },
+        { orderId: "A-1002", amount: 12, items: 1, paid: false }
+      ],
+      devices: []
+    }
+  };
+  $("btnSample").addEventListener("click", () => {
+    $("jsonIn").value = JSON.stringify(SAMPLE, null, 2);
+    run(false);
+    toast("已填入示例");
+  });
+
+  $("btnCopy").addEventListener("click", () => {
+    if (!lastCode) { toast("还没有可复制的内容"); return; }
+    copyText(lastCode, "已复制代码");
+  });
+  $("btnDl").addEventListener("click", () => {
+    if (!lastCode) { toast("还没有可下载的内容"); return; }
+    const L = LANG[$("lang").value];
+    const blob = new Blob([lastCode], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = ($("rootName").value || "Root") + "." + L.ext;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    toast("已下载 " + a.download);
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("jsonIn").value = "";
+    $("rootName").value = "Root";
+    $("lang").value = DEF_LANG;
+    run(false);
+    toast("已清空");
+  });
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  run(false);
+
+})();
+</script>
+</body>
+</html>

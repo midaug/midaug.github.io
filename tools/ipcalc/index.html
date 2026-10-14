@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IP 子网计算</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  code { font-family: var(--mono); }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 否则 main 会失去滚动容器身份 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"], input[type="number"] { cursor: text; font-variant-numeric: tabular-nums; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(209,36,47,.12); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .io {
+    display: block; width: 100%; resize: vertical;
+    font: 12.5px/1.7 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .row + .row { margin-top: 8px; }
+  .row > label { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: right; }
+  .row > input[type="text"] { flex: 1 1 auto; }
+  .row > select { flex: 0 0 auto; max-width: 46%; }
+  .row > .unit { flex: none; font-size: 12px; color: var(--text-3); }
+  /* 「切分方式」那一行是「标签 + 下拉 + 数量输入 + 单位」四件套，
+     窄屏下总宽会超出卡片（单位文案在「个子网 / 台主机/网」之间还会变长）。
+     允许换行、单位靠右收尾，好过把单位挤出屏幕。 */
+  .row.wrap { flex-wrap: wrap; }
+  .row.wrap > .unit { margin-left: auto; }
+
+  /* ===== 结果大号 ===== */
+  .hero {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .hero .v {
+    font-size: 22px; font-weight: 700; color: var(--accent);
+    letter-spacing: .3px; user-select: all; cursor: pointer; word-break: break-all;
+  }
+  .hero .u { font-size: 12px; color: var(--text-3); }
+
+  .kv-list { margin-top: 4px; }
+  .kv {
+    display: flex; align-items: baseline; gap: 8px; padding: 5px 0;
+    border-top: 1px solid var(--border); min-width: 0;
+  }
+  .kv:first-child { border-top: 0; }
+  .kv > .k { flex: none; width: 84px; font-size: 12px; color: var(--text-2); }
+  .kv > .v {
+    flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--text);
+    word-break: break-all; user-select: all; cursor: text;
+  }
+  .kv > .v.num { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kv > .v.unit { color: var(--text-2); }
+  .kv > .v.muted { color: var(--text-3); }
+
+  /* ===== 位视图 ===== */
+  .bits { margin-top: 10px; }
+  .bits .line { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; }
+  .bits .lb { flex: none; width: 84px; font-size: 12px; color: var(--text-2); text-align: left; }
+  .bits .bv {
+    font: 12px/1.7 var(--mono); letter-spacing: .2px;
+    word-break: break-all; user-select: all; cursor: text;
+  }
+  .bits .nb { color: var(--accent); font-weight: 700; }
+  .bits .hb { color: var(--text-3); }
+  .bits .dt { color: var(--text-3); }
+  .bits .legend { margin-top: 4px; font-size: 11px; color: var(--text-3); }
+  .bits .legend i { font-style: normal; color: var(--accent); font-weight: 700; }
+  .bits .legend b { font-style: normal; color: var(--text-3); }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl th.r, .tbl td.r { text-align: right; }
+  .tbl td.n { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; }
+  .tbl tbody tr.hit td { background: var(--accent-soft); }
+  .tbl tbody tr.hit td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .tag {
+    display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px;
+    background: var(--surface-2); color: var(--text-2); white-space: nowrap;
+  }
+  .tag.ok { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tag.bad { background: rgba(209,36,47,.1); color: var(--err); font-weight: 600; }
+
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2); word-break: break-word;
+  }
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .row > label, .kv > .k, .bits .lb { width: 62px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, input[type="text"], input[type="number"], select { font-size: 16px; }
+    .hero .v { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">IP<span>Calc</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">—</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">IPv4 / IPv6 · 全部在本地浏览器内计算</span>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 网段计算 ============ -->
+  <section class="card wide">
+    <h2>
+      网段计算
+      <span class="hint">支持 192.168.1.0/24、192.168.1.10 255.255.255.0、IPv6 前缀</span>
+      <span class="right">
+        <button class="mini" id="btnSample1">示例</button>
+        <button class="mini" id="btnCopy1">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="cidr">地址 / 网段</label>
+      <input type="text" id="cidr" spellcheck="false" autocomplete="off" value="192.168.1.10/24" />
+    </div>
+    <div class="ops">
+      <span class="unit" style="font-size:12px;color:var(--text-3)">常用：</span>
+      <button class="mini" data-pre="10.0.0.1/8">10/8</button>
+      <button class="mini" data-pre="172.16.0.1/12">172.16/12</button>
+      <button class="mini" data-pre="192.168.1.1/24">192.168/16</button>
+      <button class="mini" data-pre="192.168.1.1/25">/25</button>
+      <button class="mini" data-pre="192.168.1.1/30">/30</button>
+      <button class="mini" data-pre="100.64.0.1/10">100.64/10</button>
+      <button class="mini" data-pre="2001:db8::1/64">IPv6 /64</button>
+    </div>
+    <div class="hero">
+      <span class="v" id="hNet">—</span>
+      <span class="u" id="hNetSub"></span>
+    </div>
+    <div class="kv-list" id="kv1"></div>
+    <div class="bits" id="bits"></div>
+    <div class="note" id="note1"></div>
+  </section>
+
+  <!-- ============ 2. 子网划分 ============ -->
+  <section class="card">
+    <h2>
+      子网划分
+      <span class="hint">把大网等长切分</span>
+      <span class="right"><button class="mini" id="btnSample2">示例</button></span>
+    </h2>
+    <div class="row">
+      <label for="subNet">大网</label>
+      <input type="text" id="subNet" spellcheck="false" autocomplete="off" value="192.168.0.0/16" />
+    </div>
+    <div class="row wrap">
+      <label for="subMode">切分方式</label>
+      <select id="subMode">
+        <option value="count" selected>按子网数量</option>
+        <option value="hosts">按每网可用主机数</option>
+      </select>
+      <input type="text" id="subVal" inputmode="numeric" spellcheck="false" autocomplete="off" value="4" style="flex:0 0 92px" />
+      <span class="unit" id="subUnit">个子网</span>
+    </div>
+    <div class="note" id="note2"></div>
+    <div class="tbl-wrap"><table class="tbl fit" id="subTbl"></table></div>
+  </section>
+
+  <!-- ============ 3. 归属判断 ============ -->
+  <section class="card">
+    <h2>
+      归属判断
+      <span class="hint">批量看每个 IP 属于哪个网段</span>
+      <span class="right"><button class="mini" id="btnSample3">示例</button></span>
+    </h2>
+    <div class="row">
+      <label for="belongNet">网段</label>
+      <input type="text" id="belongNet" spellcheck="false" autocomplete="off" value="192.168.1.0/24" />
+    </div>
+    <textarea class="io" id="belongIps" spellcheck="false" autocomplete="off" style="margin-top:8px;min-height:96px"
+      placeholder="每行一个 IP，或用逗号分隔">192.168.1.10
+192.168.1.255
+192.168.2.1
+10.0.0.1</textarea>
+    <div class="tbl-wrap"><table class="tbl fit" id="belongTbl"></table></div>
+    <div class="note" id="note3"></div>
+  </section>
+
+  <!-- ============ 4. 地址转换 ============ -->
+  <section class="card wide">
+    <h2>
+      地址转换
+      <span class="hint">点分十进制 ↔ 整数 ↔ 十六进制 ↔ 二进制 ↔ IPv6</span>
+      <span class="right">
+        <button class="mini" id="btnSample4">示例</button>
+        <button class="mini" id="btnCopy4">复制结果</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label for="convIn">输入</label>
+      <input type="text" id="convIn" spellcheck="false" autocomplete="off" value="192.168.1.1" />
+      <select id="convFmt" title="输入格式">
+        <option value="auto" selected>自动识别</option>
+        <option value="dot">点分十进制</option>
+        <option value="int">十进制整数</option>
+        <option value="hex">十六进制</option>
+        <option value="bin">二进制</option>
+        <option value="v6">IPv6</option>
+      </select>
+    </div>
+    <div class="kv-list" id="kv4"></div>
+    <div class="note" id="note4"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const POW2 = 4294967296;      // 2^32
+
+  /* ============================================================
+     IPv4 基础
+     ============================================================ */
+  /* 一律用普通数字做算术，不用位运算 —— 位运算会把结果截成 32 位有符号，
+     掩码 255.255.255.0 这类值一旦参与 >> 就会变成负数。 */
+  function parseV4(s) {
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(s).trim());
+    if (!m) return null;
+    const o = m.slice(1).map(Number);
+    for (const x of o) if (x > 255) return null;
+    return o;
+  }
+  const v4ToInt = o => o[0] * 16777216 + o[1] * 65536 + o[2] * 256 + o[3];
+  const intToV4 = n => [
+    Math.floor(n / 16777216) % 256, Math.floor(n / 65536) % 256,
+    Math.floor(n / 256) % 256, n % 256
+  ].join(".");
+  /* 掩码位数 → 掩码整数值。prefix=0 时移位会绕回 2^32，必须单独处理。 */
+  const prefixToMask = p => p <= 0 ? 0 : POW2 - Math.pow(2, 32 - p);
+  function maskToPrefix(m) {
+    /* 掩码必须是「一串 1 后面一串 0」，用 popcount 反推 */
+    let bits = 0, seen0 = false;
+    for (let i = 31; i >= 0; i--) {
+      const b = (m >>> i) & 1;
+      if (b) { if (seen0) return null; bits++; } else seen0 = true;
+    }
+    return bits;
+  }
+
+  const V4_RANGES = [
+    [0, 8, "本网络（0.0.0.0/8）", "保留"],
+    [167772160, 8, "私有（10/8）", "私有"],
+    [1681915904, 10, "运营商级 NAT（100.64/10）", "保留"],
+    [2130706432, 8, "回环（127/8）", "保留"],
+    [2851995648, 16, "链路本地（169.254/16）", "保留"],
+    [2886729728, 12, "私有（172.16/12）", "私有"],
+    [3221225472, 24, "IETF 保留（192.0.0/24）", "保留"],
+    [3221225984, 24, "文档用 TEST-NET-1", "保留"],
+    [3232235520, 16, "私有（192.168/16）", "私有"],
+    [3323068416, 15, "基准测试（198.18/15）", "保留"],
+    [3325256704, 24, "文档用 TEST-NET-2", "保留"],
+    [3405803776, 24, "文档用 TEST-NET-3", "保留"],
+    [3758096384, 4, "组播（224/4）", "组播"],
+    [4026531840, 4, "保留（240/4，含 255.255.255.255 广播）", "保留"]
+  ];
+  function classifyV4(n) {
+    for (const [base, len, label, kind] of V4_RANGES) {
+      if (n >= base && n < base + Math.pow(2, 32 - len)) return { label: label, kind: kind };
+    }
+    return { label: "公网可路由地址", kind: "公网" };
+  }
+
+  /* ============================================================
+     IPv6 基础（BigInt 128 位）
+     ============================================================ */
+  function parseV6(str) {
+    let s = String(str).trim().toLowerCase().replace(/%.*$/, "");
+    if (s.indexOf(":") < 0) return null;
+    /* 末尾写成 IPv4 的兼容写法：::ffff:192.168.1.1 */
+    const m = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s);
+    if (m) {
+      const v4 = parseV4(m[2]);
+      if (!v4) return null;
+      s = m[1] + (v4[0] * 256 + v4[1]).toString(16) + ":" + (v4[2] * 256 + v4[3]).toString(16);
+    }
+    const dbl = s.indexOf("::");
+    let head, rest;
+    if (dbl >= 0) {
+      if (s.indexOf("::", dbl + 1) >= 0) return null;      // 只能出现一次 ::
+      head = s.slice(0, dbl);
+      rest = s.slice(dbl + 2);
+    } else {
+      head = s; rest = null;
+    }
+    const hp = head === "" ? [] : head.split(":");
+    const rp = rest === null || rest === "" ? [] : rest.split(":");
+    if (rest === null && hp.length !== 8) return null;
+    const need = 8 - hp.length - rp.length;
+    if (rest !== null && need < 0) return null;
+    const groups = rest !== null ? hp.concat(new Array(need).fill("0")).concat(rp) : hp;
+    if (groups.length !== 8) return null;
+    let v = 0n;
+    for (const g of groups) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      v = (v << 16n) | BigInt(parseInt(g, 16));
+    }
+    return v;
+  }
+  /* RFC 5952 的压缩写法：小写、去前导零、最长的连续 0 段用 :: 代替（至少 2 段） */
+  function fmtV6(v) {
+    const g = [];
+    for (let i = 0; i < 8; i++) g.push(((v >> BigInt((7 - i) * 16)) & 0xffffn).toString(16));
+    let best = -1, bestLen = 0, cur = -1, curLen = 0;
+    for (let i = 0; i < 8; i++) {
+      if (g[i] === "0") {
+        if (cur < 0) { cur = i; curLen = 0; }
+        curLen++;
+        if (curLen > bestLen) { bestLen = curLen; best = cur; }
+      } else { cur = -1; curLen = 0; }
+    }
+    if (bestLen < 2) return g.join(":");
+    return g.slice(0, best).join(":") + "::" + g.slice(best + bestLen).join(":");
+  }
+  function expandV6(v) {
+    const g = [];
+    for (let i = 0; i < 8; i++) g.push(((v >> BigInt((7 - i) * 16)) & 0xffffn).toString(16).padStart(4, "0"));
+    return g.join(":");
+  }
+
+  /* ============================================================
+     网段解析：统一入口
+     接受 "a.b.c.d/n"、"a.b.c.d 255.255.255.0"、"a.b.c.d"、"v6/n"
+     ============================================================ */
+  function parseNet(input) {
+    const raw = String(input).trim();
+    if (!raw) return { empty: true };
+    let addr = raw, maskPart = "";
+    const slash = raw.indexOf("/");
+    if (slash >= 0) { addr = raw.slice(0, slash).trim(); maskPart = raw.slice(slash + 1).trim(); }
+    else {
+      const sp = raw.split(/\s+/);
+      if (sp.length === 2) { addr = sp[0]; maskPart = sp[1]; }
+    }
+    const isV6 = addr.indexOf(":") >= 0;
+
+    if (isV6) {
+      const v = parseV6(addr);
+      if (v === null) return { err: "IPv6 地址格式不正确" };
+      let p = 128;
+      if (maskPart) {
+        if (!/^\d{1,3}$/.test(maskPart) || Number(maskPart) > 128) return { err: "IPv6 前缀长度必须在 0~128 之间" };
+        p = Number(maskPart);
+      }
+      return { v: v, prefix: p, v6: true, addr: addr };
+    }
+
+    const o = parseV4(addr);
+    if (!o) return { err: "IPv4 地址格式不正确（应为 a.b.c.d，每段 0~255）" };
+    const ip = v4ToInt(o);
+    let p = 32;
+    if (maskPart) {
+      if (/^\d{1,3}$/.test(maskPart)) {
+        if (Number(maskPart) > 32) return { err: "前缀长度必须在 0~32 之间" };
+        p = Number(maskPart);
+      } else {
+        const mo = parseV4(maskPart);
+        if (!mo) return { err: "掩码既不是前缀长度也不是合法的点分掩码" };
+        const mp = maskToPrefix(v4ToInt(mo));
+        if (mp === null) return { err: "掩码不是连续的 1 后面跟连续的 0（如 255.255.255.0），这种掩码无法使用" };
+        p = mp;
+      }
+    }
+    return { v: ip, prefix: p, v6: false, addr: addr };
+  }
+
+  /* ============================================================
+     一、网段计算
+     ============================================================ */
+  let sum1 = "";
+  function runNet() {
+    const el = $("cidr");
+    const r = parseNet(el.value);
+    const kv = $("kv1"), bits = $("bits");
+    if (r.empty) {
+      el.classList.remove("bad");
+      $("hNet").textContent = "—"; $("hNetSub").textContent = "";
+      kv.innerHTML = ""; bits.innerHTML = "";
+      $("note1").innerHTML = '<span class="empty-tip">输入一个 IP 或 CIDR 网段</span>';
+      $("stat").textContent = "—";
+      sum1 = "";
+      return;
+    }
+    if (r.err) {
+      el.classList.add("bad");
+      $("hNet").textContent = "—"; $("hNetSub").textContent = "";
+      kv.innerHTML = ""; bits.innerHTML = "";
+      $("note1").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>";
+      $("stat").textContent = "输入有误";
+      sum1 = "";
+      return;
+    }
+    el.classList.remove("bad");
+
+    if (r.v6) {
+      const hostBits = 128 - r.prefix;
+      const size = 1n << BigInt(hostBits);
+      const mask = r.prefix === 0 ? 0n : ((1n << 128n) - 1n) ^ (size - 1n);
+      const net = r.v & mask;
+      const last = net + size - 1n;
+      const isNet = r.v === net;
+      $("hNet").textContent = fmtV6(net) + "/" + r.prefix;
+      $("hNetSub").textContent = "IPv6 网段";
+      $("stat").textContent = "IPv6 /" + r.prefix;
+      const rows = [
+        ["完整写法", expandV6(net) + "/" + r.prefix, "unit"],
+        ["你输入的地址", fmtV6(r.v) + (isNet ? "" : ' <span class="tag">不是网络地址</span>'), ""],
+        ["网段范围", fmtV6(net) + " ~ " + fmtV6(last), "num"],
+        ["前缀长度", "/" + r.prefix + "（" + r.prefix + " 位网络 + " + hostBits + " 位接口标识）", "unit"],
+        ["地址总数", "2<sup>" + hostBits + "</sup> ≈ " + bigApprox(size) + " 个", "num"],
+        ["网段掩码", fmtV6(mask), "unit"],
+        ["作用域", v6Scope(r.v), "unit"]
+      ];
+      renderKV(kv, rows);
+      bits.innerHTML = "";
+      sum1 = ["IPv6 网段：" + fmtV6(net) + "/" + r.prefix, "范围：" + fmtV6(net) + " ~ " + fmtV6(last), "地址数：" + size.toString()].join("\n");
+      $("note1").innerHTML = 'IPv6 没有广播地址，也没有「可用主机数减 2」这回事 —— '
+        + '一个 /64 里 <code>::</code>（子网路由器任播地址）在特定场景下有约定用途，但整段都可用于分配。'
+        + (hostBits > 64 ? "<br>地址总数已超过 2<sup>64</sup>，右侧只给出近似值。" : "");
+      return;
+    }
+
+    const mask = prefixToMask(r.prefix);
+    const network = r.prefix === 0 ? 0 : r.v - (r.v % Math.pow(2, 32 - r.prefix));
+    const broadcast = network + Math.pow(2, 32 - r.prefix) - 1;
+    const total = Math.pow(2, 32 - r.prefix);
+    /* /31 与 /32 是特例：RFC 3021 允许 /31 用于点对点链路，两端都是可用地址，
+       不再遵循「网络号 + 广播号占掉两个」的老规矩。 */
+    const usable = r.prefix >= 31 ? total : total - 2;
+    const first = r.prefix >= 31 ? network : network + 1;
+    const last = r.prefix >= 31 ? broadcast : broadcast - 1;
+    const cls = classifyV4(r.v);
+    const wildcard = POW2 - 1 - mask;
+    const isNetAddr = r.v === network;
+
+    $("hNet").textContent = intToV4(network) + "/" + r.prefix;
+    $("hNetSub").textContent = cls.label;
+    $("stat").textContent = "/" + r.prefix + " · " + fmtCount(usable) + " 可用";
+
+    renderKV(kv, [
+      ["你输入的地址", intToV4(r.v) + (isNetAddr ? ' <span class="tag ok">就是网络地址</span>' : ' <span class="tag">主机地址，不在网段边界上</span>'), ""],
+      ["网络地址", intToV4(network), "num"],
+      ["广播地址", r.prefix >= 31 ? "（/" + r.prefix + " 没有广播地址）" : intToV4(broadcast), r.prefix >= 31 ? "muted" : "num"],
+      ["可用主机范围", r.prefix >= 32 ? "（/32 是单个地址）" : intToV4(first) + " ~ " + intToV4(last), "num"],
+      ["可用主机数", r.prefix >= 31 ? usable + " 个（RFC 3021 点对点）" : fmtCount(usable) + " 个", "num"],
+      ["地址总数", fmtCount(total) + " 个（2<sup>" + (32 - r.prefix) + "</sup>）", "unit"],
+      ["子网掩码", intToV4(mask) + "  （/" + r.prefix + "）", "unit"],
+      ["反掩码（通配符）", intToV4(wildcard) + "  ← 用于 ACL / OSPF 配置", "unit"],
+      ["地址类型", cls.label, "unit"],
+      ["十进制整数", String(r.v), "unit"],
+      ["十六进制", "0x" + r.v.toString(16).toUpperCase().padStart(8, "0"), "unit"]
+    ]);
+
+    bits.innerHTML =
+      bitsLine("地址", r.v, r.prefix)
+      + bitsLine("掩码", mask, r.prefix)
+      + bitsLine("网络", network, r.prefix)
+      + '<div class="legend"><i>■</i> 网络位（' + r.prefix + ' 位）　<b>■</b> 主机位（' + (32 - r.prefix) + ' 位）</div>';
+
+    sum1 = [
+      "网段：" + intToV4(network) + "/" + r.prefix,
+      "掩码：" + intToV4(mask),
+      "范围：" + intToV4(first) + " ~ " + intToV4(last),
+      "可用主机数：" + usable,
+      "广播：" + intToV4(broadcast)
+    ].join("\n");
+
+    const notes = [];
+    notes.push('把 <b>' + intToV4(r.v) + '</b> 与掩码 <b>' + intToV4(mask) + '</b> 做按位与，得到网络地址 <b>'
+      + intToV4(network) + '</b>，也就是说这个地址属于 <code>' + intToV4(network) + "/" + r.prefix + "</code> 这个网段。");
+    if (r.prefix >= 31) notes.push('前缀 /31 与 /32 按 <b>RFC 3021</b> 处理：/31 用于点对点链路，两端都算可用地址；/32 就是一个单主机地址，没有广播。');
+    else notes.push('老规矩里网络地址与广播地址各占一个，所以要减 2 —— 这也是为什么 /24 常被说成「253 个可用」（其实是 254）。');
+    if (cls.kind === "私有") notes.push('<b>这是私有地址</b>，不会在公网上路由，出口必须经过 NAT。');
+    if (cls.kind === "保留") notes.push('这个范围属于保留 / 特殊用途，通常不该出现在普通业务网络里。');
+    if (!isNetAddr) notes.push('你输入的是主机地址而不是网络地址 —— 配置设备时一般写 <code>' + intToV4(network) + "/" + r.prefix + "</code>。");
+    $("note1").innerHTML = notes.join("<br>");
+  }
+
+  function bitsLine(label, n, prefix) {
+    let out = "";
+    for (let i = 31; i >= 0; i--) {
+      const pos = 31 - i;
+      if (pos && pos % 8 === 0) out += '<span class="dt">.</span>';
+      out += '<span class="' + (pos < prefix ? "nb" : "hb") + '">' + ((n >>> i) & 1) + "</span>";
+    }
+    return '<div class="line"><span class="lb">' + label + '</span><span class="bv">' + out + "</span></div>";
+  }
+
+  function fmtCount(n) {
+    if (n < 10000) return String(n);
+    return n.toLocaleString("en-US");
+  }
+  /* 大数的中文近似：2^64 这种写全了没法看 */
+  function bigApprox(v) {
+    const s = v.toString();
+    if (s.length <= 6) return Number(s).toLocaleString("en-US");
+    const units = [[24, "亿亿"], [20, "万亿"], [16, "亿亿"], [12, "万亿"], [8, "亿"], [4, "万"]];
+    for (const [e, u] of units) {
+      if (s.length > e) {
+        const head = s.slice(0, s.length - e);
+        const tail = s.slice(s.length - e, s.length - e + 2);
+        return head + (tail && tail[0] !== "0" ? "." + tail[0] : "") + " " + u;
+      }
+    }
+    return s;
+  }
+  /* ★ 前缀掩码必须按「前 N 位」去比对：右移 (128-N) 位再跟前缀的高 N 位比较。
+     之前把 /10 写成右移 125 位（= 只留 3 位）、/7 写成右移 121 位，fe80:: 被算成了全球单播。 */
+  function v6Scope(v) {
+    if (v === 0n) return "未指定（::）";
+    if (v === 1n) return "回环（::1）";
+    if (v >> 120n === 0xffn) return "组播（ff00::/8）";
+    if (v >> 118n === 0x3fan) return "链路本地（fe80::/10）";
+    if (v >> 121n === 0x7en) return "唯一本地（fc00::/7，相当于 IPv4 私有地址）";
+    if (v >> 96n === 0x20010db8n) return "文档用（2001:db8::/32）";
+    return "全球单播（2000::/3 范围）";
+  }
+
+  /* ============================================================
+     二、子网划分
+     ============================================================ */
+  let sum2 = "";
+  function runSub() {
+    const r = parseNet($("subNet").value);
+    const tbl = $("subTbl");
+    const mode = $("subMode").value;
+    $("subUnit").textContent = mode === "count" ? "个子网" : "台主机/网";
+    if (r.empty) {
+      tbl.innerHTML = ""; $("note2").innerHTML = '<span class="empty-tip">填入要切分的大网</span>'; sum2 = "";
+      return;
+    }
+    if (r.err) { tbl.innerHTML = ""; $("note2").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>"; sum2 = ""; return; }
+    if (r.v6) { tbl.innerHTML = ""; $("note2").innerHTML = '<span class="empty-tip">子网划分目前只支持 IPv4（IPv6 的 /64 空间足够大，通常不需要再切）</span>'; sum2 = ""; return; }
+
+    const want = Number(String($("subVal").value).replace(/[,\s]/g, ""));
+    if (!want || want < 1 || !isFinite(want)) {
+      tbl.innerHTML = ""; $("note2").innerHTML = '<span class="err-tip">请填一个大于 0 的数字</span>'; sum2 = "";
+      return;
+    }
+
+    const hostBits = 32 - r.prefix;
+    let newPrefix;
+    if (mode === "count") {
+      const need = Math.ceil(Math.log2(want));
+      newPrefix = r.prefix + Math.max(need, 0);
+    } else {
+      /* 每个子网要放 want 台主机，还要算上网络号与广播号两个 */
+      const bits = Math.ceil(Math.log2(want + 2));
+      newPrefix = 32 - bits;
+    }
+    if (newPrefix > 32) {
+      tbl.innerHTML = "";
+      $("note2").innerHTML = '<span class="err-tip">做不到：要 ' + want + (mode === "count" ? " 个子网" : " 台主机/网")
+        + ' 需要把前缀加到 /' + newPrefix + '，已经超过 /32。请换一个更大的大网。</span>';
+      sum2 = "";
+      return;
+    }
+    if (newPrefix < r.prefix) {
+      tbl.innerHTML = "";
+      $("note2").innerHTML = '<span class="err-tip">大网 <code>/' + r.prefix + '</code> 本身只够放 '
+        + Math.pow(2, hostBits) + ' 个地址，装不下每个子网 ' + want + ' 台主机。</span>';
+      sum2 = "";
+      return;
+    }
+
+    const step = Math.pow(2, 32 - newPrefix);
+    const base = r.prefix === 0 ? 0 : r.v - (r.v % Math.pow(2, hostBits));
+    const maxSubs = Math.floor(Math.pow(2, 32 - r.prefix) / step);
+    const shown = Math.min(maxSubs, 64);
+    const usable = newPrefix >= 31 ? step : step - 2;
+
+    const rows = [];
+    for (let i = 0; i < shown; i++) {
+      const s = base + i * step;
+      const e = s + step - 1;
+      rows.push({
+        cls: i === 0 ? "hit" : "",
+        cells: [
+          { t: String(i + 1), cls: "u" },
+          { t: intToV4(s) + "/" + newPrefix, cls: "n" },
+          { t: newPrefix >= 31 ? "—" : intToV4(s + 1), cls: "" },
+          { t: newPrefix >= 31 ? "—" : intToV4(e - 1), cls: "" },
+          { t: newPrefix >= 31 ? "—" : intToV4(e), cls: "u" },
+          { t: String(usable), cls: "u" }
+        ]
+      });
+    }
+    tbl.innerHTML = '<thead><tr><th>#</th><th>子网</th><th>首个可用</th><th>末个可用</th><th>广播</th><th class="r">可用数</th></tr></thead><tbody>'
+      + rows.map(x => '<tr' + (x.cls ? ' class="' + x.cls + '"' : "") + ">"
+          + x.cells.map(c => '<td class="' + c.cls + '">' + eh(c.t) + "</td>").join("") + "</tr>").join("")
+      + "</tbody>";
+
+    sum2 = "大网 " + intToV4(base) + "/" + r.prefix + " 切分为 /" + newPrefix + " 的子网，共 " + maxSubs + " 个，每个 " + usable + " 个可用地址";
+    $("note2").innerHTML = '把 <code>' + intToV4(base) + "/" + r.prefix + '</code> 切成 <b>/' + newPrefix
+      + '</b>：每个子网跨度 <b>' + step + '</b> 个地址（' + newPrefix + ' 位网络 + ' + (32 - newPrefix) + ' 位主机），'
+      + '共 <b>' + maxSubs + '</b> 个子网，每个可用 <b>' + usable + '</b> 个地址。'
+      + (maxSubs > 64 ? "<br>表里只列出前 64 个，其余按同样的步长递增。"
+          : "")
+      + (mode === "count" && Math.pow(2, Math.ceil(Math.log2(want))) !== want
+          ? "<br>按子网数量切分只能取 2 的幂，你要 " + want + " 个，向上取到 <b>" + Math.pow(2, Math.ceil(Math.log2(want))) + "</b> 个（多出来的可以留作扩展）。"
+          : "")
+      + (mode === "hosts" ? "<br>每网要放 " + want + " 台主机，加上网络号与广播号共需 " + (want + 2) + " 个地址，向上取到 2 的幂 <b>" + step + "</b>。" : "");
+  }
+
+  /* ============================================================
+     三、归属判断
+     ============================================================ */
+  let sum3 = "";
+  function runBelong() {
+    const r = parseNet($("belongNet").value);
+    const tbl = $("belongTbl");
+    if (r.empty) { tbl.innerHTML = ""; $("note3").innerHTML = '<span class="empty-tip">填入一个网段</span>'; sum3 = ""; return; }
+    if (r.err) { tbl.innerHTML = ""; $("note3").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>"; sum3 = ""; return; }
+
+    const list = $("belongIps").value.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+    if (!list.length) { tbl.innerHTML = ""; $("note3").innerHTML = '<span class="empty-tip">填入要检查的 IP，每行一个</span>'; sum3 = ""; return; }
+
+    if (r.v6) {
+      const hostBits = 128 - r.prefix;
+      const size = 1n << BigInt(hostBits);
+      const mask = r.prefix === 0 ? 0n : ((1n << 128n) - 1n) ^ (size - 1n);
+      const net = r.v & mask;
+      const rows = list.map(ip => {
+        const v = parseV6(ip);
+        if (v === null) return { ip: ip, err: true };
+        const n = v & mask;
+        return { ip: ip, inside: n === net, net: fmtV6(n) + "/" + r.prefix };
+      });
+      tbl.innerHTML = '<thead><tr><th>IP</th><th>是否在网段内</th><th>所属网段</th></tr></thead><tbody>'
+        + rows.map(x => x.err
+            ? '<tr><td class="wrap">' + eh(x.ip) + '</td><td><span class="tag bad">格式错误</span></td><td class="u">—</td></tr>'
+            : '<tr><td class="wrap">' + eh(x.ip) + '</td><td>' + (x.inside ? '<span class="tag ok">是</span>' : '<span class="tag bad">否</span>')
+              + '</td><td class="u wrap">' + eh(x.net) + "</td></tr>").join("")
+        + "</tbody>";
+      const okN = rows.filter(x => x.inside).length;
+      $("note3").innerHTML = "共 <b>" + list.length + "</b> 个地址，其中 <b>" + okN + "</b> 个落在 <code>" + eh(fmtV6(net) + "/" + r.prefix) + "</code> 内。";
+      sum3 = rows.filter(x => x.inside).map(x => x.ip).join("\n");
+      return;
+    }
+
+    const hostBits = 32 - r.prefix;
+    const size = Math.pow(2, hostBits);
+    const mask = prefixToMask(r.prefix);
+    const net = r.prefix === 0 ? 0 : r.v - (r.v % size);
+    const rows = list.map(ip => {
+      const o = parseV4(ip);
+      if (!o) return { ip: ip, err: true };
+      const v = v4ToInt(o);
+      const n = r.prefix === 0 ? 0 : v - (v % size);
+      return { ip: ip, inside: n === net, net: intToV4(n) + "/" + r.prefix };
+    });
+    tbl.innerHTML = '<thead><tr><th>IP</th><th>是否在网段内</th><th>所属网段</th></tr></thead><tbody>'
+      + rows.map(x => x.err
+          ? '<tr><td class="wrap">' + eh(x.ip) + '</td><td><span class="tag bad">格式错误</span></td><td class="u">—</td></tr>'
+          : '<tr><td class="wrap">' + eh(x.ip) + '</td><td>' + (x.inside ? '<span class="tag ok">是</span>' : '<span class="tag bad">否</span>')
+            + '</td><td class="u wrap">' + eh(x.net) + "</td></tr>").join("")
+      + "</tbody>";
+
+    const okRows = rows.filter(x => x.inside);
+    const nets = {};
+    rows.forEach(x => { if (!x.err) nets[x.net] = (nets[x.net] || 0) + 1; });
+    const parts = ["共 <b>" + list.length + "</b> 个地址，其中 <b>" + okRows.length + "</b> 个落在 <code>"
+      + intToV4(net) + "/" + r.prefix + "</code> 内。"];
+    const keys = Object.keys(nets);
+    if (keys.length > 1) {
+      parts.push("这些地址分布在 <b>" + keys.length + "</b> 个不同网段里："
+        + keys.map(k => "<code>" + eh(k) + "</code>（" + nets[k] + " 个）").join("、")
+        + " —— 它们之间通信需要经过路由。");
+    } else if (keys.length === 1 && okRows.length === list.length) {
+      parts.push("所有地址都在同一个网段内，彼此可以直接二层通信。");
+    }
+    const badN = rows.filter(x => x.err).length;
+    if (badN) parts.push('<span class="err-tip">有 ' + badN + " 个地址格式不正确。</span>");
+    $("note3").innerHTML = parts.join("<br>");
+    sum3 = okRows.map(x => x.ip).join("\n");
+  }
+
+  /* ============================================================
+     四、地址转换
+     ============================================================ */
+  let sum4 = "";
+  function autoParse(s) {
+    s = String(s).trim();
+    if (!s) return { empty: true };
+    if (s.indexOf(":") >= 0) {
+      const v = parseV6(s);
+      return v === null ? { err: "IPv6 地址格式不正确" } : { k: "v6", v: v };
+    }
+    if (/^0x[0-9a-f]{1,8}$/i.test(s)) return { k: "v4", n: Number(BigInt(s)) };
+    if (/^[01]{1,32}$/.test(s)) return { k: "v4", n: parseInt(s, 2) };
+    const o = parseV4(s);
+    if (o) return { k: "v4", n: v4ToInt(o) };
+    /* 纯数字一律当整数看，超范围要明确报「超出 32 位」，不能落到「无法识别」上去 */
+    if (/^\d+$/.test(s)) {
+      const n = Number(s);
+      if (!isFinite(n) || n > 4294967295) return { err: "整数超出 IPv4 的 32 位范围（最大 4294967295）" };
+      return { k: "v4", n: n };
+    }
+    return { err: "无法识别：既不是点分十进制、整数、十六进制、二进制，也不是 IPv6" };
+  }
+  function runConv() {
+    const el = $("convIn");
+    const fmt = $("convFmt").value;
+    let s = el.value.trim();
+    if (fmt === "hex" && s && !/^0x/i.test(s)) s = "0x" + s;
+    if (fmt === "v6" && s && s.indexOf(":") < 0) s = "";
+    const r = fmt === "auto" ? autoParse(el.value) : autoParse(s);
+    const kv = $("kv4");
+    if (r.empty) {
+      el.classList.remove("bad"); kv.innerHTML = "";
+      $("note4").innerHTML = '<span class="empty-tip">输入一个地址，或上面那种整数 / 十六进制 / 二进制写法</span>';
+      sum4 = "";
+      return;
+    }
+    if (r.err) {
+      el.classList.add("bad"); kv.innerHTML = "";
+      $("note4").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>";
+      sum4 = "";
+      return;
+    }
+    el.classList.remove("bad");
+
+    if (r.k === "v6") {
+      const v = r.v;
+      const low32 = Number(v & 0xffffffffn);
+      renderKV(kv, [
+        ["压缩写法", fmtV6(v), "num"],
+        ["完整展开", expandV6(v), ""],
+        ["作用域", v6Scope(v), "unit"],
+        ["十六进制", "0x" + v.toString(16).toUpperCase().padStart(32, "0"), "unit"],
+        ["十进制整数", v.toString(), "unit"],
+        ["是否 IPv4 映射", (v >> 32n) === 0xffffn ? "是（::ffff:0:0/96），低 32 位即 " + intToV4(low32) : "否", "unit"],
+        ["地址类型", v6Scope(v), "unit"]
+      ]);
+      $("note4").innerHTML = 'IPv6 地址 128 位。压缩规则见 <b>RFC 5952</b>：小写、每段去前导零、'
+        + '把<b>最长</b>的一串连续零段写成 <code>::</code>（只有一段零不算，至少两段才压缩，且全串只能出现一次 <code>::</code>）。';
+      sum4 = [fmtV6(v), expandV6(v), "0x" + v.toString(16)].join("\n");
+      return;
+    }
+
+    const n = r.n;
+    const bin = n.toString(2).padStart(32, "0");
+    const cls = classifyV4(n);
+    renderKV(kv, [
+      ["点分十进制", intToV4(n), "num"],
+      ["十进制整数", String(n), ""],
+      ["十六进制", "0x" + n.toString(16).toUpperCase().padStart(8, "0") + "  （0x" + n.toString(16) + "）", "unit"],
+      ["二进制", bin.replace(/(.{8})(?=.)/g, "$1."), "unit"],
+      ["IPv4 映射 IPv6", "::ffff:" + intToV4(n), "unit"],
+      ["地址类型", cls.label, "unit"],
+      ["所在 /24", intToV4(Math.floor(n / 256) * 256) + "/24", "unit"],
+      ["所在 /16", intToV4(Math.floor(n / 65536) * 65536) + "/16", "unit"]
+    ]);
+    $("note4").innerHTML = '转换关系：<b>' + intToV4(n) + '</b> = <b>' + n + '</b> = <b>0x'
+      + n.toString(16).toUpperCase() + '</b> = <b>' + bin + '</b>（二进制）。'
+      + '<br>算法：把四段分别左移 24 / 16 / 8 / 0 位后相加；反过来就是从高位到低位依次除 16777216、65536、256 取余。';
+    sum4 = [intToV4(n), String(n), "0x" + n.toString(16).toUpperCase(), bin].join("\n");
+  }
+
+  /* ============================================================
+     渲染 / 事件
+     ============================================================ */
+  function renderKV(box, items) {
+    box.innerHTML = items.map(it =>
+      '<div class="kv"><span class="k">' + eh(it[0]) + '</span><span class="v ' + (it[2] || "") + '">' + it[1] + "</span></div>"
+    ).join("");
+  }
+
+  const timers = {};
+  const soon = (fn, key) => { clearTimeout(timers[key]); timers[key] = setTimeout(fn, 180); };
+
+  $("cidr").addEventListener("input", () => soon(runNet, 0));
+  $("subNet").addEventListener("input", () => soon(runSub, 1));
+  $("subVal").addEventListener("input", () => soon(runSub, 1));
+  $("subMode").addEventListener("change", runSub);
+  $("belongNet").addEventListener("input", () => soon(runBelong, 2));
+  $("belongIps").addEventListener("input", () => soon(runBelong, 2));
+  $("convIn").addEventListener("input", () => soon(runConv, 3));
+  $("convFmt").addEventListener("change", runConv);
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-pre]");
+    if (!b) return;
+    $("cidr").value = b.dataset.pre;
+    runNet();
+    toast("已填入 " + b.dataset.pre);
+  });
+
+  $("btnSample1").addEventListener("click", () => { $("cidr").value = "172.16.20.130/20"; runNet(); toast("示例：172.16.20.130/20"); });
+  $("btnSample2").addEventListener("click", () => {
+    $("subNet").value = "192.168.0.0/24"; $("subMode").value = "count"; $("subVal").value = "6"; runSub(); toast("示例：/24 切成 6 个子网");
+  });
+  $("btnSample3").addEventListener("click", () => {
+    $("belongNet").value = "10.10.0.0/16";
+    $("belongIps").value = "10.10.1.1\n10.10.255.254\n10.11.0.1\n192.168.1.1\n10.10.0.0\nnot-an-ip";
+    runBelong(); toast("示例：10.10.0.0/16");
+  });
+  $("btnSample4").addEventListener("click", () => { $("convIn").value = "3232235777"; runConv(); toast("示例：整数 3232235777"); });
+
+  $("btnCopy1").addEventListener("click", () => { if (!sum1) { toast("还没有可复制的结果"); return; } copyText(sum1, "已复制网段信息"); });
+  $("btnCopy4").addEventListener("click", () => { if (!sum4) { toast("还没有可复制的结果"); return; } copyText(sum4, "已复制地址转换"); });
+
+  $("btnClear").addEventListener("click", () => {
+    ["cidr", "subNet", "belongNet", "convIn"].forEach(i => { $(i).value = ""; });
+    $("belongIps").value = "";
+    runNet(); runSub(); runBelong(); runConv();
+    toast("已清空");
+  });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+  runNet(); runSub(); runBelong(); runConv();
+})();
+</script>
+</body>
+</html>
