@@ -2,9 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Calendar</title>
-    <script src="https://cdn.jsdelivr.net/gh/6tail/lunar-javascript/lunar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js"></script>
+    <script>
+    /* lunar.js 兜底加载：首选 jsdelivr（锁定 1.7.3，不再走 gh master 未锁版本），
+       失败依次退 fastly.jsdelivr、bootcdn；全部失败时页面顶部给出原因。
+       此前单源 + gh master 未锁版本，任一变动整页农历功能全灭。 */
+    (function () {
+      var alts = [
+        "https://fastly.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js",
+        "https://cdn.bootcdn.net/ajax/libs/lunar-javascript/1.7.3/lunar.js"
+      ];
+      function failed() {
+        var tip = document.createElement("div");
+        tip.style.cssText = "margin:12px auto;max-width:720px;padding:10px 14px;border:1px solid #f0c36d;background:#fff8e6;color:#7a5b00;border-radius:6px;font-size:14px;";
+        tip.textContent = "农历计算库（lunar.js）加载失败：所有 CDN 均不可达，请检查网络后刷新重试。";
+        if (document.body) document.body.prepend(tip);
+        else document.addEventListener("DOMContentLoaded", function () { document.body.prepend(tip); });
+      }
+      function tryNext() {
+        if (window.Solar && window.Lunar) return;
+        if (!alts.length) { failed(); return; }
+        var s = document.createElement("script");
+        s.src = alts.shift();
+        s.onload = tryNext;
+        s.onerror = tryNext;
+        document.head.appendChild(s);
+      }
+      tryNext();
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <style>
        :root {

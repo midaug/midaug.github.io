@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>文本对比工具</title>
 <meta name="theme-color" content="#f6f7f9" />
@@ -1671,11 +1672,16 @@
   /* 行数口径必须与 toLines 一致：末尾的换行符是「行终止符」而不是「空行」。
      不扣掉它的话，"a\nb\n" 会显示 3 行，而对比按 2 行做，
      用户会看到「输入区 16 行、最后一行是 15」这种对不上的数字。 */
+  /* 按值缓存：每次击键 updateMeta + scheduleDiff 会对同一文本扫 4 遍 O(n)，
+     缓存后只有文本真的变了才重扫。只存最近一条，够覆盖连打的场景。 */
+  var _clKey = null, _clVal = 0;
   function countLines(s) {
     if (s === "") return 0;
+    if (s === _clKey) return _clVal;
     var n = 1;
     for (var i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) n++;
     if (s.charCodeAt(s.length - 1) === 10) n--;
+    _clKey = s; _clVal = n;
     return n;
   }
 
@@ -1774,6 +1780,14 @@
 
      at 是要应用的那一处差异的下标；接缝栏上每个按钮都带自己的下标，
      不传则退回「当前导航到的那一处」。 */
+  /* 防抖窗口内文本可能已改动：lastA / lastB / navs 都是上一次 diff 的快照。
+     过期就先按当前文本强制重算并提示，绝不用旧快照覆写 textarea ——
+     否则「改一处 → 顺手点接缝栏同步」会静默吞掉刚敲的编辑。 */
+  function snapshotsFresh() {
+    return toLines($("taL").value).join("\n") === lastA.join("\n")
+        && toLines($("taR").value).join("\n") === lastB.join("\n");
+  }
+
   function applyHunk(dir, all, at) {
     var toR = dir === "LR";
     var dst = toR ? "R" : "L";
@@ -1789,6 +1803,11 @@
       return;
     }
 
+    if (!snapshotsFresh()) {
+      toast("文本刚有改动，已按最新内容重新对比，请再点一次");
+      runDiff(true);
+      return;
+    }
     if (!navs.length) { toast("两侧没有差异"); return; }
     var k = (at == null || at < 0) ? (navIdx < 0 ? 0 : navIdx) : at;
     if (k >= navs.length) k = navs.length - 1;

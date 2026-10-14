@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>JSON 格式化工具</title>
 <meta name="theme-color" content="#f6f7f9" />
@@ -56,7 +57,7 @@
 
   /* ===== 顶栏 ===== */
   header {
-    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap;
     padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
     overflow: hidden;
   }
@@ -87,13 +88,8 @@
     flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* 窄屏时顶栏不换行，优先隐藏次要控件 */
-  @media (max-width: 1180px) {
-    .hide-md { display: none; }
-  }
-  @media (max-width: 900px) {
-    .hide-sm { display: none; }
-  }
+  /* 窄屏时顶栏改为换行：原 hide-md/hide-sm 断点藏控件的方案已废弃
+     （text-diff 分册教训 —— ≤900px 连「自动换行」开关都消失，功能凭空蒸发） */
 
   /* ===== 主体 ===== */
   main { flex: 1; display: flex; min-height: 0; }
@@ -308,15 +304,15 @@
     <button class="primary" id="btnFormat">格式化</button>
     <button id="btnSample">示例</button>
     <button id="btnClear">清空</button>
-    <button id="btnUpload" class="hide-sm">导入文件</button>
+    <button id="btnUpload">导入文件</button>
     <input type="file" id="file" accept=".json,.txt,application/json" hidden />
     <span class="sep"></span>
     <button id="btnExpand">全部展开</button>
     <button id="btnCollapse">全部折叠</button>
     <button id="btnCopyAll">复制全部</button>
-    <button id="btnCopyPath" class="hide-md">复制路径</button>
-    <span class="sep hide-md"></span>
-    <label class="stat optional hide-sm">缩进
+    <button id="btnCopyPath">复制路径</button>
+    <span class="sep"></span>
+    <label class="stat optional">缩进
       <select id="indent">
         <option value="2">2 空格</option>
         <option value="4" selected>4 空格</option>
@@ -324,9 +320,9 @@
         <option value="tab">Tab</option>
       </select>
     </label>
-    <label class="stat optional hide-sm"><input type="checkbox" id="sortKeys" /> 排序键</label>
-    <label class="stat optional hide-sm" title="把内容本身是 JSON 的字符串字段也解析成嵌套结构"><input type="checkbox" id="nested" /> 嵌套解析</label>
-    <label class="stat optional hide-md"><input type="checkbox" id="wrap" checked /> 自动换行</label>
+    <label class="stat optional"><input type="checkbox" id="sortKeys" /> 排序键</label>
+    <label class="stat optional" title="把内容本身是 JSON 的字符串字段也解析成嵌套结构"><input type="checkbox" id="nested" /> 嵌套解析</label>
+    <label class="stat optional"><input type="checkbox" id="wrap" checked /> 自动换行</label>
   </header>
 
   <main>
@@ -599,7 +595,11 @@
      ============================================================ */
   function push(n, r) { flat.push(n); role.push(r); }
 
+  let buildGen = 0;   // 构建链世代号：构建中途重入 startBuild 时，旧 rAF 链到期自动失效
+
   function startBuild(keepScroll) {
+    buildGen++;                            // 作废还在路上的旧 pump 链
+    const gen = buildGen;
     indentText = indentStr();              // 缩进设置可能刚被改过，重新取一次
 
     anchor = (keepScroll && flat.length)
@@ -629,11 +629,12 @@
     setBar(building ? 0 : 1);
 
     render();
-    if (building) pump();
+    if (building) pump(gen);
     else restoreAnchor();
   }
 
-  function pump() {
+  function pump(gen) {
+    if (gen !== buildGen) return;             // 本链已被新构建作废，不得驱动新链
     if (!stack) return;                       // 构建已被新操作取消
     const t0 = performance.now();
     while (stack.length && performance.now() - t0 < CHUNK_MS) {
@@ -660,7 +661,7 @@
     if (done) setBar(1); else setBar(barTarget ? flat.length / barTarget : 0);
     render();
     if (done) restoreAnchor();
-    else requestAnimationFrame(pump);
+    else requestAnimationFrame(() => pump(gen));
   }
 
   function restoreAnchor() {

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>麦克风 · 音响 · 摄像头测试</title>
 <meta name="theme-color" content="#f6f7f9" />
@@ -890,7 +891,12 @@
       }
       mrChunks = [];
       mr.ondataavailable = function (e) { if (e.data && e.data.size) mrChunks.push(e.data); };
-      mr.onstop = onRecStop;
+      mr.onstop = function () {
+        /* 世代守卫：录音中点「清除/重置」会同步清空状态并作废本会话，
+           异步 onstop 不得用残留 chunks 复活录音，也不得清掉新一轮录音的计时器 */
+        if (gen !== recGen) { mrChunks = []; return; }
+        onRecStop();
+      };
       try { mr.start(); } catch (e) { toast("录音启动失败：" + errMsg(e)); return; }
 
       recT0 = Date.now();
@@ -1079,7 +1085,11 @@
   }
 
   function recClear() {
-    if (recIsRecording() && mr) { try { mr.stop(); } catch (e) {} }
+    recGen++;   /* 作废进行中会话的异步回调（onstop/授权续体），防止复活录音 */
+    if (recIsRecording() && mr) {
+      try { mr.onstop = null; mr.ondataavailable = null; mr.stop(); } catch (e) {}
+    }
+    mrChunks = [];
     recStopNode();
     if (window.__recFallback) { try { window.__recFallback.pause(); } catch (e) {} window.__recFallback = null; }
     recBlob = null; recBuf = null; recOffset = 0; mrMime = "";
@@ -1115,7 +1125,9 @@
     else if (camFacing) v.facingMode = camFacing;
     var want = { video: v, audio: false };
 
-    return navigator.mediaDevices.getUserMedia(want).catch(function () {
+    return navigator.mediaDevices.getUserMedia(want).catch(function (e) {
+      /* 权限被拒绝（NotAllowedError）不是约束问题，降级重试只会再弹一次授权框 */
+      if (e && e.name === "NotAllowedError") throw e;
       /* 1280×720 是「理想值」，理论上不该失败；但某些 USB 摄像头对
          width/height 组合很挑剔，退回不带分辨率的约束再试一次。 */
       var v2 = dev ? { deviceId: { exact: dev } } : true;
@@ -1797,6 +1809,8 @@
   window.addEventListener("pagehide", function () {
     micClose();
     camClose();
+    stopDemo();          /* 清 demo 轮询定时器并静音，防 bfcache 恢复后状态残留 */
+    if (rotOn) rotStop();
     if (au && au.state === "running" && au.suspend) { try { au.suspend(); } catch (e) {} }
   });
 

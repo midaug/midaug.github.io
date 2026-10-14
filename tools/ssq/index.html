@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>奕彩SSQ</title>
     <!-- CSS only -->
@@ -341,6 +342,14 @@
             dataContainer.html('');
         } catch (error) {
             console.error('初始化OCR失败:', error);
+            /* CDN 加载失败/网络异常时必须给可见反馈：此前只打 console，
+               按钮永远灰着「初始化中」，页面看起来像死机。
+               ocrWorker 失败时不会缓存，刷新或重进即可重试。 */
+            $('#up-btn').removeAttr('disabled');
+            $('#up-btn').removeAttr('init');
+            dataContainer.html('<div class="alert alert-danger">识别引擎初始化失败：'
+                + esc(error && error.message ? error.message : String(error))
+                + '。请检查网络后刷新页面重试。</div>');
         }
     }
 
@@ -403,19 +412,19 @@
             // 显示投注类型
             if (bet.betType === 'single') {
                 html += '<h6 class="card-text">';
-                html += '<span>' + bet.details[0].zm + '</span>';
+                html += '<span>' + esc(bet.details[0].zm) + '</span>';
 
                 // 渲染红球
                 for (var j = 1; j <= 6; j++) {
                     var className = validateNumber(bet.details[0]['red' + j], 1, 33) ?
                         (bet.details[0]['red' + j + 'f'] ? 'num red redf' : 'num red') : 'num err';
-                    html += '<span class="' + className + '">' + bet.details[0]['red' + j] + '</span>';
+                    html += '<span class="' + className + '">' + esc(bet.details[0]['red' + j]) + '</span>';
                 }
 
                 // 渲染蓝球
                 var blueClass = validateNumber(bet.details[0].blue1, 1, 16) ?
                     (bet.details[0].blue1f ? 'num blue bluef' : 'num blue') : 'num err';
-                html += '<span class="' + blueClass + '">' + bet.details[0].blue1 + '</span>';
+                html += '<span class="' + blueClass + '">' + esc(bet.details[0].blue1) + '</span>';
                 html += '<span>' + bet.bonusText + '</span>';
                 html += '<span>' + bet.rewardValue + '</span>';
                 html += '</h6>';
@@ -443,12 +452,12 @@
                         // 渲染红球
                         for (var m = 0; m < detail.redBalls.length; m++) {
                             var className = detail['red' + (m + 1) + 'f'] ? 'num red redf' : 'num red';
-                            html += '<span class="' + className + '">' + detail.redBalls[m] + '</span>';
+                            html += '<span class="' + className + '">' + esc(detail.redBalls[m]) + '</span>';
                         }
 
                         // 渲染蓝球
                         var blueClass = detail.blue1f ? 'num blue bluef' : 'num blue';
-                        html += '<span class="' + blueClass + '">' + detail.blueBall + '</span>';
+                        html += '<span class="' + blueClass + '">' + esc(detail.blueBall) + '</span>';
                         html += '<span>' + detail.bonusText + '</span>';
                         html += '<span>' + detail.rewardValue + '</span>';
                         html += '</div>';
@@ -486,12 +495,12 @@
                         // 渲染红球
                         for (var m = 0; m < detail.redBalls.length; m++) {
                             var className = detail['red' + (m + 1) + 'f'] ? 'num red redf' : 'num red';
-                            html += '<span class="' + className + '">' + detail.redBalls[m] + '</span>';
+                            html += '<span class="' + className + '">' + esc(detail.redBalls[m]) + '</span>';
                         }
 
                         // 渲染蓝球
                         var blueClass = detail.blue1f ? 'num blue bluef' : 'num blue';
-                        html += '<span class="' + blueClass + '">' + detail.blueBall + '</span>';
+                        html += '<span class="' + blueClass + '">' + esc(detail.blueBall) + '</span>';
                         html += '<span>' + detail.bonusText + '</span>';
                         html += '<span>' + detail.rewardValue + '</span>';
                         html += '</div>';
@@ -686,6 +695,12 @@
             var needFromTuo = 6 - options.danRedBalls.length;
             var tuoCombinations = getCombinations(options.tuoRedBalls, needFromTuo);
 
+            // 总量闸门：红组合数 × 蓝球数，防止笛卡尔积爆炸
+            var estTotal = tuoCombinations.length * blueBalls.length;
+            if (estTotal > MAX_COMBINATIONS) {
+                throw new Error('投注组合数过多(' + estTotal + ')，请检查投注码是否正确');
+            }
+
             // 组合胆码和拖码组合
             for (let i = 0; i < tuoCombinations.length; i++) {
                 var combinedRed = options.danRedBalls.concat(tuoCombinations[i]);
@@ -699,6 +714,12 @@
         } else {
             // 普通复式投注处理
             var redCombinations = getCombinations(redBalls, 6);
+
+            // 总量闸门：红组合数 × 蓝球数，防止笛卡尔积爆炸
+            var estTotal = redCombinations.length * blueBalls.length;
+            if (estTotal > MAX_COMBINATIONS) {
+                throw new Error('投注组合数过多(' + estTotal + ')，请检查投注码是否正确');
+            }
 
             // 为每个红球组合配对所有蓝球
             for (let i = 0; i < redCombinations.length; i++) {
@@ -951,6 +972,27 @@
             }
         }
 
+        // 值域与数量校验：红球 01-33 且 ≤33 个，蓝球 01-16 且 ≤16 个
+        // （复式部分逐 2 位切片解析，OCR 误识别可产生越界值或超量蓝球）
+        if (result.redBalls.length > 33) {
+            throw new Error('红球数量异常(' + result.redBalls.length + '个)，请检查投注码');
+        }
+        if (result.blueBalls.length > 16) {
+            throw new Error('蓝球数量异常(' + result.blueBalls.length + '个)，请检查投注码');
+        }
+        for (let i = 0; i < result.redBalls.length; i++) {
+            var rv = parseInt(result.redBalls[i], 10);
+            if (!(rv >= 1 && rv <= 33)) {
+                throw new Error('红球号码越界(' + result.redBalls[i] + ')，请检查投注码');
+            }
+        }
+        for (let i = 0; i < result.blueBalls.length; i++) {
+            var bv = parseInt(result.blueBalls[i], 10);
+            if (!(bv >= 1 && bv <= 16)) {
+                throw new Error('蓝球号码越界(' + result.blueBalls[i] + ')，请检查投注码');
+            }
+        }
+
         return result;
     }
 
@@ -1146,8 +1188,10 @@
         console.log("提取的红球:", redNumbers);
         console.log("提取的蓝球:", blueNumbers);
 
-        // 防止OCR误识别导致组合爆炸：数量超过正常复式票范围时放弃此解析路径
-        if (redNumbers.length > 20 || blueNumbers.length > 16) {
+        // 防止OCR误识别导致组合爆炸：数量超过正常复式票范围时放弃此解析路径。
+        // 红球上限 18 与 MAX_COMBINATIONS=20000 对齐（C(19,6)=27132 必撞闸门，提前拦截）；
+        // 蓝球上限 16 为双色球全部取值，红×蓝总量闸门在 generateOCRSpecCombinations 里兜底。
+        if (redNumbers.length > 18 || blueNumbers.length > 16) {
             console.warn("红球/蓝球数量异常，放弃OCR复式解析:", redNumbers.length, blueNumbers.length);
             return null;
         }
@@ -1196,6 +1240,11 @@
         }
 
         // 为每个红球组合配对所有蓝球
+        // 总量闸门：红组合数 × 蓝球数，防止笛卡尔积爆炸（OCR误识别 18红×16蓝=29.7万组合可穿透单层闸门）
+        var estTotal = redCombinations.length * ocrSpec.blueBalls.length;
+        if (estTotal > MAX_COMBINATIONS) {
+            throw new Error('投注组合数过多(' + estTotal + ')，请检查识别结果是否正确');
+        }
         for (let i = 0; i < redCombinations.length; i++) {
             for (let j = 0; j < ocrSpec.blueBalls.length; j++) {
                 combinations.push({
@@ -1611,6 +1660,13 @@
         const t1 = window.performance.now();
         dataContainer.html(loadingHtml);
 
+        /* Compressor 由 CDN 加载，可能不存在；此前不在 try 内，抛错会让按钮永久灰死 */
+        if (typeof Compressor === 'undefined') {
+            dataContainer.html('<div class="alert alert-danger">图片压缩库（Compressor.js）加载失败，请检查网络后刷新重试。</div>');
+            $('#up-btn').removeAttr('disabled');
+            return;
+        }
+
         new Compressor(file, {
             quality: 0.9,
             maxWidth: 800,
@@ -1641,6 +1697,8 @@
             },
             error(err) {
                 console.error(err);
+                /* 压缩失败也要清掉加载态，否则按钮永久灰死、转圈永远不停 */
+                dataContainer.html('<div class="alert alert-danger">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
                 $('#up-btn').removeAttr('disabled');
             }
         });
@@ -1649,6 +1707,7 @@
     $('#input-img').change(function (e) {
         if (!this.files || !this.files[0]) return; // 用户取消选择时不处理
         handleImage(this.files[0]);
+        this.value = ''; // 立即重置，否则同一张图二次选择不触发 change
     });
 </script>
 

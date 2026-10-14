@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>日期时间工具</title>
 <meta name="theme-color" content="#f6f7f9" />
@@ -399,9 +400,9 @@
     const cn = s.match(/^(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?(?:\s*(\d{1,2})\s*[:时]\s*(\d{1,2})(?:\s*[:分]\s*(\d{1,2}))?(?:\.(\d{1,3}))?\s*秒?)?$/);
     if (cn) return { date: build(cn[1], cn[2], cn[3], cn[4], cn[5], cn[6], cn[7]), utc: false };
 
-    // 通用：YYYY-M-D [H:m[:s[.ms]]]
-    const m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,3}))?)?)?$/);
-    if (m) return { date: build(m[1], m[2], m[3], m[4], m[5], m[6], m[7]), utc: false };
+    // 通用：YYYY-M-D [H:m[:s[.ms]]]（分隔符须一致：用反向引用 \2 拒绝 2026-10/14 这类混合写法）
+    const m = s.match(/^(\d{4})([-/.])(\d{1,2})\2(\d{1,2})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,3}))?)?)?$/);
+    if (m) return { date: build(m[1], m[3], m[4], m[5], m[6], m[7], m[8]), utc: false };
 
     return null;
   }
