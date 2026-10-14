@@ -6,11 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>客户端信息查看</title>
 <meta name="theme-color" content="#f6f7f9" />
-<!-- 原来用的是 lf9-cdn-tos.bytecdntp.com 上的 jQuery 3.1.1，该地址已 404
+<!-- jQuery 已本地化到 vendor/jquery-3.7.1.min.js（本地优先）。
+     历史教训：原来用的是 lf9-cdn-tos.bytecdntp.com 上的 jQuery 3.1.1，该地址已 404
      （整页静默失效：$ 未定义 → ready 回调抛错 → 什么都不显示）。
-     换成 fastly.jsdelivr.net 的 3.7.1，并把 bootcdn 作为兜底 ——
-     任一 CDN 挂掉都不会再白屏。两个地址 ssq 页已在用。 -->
-<script src="https://fastly.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+     现在本地缺失时才回退 CDN：fastly.jsdelivr.net 优先，bootcdn 兜底 ——
+     两个方向都保住，任一环节挂掉都不会再白屏。 -->
+<script src="vendor/jquery-3.7.1.min.js"></script>
+<script>window.jQuery || document.write('<script src="https://fastly.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"><\/script>');</script>
 <script>window.jQuery || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"><\/script>');</script>
 <style>
   :root {

@@ -5,36 +5,21 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Calendar</title>
-    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js"></script>
+    <!-- 依赖全部本地化，见 vendor/（lunar-javascript 1.7.3 / jquery 3.7.1）。
+         本地优先，缺失或损坏时才回退 CDN（同样锁版本），避免任一 CDN 挂掉整页不可用。 -->
+    <script src="vendor/lunar-1.7.3.js"></script>
     <script>
-    /* lunar.js 兜底加载：首选 jsdelivr（锁定 1.7.3，不再走 gh master 未锁版本），
-       失败依次退 fastly.jsdelivr、bootcdn；全部失败时页面顶部给出原因。
-       此前单源 + gh master 未锁版本，任一变动整页农历功能全灭。 */
-    (function () {
-      var alts = [
-        "https://fastly.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js",
-        "https://cdn.bootcdn.net/ajax/libs/lunar-javascript/1.7.3/lunar.js"
-      ];
-      function failed() {
-        var tip = document.createElement("div");
-        tip.style.cssText = "margin:12px auto;max-width:720px;padding:10px 14px;border:1px solid #f0c36d;background:#fff8e6;color:#7a5b00;border-radius:6px;font-size:14px;";
-        tip.textContent = "农历计算库（lunar.js）加载失败：所有 CDN 均不可达，请检查网络后刷新重试。";
-        if (document.body) document.body.prepend(tip);
-        else document.addEventListener("DOMContentLoaded", function () { document.body.prepend(tip); });
-      }
-      function tryNext() {
-        if (window.Solar && window.Lunar) return;
-        if (!alts.length) { failed(); return; }
-        var s = document.createElement("script");
-        s.src = alts.shift();
-        s.onload = tryNext;
-        s.onerror = tryNext;
-        document.head.appendChild(s);
-      }
-      tryNext();
-    })();
+    /* lunar.js 兜底：本地优先，缺失/损坏时按序回退 jsdelivr → fastly → bootcdn（全部锁定 1.7.3，
+       不再走 gh master 未锁版本；此前单源 + 未锁版本，任一变动整页农历功能全灭）。
+       ★ 必须用 document.write 同步补 <script>：若改成异步 appendChild，
+         body 末尾的主脚本会在 Solar 就绪前执行 → ReferenceError: Solar is not defined（实测踩过）。 */
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script>window.Solar || document.write('<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js"><\/script>');</script>
+    <script>window.Solar || document.write('<script src="https://fastly.jsdelivr.net/npm/lunar-javascript@1.7.3/lunar.js"><\/script>');</script>
+    <script>window.Solar || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/lunar-javascript/1.7.3/lunar.js"><\/script>');</script>
+    <script src="vendor/jquery-3.7.1.min.js"></script>
+    <script>window.jQuery || document.write('<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"><\/script>');</script>
+    <script>window.jQuery || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js"><\/script>');</script>
     <style>
        :root {
             font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -348,6 +333,17 @@
 </head>
 
 <body>
+    <script>
+    /* 本地文件 + 三个 CDN 全挂时给出可见原因。
+       用 insertAdjacentHTML 而不是 document.write（后者在解析期会把内容写进 head）。
+       此时主脚本必然会在 Solar 上抛错，但至少用户能看到「为什么」而不是一片空白。 */
+    if (!(window.Solar && window.Lunar)) {
+        document.body.insertAdjacentHTML("afterbegin",
+            '<div style="margin:12px auto;max-width:720px;padding:10px 14px;border:1px solid #f0c36d;'
+            + 'background:#fff8e6;color:#7a5b00;border-radius:6px;font-size:14px;">'
+            + '农历计算库（lunar.js）加载失败：本地文件缺失且所有 CDN 均不可达，请检查网络后刷新重试。</div>');
+    }
+    </script>
     <div id="app">
         <div class="calendar">
             <div class="container">
