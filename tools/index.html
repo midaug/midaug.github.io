@@ -52,7 +52,11 @@ body::before{
     radial-gradient(520px 260px at 92% 8%, var(--glow-2), transparent 70%);
 }
 a{color:inherit;text-decoration:none}
-.shell{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:64px 22px 80px}
+/* 顶栏不设上内边距：上留白改由 .bar 自己的 padding-top 承担。
+   否则页顶时顶栏并不在窗口顶部，要往下滚过这段空白才吸顶 —— 顶栏先跟着页面走、
+   再突然钉住并弹出渐隐条，观感上是「卡一下」。留白搬进 sticky 元素内部后，
+   顶栏从首帧起就贴在 top:0，整个滚动过程不再移动。 */
+.shell{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:0 22px 80px}
 
 /* ---------- 顶栏（粘性：搜索框永远看得见）---------- */
 /* 列表不再是自己的滚动容器、改用窗口滚动条，搜索框就会跟着滚走；
@@ -61,16 +65,20 @@ a{color:inherit;text-decoration:none}
    ⚠️ body 上不能有 overflow:hidden，否则 sticky 失效（这里本来也没有）。 */
 .bar{
   position:sticky;top:0;z-index:5;
-  padding:10px 0 12px;
+  padding:18px 0 12px;
   background:var(--bg);
 }
-/* 吸顶后在下沿补一条渐隐：滚动中的内容淡出，而不是被硬切一刀。
-   只在真的吸顶时加（.stuck 由脚本按顶栏位置切换），页顶时加了会糊住面板上缘。 */
-.bar.stuck::after{
+/* 吸顶时在下沿补一条渐隐：滚动中的内容淡出，而不是被硬切一刀。
+   顶栏现在从首帧起就贴在窗口顶部，所以判据是「页面是否已经滚动」而不是「顶栏是否到位」。
+   渐隐条常驻在 DOM 里、只切 opacity：页面一滚就淡入，不会出现硬切的一帧；
+   页顶时保持透明，免得糊住面板上缘。 */
+.bar::after{
   content:"";position:absolute;left:0;right:0;top:100%;height:18px;
   pointer-events:none;
   background:linear-gradient(var(--bg), transparent);
+  opacity:0;transition:opacity .18s ease;
 }
+.bar.stuck::after{opacity:1}
 .bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px}
 .brand{display:flex;align-items:center;gap:9px}
 .mark{
@@ -227,13 +235,13 @@ kbd{
 .hints .sep{color:var(--border-2)}
 
 @media (max-width:600px){
-  .shell{padding:38px 14px 60px}
+  .shell{padding:0 14px 60px}
   .row{grid-template-columns:minmax(0,1fr) 28px;height:44px;padding:0 3px 0 8px}
   .row-hit{grid-template-columns:26px minmax(0,1fr) 14px;gap:10px}
   .row-desc{display:none}
   .row-path{display:none}
   .panel,.cmd{border-radius:12px}
-  .bar{padding:8px 0 10px}
+  .bar{padding:12px 0 10px}
   .bar-top{margin-bottom:10px}
 }
 /* 触屏下搜索框字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大，
@@ -486,9 +494,12 @@ var emptyEl = document.getElementById('empty');
 var barEl = document.querySelector('.bar');
 var active = 0;
 
-/* 顶栏吸顶时给它挂 .stuck（下沿渐隐条只在吸顶时出现） */
+/* 页面一旦滚动就给顶栏挂 .stuck（下沿渐隐条淡入）。
+   判据用 scrollY 而不是 bar.getBoundingClientRect().top —— 上留白搬进 .bar 之后，
+   顶栏从首帧起就贴在 top:0，bar.top 恒为 0，拿它当判据会一直为真、
+   页顶就把渐隐条压在面板上缘。 */
 function syncBar(){
-  barEl.classList.toggle('stuck', barEl.getBoundingClientRect().top <= 0);
+  barEl.classList.toggle('stuck', window.scrollY > 0);
 }
 
 function visibleRows(){
