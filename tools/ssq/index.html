@@ -1,188 +1,264 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="zh-CN">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>奕彩SSQ</title>
-    <!-- CSS only -->
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/css/bootstrap.min.css" rel="stylesheet"
-        async="async">
-    <style>
-        .bd-placeholder-img {
-            font-size: 1.125rem;
-            text-anchor: middle;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            user-select: none
-        }
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>奕彩 SSQ</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节换算」共用的一套配色（浅色 · 靛蓝）===== */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    /* 数值强调色，与 JSON 工具的语法高亮同一批 */
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
 
-        @media (min-width:576px) {
-            .row-cols-sm-2>* {
-                flex: 0 0 auto;
-                width: 100%
-            }
-        }
+    /* 双色球领域色：红球 / 蓝球。**只在这里定义**，其余一律引用，不要写死 */
+    --ball-red: #d1242f;
+    --ball-blue: #4f6bed;
 
-        @media (min-width:768px) {
-            .bd-placeholder-img-lg {
-                font-size: 3.5rem
-            }
+    /* 内容列最大宽度。整宽会让「识别结果」里的投注行只有约 300px 内容、
+       右侧空出上千像素，观感很差；收窄成居中窄列（参照 child-growth 的 .wrap）。 */
+    --wrap: 720px;
 
-            .row-cols-sm-2>* {
-                flex: 0 0 auto;
-                width: 50%
-            }
-        }
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    /* height（不是 min-height）：让 main 成为唯一滚动容器，
+       与其余工具页一致；否则文档整体滚动，$('main').scroll 触底加载永不触发 */
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { display: flex; flex-direction: column; }
 
-        @media (min-width:992px) {
-            .row-cols-md-3>* {
-                flex: 0 0 auto;
-                width: 33.3333333333%
-            }
-        }
+  /* ===== 顶栏 ===== */
+  /* 内容收窄成居中窄列（用户要求，参照 child-growth 的 .wrap）。
+     顶栏本身仍整宽（底边线要通到底），只把左右内边距撑到与内容列对齐。 */
+  header {
+    flex: none; position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap;
+    padding: 8px max(14px, calc((100% - var(--wrap)) / 2));
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  header .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
-        .card-text span {
-            margin-right: 5px;
-        }
+  /* ===== 控件 ===== */
+  button {
+    font: inherit; cursor: pointer; outline: 0;
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 6px 12px; min-height: 34px;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini { padding: 4px 10px; min-height: 28px; font-size: 11px; background: var(--panel-2); color: var(--text-2); border-color: var(--border); }
+  button.mini:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-        .ocr-ssq-item {
-            min-width: 285px
-        }
+  /* 主操作按钮。文案走属性选择器，JS 只需增删 disabled / init（零逻辑改动）：
+     init 规则写在 disabled 之后 → 两者同时在时显示「初始化中…」。 */
+  #up-btn::after { content: "图片识别"; }
+  #up-btn[disabled]::after { content: "正在处理…"; }
+  #up-btn[init]::after { content: "初始化中…"; }
+  #up-btn:disabled { box-shadow: none; }
 
-        .ocr-ssq-item h6 {
-            text-align: left
-        }
+  /* ===== 主体 ===== */
+  main {
+    flex: 1; min-height: 0; overflow: auto;
+    padding: 14px; display: grid; gap: 12px; align-content: start;
+    grid-template-columns: 1fr;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
 
-        .ocr-ssq-item .card-text span {
-            font-size: 12px;
-            padding: 1px;
-            font-family: monospace
-        }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+    /* 居中窄列：卡片不铺满整屏（见 :root 的 --wrap） */
+    width: 100%; max-width: var(--wrap); margin-inline: auto;
+  }
+  .card > h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 
-        .ocr-ssq-item .red {
-            color: black;
-            border: 1px solid red
-        }
+  /* ===== 号码球 =====
+     类名沿用原 JS 的 num/red/blue/redf/bluef/err（零逻辑改动），只重写样式。
+     redf/bluef 表示「该号命中开奖号」，必须写在 red/blue 之后才能覆盖颜色。 */
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 26px; padding: 0 5px; line-height: 1;
+    border-radius: 50%; border: 1px solid currentColor; background: transparent;
+    font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .num.red { color: var(--ball-red); }
+  .num.blue { color: var(--ball-blue); }
+  .num.redf { background: var(--ball-red); color: #fff; }
+  .num.bluef { background: var(--ball-blue); color: #fff; }
+  .num.err { background: var(--err); color: #fff; border-color: var(--err); }
 
-        .ocr-ssq-item .blue {
-            color: black;
-            border: 1px solid #0d6efd
-        }
+  .balls { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 
-        .ocr-ssq-item .err {
-            color: #fff;
-            background-color: black;
-            border: 1px solid black
-        }
+  /* ===== 历史开奖卡片网格 ===== */
+  .ssq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .ssq-item {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; min-width: 0;
+  }
+  .ssq-item .ssq-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .ssq-item .code { font-weight: 700; color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .ssq-item .draw { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+  .ssq-item .ssq-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--text-2); }
+  .ssq-item .ssq-foot b { color: var(--num); font-weight: 600; }
 
-        .ocr-ssq-item .redf {
-            color: #fff;
-            background-color: red;
-            border: 1px solid red
-        }
+  .more { margin-top: 12px; text-align: center; }
 
-        .ocr-ssq-item .bluef {
-            color: #fff;
-            background-color: #0d6efd;
-            border: 1px solid #0d6efd
-        }
+  /* ===== 识别 / 核对结果 =====
+     一行一注（不要改成多列铺排：号码条内容只有约 300px，
+     横排会把「号码」和「奖金」拉得过开，观感反而更差）。
+     整宽问题由「卡片收窄成居中窄列」解决，不靠拆列。 */
+  .result-bets { display: block; }
+  .result-head { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .result-head b { color: var(--accent); font-family: var(--mono); }
+  .bet {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    padding: 8px 0; border-top: 1px solid var(--border);
+  }
+  .bet:first-of-type { border-top: 0; }
+  .bet .zm { font-family: var(--mono); font-weight: 700; color: var(--text-2); }
+  .bet .prize { font-size: 12px; color: var(--text-2); }
+  .bet .reward { font-size: 12px; font-weight: 700; color: var(--ok); }
+  .bet-type { width: 100%; font-size: 12px; color: var(--text-2); }
+  .compound-details, .drag-details { margin-top: 4px; width: 100%; }
+  .combination { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 5px 10px; border-left: 2px solid var(--border-2); }
+  .combination .label { font-size: 11px; color: var(--text-3); }
+  .total { margin-top: 8px; font-size: 12px; color: var(--text-2); }
+  .total b { color: var(--ok); }
+  .fileinfo {
+    display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid var(--border); font-size: 11px; color: var(--text-3);
+  }
 
-        .ssq-item .red {
-            color: #fff;
-            background-color: red;
-            border-color: red;
-            border-radius: 25px;
-            padding: 5px;
-            font-family: monospace
-        }
+  /* ===== 空态：铺满卡片的拖拽上传区 =====
+     早期空态只是一行左对齐的短文案，宽屏下右侧会空出一大片、像没渲染完。
+     改成整宽的虚线投放区，内容居中，空间被「有意图地留白」占满。 */
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; min-height: 148px; padding: 18px;
+    border: 1.5px dashed var(--border-2); border-radius: 10px;
+    background: var(--panel-2); color: var(--text-2); text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .dropzone:hover, .dropzone:focus-visible, .dropzone.dragover {
+    border-color: var(--accent); background: var(--accent-soft); color: var(--accent); outline: none;
+  }
+  /* 子元素不接收指针事件：既让 click 直接落在投放区上，也避免拖拽时
+     dragleave 在子元素间反复触发导致高亮闪烁 */
+  .dropzone > * { pointer-events: none; }
+  .dropzone .dz-icon { width: 28px; height: 28px; }
+  .dropzone .dz-title { font-size: 13px; font-weight: 600; }
+  .dropzone .dz-sub { font-size: 11.5px; color: var(--text-3); }
+  .dropzone:hover .dz-sub, .dropzone.dragover .dz-sub { color: inherit; opacity: .75; }
 
-        .ssq-item .blue {
-            color: #fff;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-            border-radius: 25px;
-            padding: 5px;
-            font-family: monospace
-        }
+  /* ===== 提示条 ===== */
+  .alert { border-radius: 8px; padding: 10px 12px; font-size: 12.5px; border: 1px solid var(--border-2); background: var(--panel-2); color: var(--text-2); }
+  .alert.err { border-color: rgba(209,36,47,.35); background: rgba(209,36,47,.07); color: var(--err); }
+  .alert.warn { border-color: rgba(178,94,9,.35); background: rgba(178,94,9,.08); color: var(--num); }
+  .alert.ok { border-color: rgba(13,122,82,.35); background: rgba(13,122,82,.08); color: var(--ok); }
 
-        .ssq-item {
-            min-width: 300px
-        }
+  /* ===== 加载指示（替代原来的 loading.gif，去掉 gh 浮动 CDN 依赖）===== */
+  .spinner {
+    width: 26px; height: 26px; margin: 20px auto;
+    border: 3px solid var(--surface-2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
 
-        .ssq-item .shadow-sm {
-            min-width: 285px
-        }
-
-        .upload-box1 {
-            min-width: 285px;
-            width: 100%;
-            height: 50px;
-            border: 1px dashed;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-size='18' fill='%236699ff' text-anchor='middle' dominant-baseline='middle'%3E图片识别%3C/text%3E%3C/svg%3E") no-repeat center
-        }
-
-        .upload-box1[disabled] {
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-size='18' fill='%23A9A9A9' text-anchor='middle' dominant-baseline='middle'%3E正在处理%3C/text%3E%3C/svg%3E") no-repeat center
-        }
-
-        .upload-box1[init] {
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-size='18' fill='%23A9A9A9' text-anchor='middle' dominant-baseline='middle'%3E初始化中%3C/text%3E%3C/svg%3E") no-repeat center
-        }
-
-        #dataBody .card-body {
-            padding: 2px
-        }
-
-        #dataBody .shadow-sm {
-            box-shadow: none !important;
-            border: none
-        }
-
-        .compound-details,
-        .drag-details {
-            margin-left: 10px;
-            margin-top: 5px;
-        }
-
-        .combination {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-left: 2px solid #eee;
-        }
-
-        .combination span {
-            margin-right: 3px;
-        }
-    </style>
+  /* ===== 窄屏 ===== */
+  @media (max-width: 600px) {
+    header { padding: 8px 10px; gap: 6px 8px; }
+    .brand { font-size: 14px; }
+    .stat { font-size: 11px; }
+    header button { min-height: 38px; padding: 8px 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    .ssq-grid { gap: 8px; }
+    .ssq-item { padding: 9px 10px; }
+    .dropzone { min-height: 116px; padding: 14px; gap: 4px; }
+  }
+</style>
 </head>
 
 <body>
-    <main>
-        <section class="py-4 text-center container">
-            <div class="row py-lg-2">
-                <div class="col-lg-6 col-md-8 mx-auto">
-                    <div class="mb-3"><input style="display: none;" class="form-control" type="file" accept="image/*"
-                            id="input-img" /><button id="up-btn" class="upload-box1" disabled init></button></div>
-                    <div id="dataBody" class="ocr-ssq-item"></div>
-                </div>
-            </div>
-        </section>
-        <div class="album py-1">
-            <div class="container">
-                <h5 style="text-align: center">历史开奖信息</h5>
-                <h6 style="text-align: center" id="data-update-time"></h6>
-                <div id="ssq-el" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3"></div>
-            </div>
-        </div>
-    </main>
 
-</body>
+<header>
+  <div class="brand">奕彩<span>SSQ</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="data-update-time">数据加载中…</span>
+  <span class="right">
+    <button class="primary" id="up-btn" disabled init aria-label="上传投注票截图识别号码"></button>
+    <input type="file" id="input-img" accept="image/*" hidden />
+  </span>
+</header>
 
-<!-- JavaScript Bundle with Popper -->
-<script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.2.3/js/bootstrap.bundle.min.js"
-    async="async"></script>
+<main>
+  <section class="card">
+    <h2>识别结果 <span class="hint">上传投注票截图后，自动识别期号与号码并核对中奖情况</span></h2>
+    <div id="dataBody"></div>
+  </section>
+
+  <section class="card">
+    <h2>历史开奖信息
+      <span class="hint" id="ssq-total"></span>
+    </h2>
+    <div id="ssq-el" class="ssq-grid"></div>
+    <div class="more"><button class="mini" id="btnMore">加载更多</button></div>
+  </section>
+</main>
+
 <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js'></script>
 <script src='https://cdn.bootcdn.net/ajax/libs/compressorjs/1.2.1/compressor.min.js' async="async"></script>
@@ -195,31 +271,46 @@
     var pageSize = 5;
     var lang = 'chi_sim+eng';
     var dataContainer = $('#dataBody');
-    var loadingHtml = '<img src="https://cdn.jsdelivr.net/gh/midaug/files/static/images/loading.gif" />';
+    /* 加载指示用内联 CSS spinner，不再引 gh/<repo> 浮动地址上的 loading.gif
+       （MEMORY.md：CDN 资源一律锁版本，禁 gh/master 浮动路径） */
+    var loadingHtml = '<div class="spinner" role="status" aria-label="加载中"></div>';
+    /* 空态 = 铺满卡片的投放区（可点击、可拖放）。不要退回成一行短文案：
+       整宽卡片里左对齐的一行字会让右侧空一大片。 */
+    var idleHtml = '<div class="dropzone" id="dropzone" role="button" tabindex="0"'
+        + ' aria-label="上传投注票截图">'
+        + '<svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+        + ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>'
+        + '</svg>'
+        + '<div class="dz-title">上传投注票截图</div>'
+        + '<div class="dz-sub">点击选择图片，或把截图拖到这里</div>'
+        + '</div>';
 
     function renderHistoryList(data, lastPage) {
         var container = $('#ssq-el');
         for (let i = 0; i < data.length; i++) {
             var item = data[i];
-            var html = '<div class="col ssq-item"><div class="card shadow-sm"><div class="card-body">';
-            html += '<h6 class="card-subtitle mb-2 text-muted"><span>' + item.code + '</span> 期</h6>';
-            html += '<h6 class="card-text">';
+            var html = '<article class="ssq-item">';
+            html += '<div class="ssq-head">';
+            html += '<span class="code">' + esc(item.code) + '</span>';
+            html += '<span class="draw">' + esc(item.drawDate) + '</span>';
+            html += '</div>';
+            html += '<div class="balls">';
 
             // 渲染红球
             for (var j = 1; j <= 6; j++) {
                 var className = item['red' + j + 'f'] ? 'num red redf' : 'num red';
-                html += '<span class="' + className + '">' + item['red' + j] + '</span>';
+                html += '<span class="' + className + '">' + esc(item['red' + j]) + '</span>';
             }
-            html += '</span>'
             // 渲染蓝球
             var blueClass = item.blue1f ? 'num blue bluef' : 'num blue';
-            html += '<span class="' + blueClass + '">' + item.blue1 + '</span>';
-            html += '</h6>';
-            html += '<div class="d-flex justify-content-between align-items-center">';
-            html += '<small class="text-muted">开奖日期：<span>' + item.drawDate + '</span></small>';
-            html += '<small class="text-muted">奖金：<span>' + item.bonus + '</span></small>';
+            html += '<span class="' + blueClass + '">' + esc(item.blue1) + '</span>';
             html += '</div>';
-            html += '</div></div></div>';
+            html += '<div class="ssq-foot">';
+            html += '<span>奖金 <b>' + esc(item.bonus) + '</b></span>';
+            html += '<span>第 ' + (lastPage - data.length + i + 1) + ' 期</span>';
+            html += '</div>';
+            html += '</article>';
             container.append(html);
         }
         currentPage = lastPage;
@@ -244,10 +335,20 @@
     }
 
     function loadMore(page) {
+        if (currentPage >= dataList.length) { syncMoreBtn(); return; }
         var start = currentPage;
         var end = Math.min(currentPage + page, dataList.length);
         var slice = dataList.slice(start, end);
         renderHistoryList(slice, end);
+        syncMoreBtn();
+    }
+
+    /* 「加载更多」按钮与「共 N 期」提示的同步（滚动触底与点按钮共用同一条路径） */
+    function syncMoreBtn() {
+        var more = document.getElementById('btnMore');
+        if (more) more.disabled = currentPage >= dataList.length;
+        var total = document.getElementById('ssq-total');
+        if (total) total.textContent = '共 ' + dataList.length + ' 期 · 已显示 ' + currentPage + ' 期';
     }
 
     // 全局Tesseract worker变量
@@ -279,8 +380,9 @@
         if (typeof window.ssqData === 'undefined') {
             if (++initAppRetries > 100) { // 最多等待10秒
                 console.error('开奖数据加载超时');
-                dataContainer.html('<div class="alert alert-warning">开奖数据加载失败，请刷新重试</div>');
+                dataContainer.html('<div class="alert warn">开奖数据加载失败，请刷新重试</div>');
                 $('#up-btn').removeAttr('disabled');
+                $('#up-btn').removeAttr('init');   /* 一并摘掉 init，否则按钮显示「初始化中…」 */
                 return;
             }
             setTimeout(initApp, 100); // 如果还没加载完成，等待100ms后再次检查
@@ -291,7 +393,7 @@
 
         // 处理从ssq.js获取的数据
         var lines = window.ssqData.split('\n');
-        $('#data-update-time').html(formatDate(parseInt(lines[0].split(',')[3])));
+        $('#data-update-time').text('更新于 ' + formatDate(parseInt(lines[0].split(',')[3])));
 
         for (let i = 1; i < lines.length; i++) {
             var fields = lines[i].split(',');
@@ -339,34 +441,43 @@
 
             $('#up-btn').removeAttr('disabled');
             $('#up-btn').removeAttr('init');
-            dataContainer.html('');
+            dataContainer.html(idleHtml);
         } catch (error) {
             console.error('初始化OCR失败:', error);
             /* CDN 加载失败/网络异常时必须给可见反馈：此前只打 console，
                按钮永远灰着「初始化中」，页面看起来像死机。
-               ocrWorker 失败时不会缓存，刷新或重进即可重试。 */
+               注意用 warn 而不是 err —— 用户此刻还没做任何操作，不该看到报错；
+               ocrWorker 失败时不会缓存，上传时会自动重试。 */
             $('#up-btn').removeAttr('disabled');
             $('#up-btn').removeAttr('init');
-            dataContainer.html('<div class="alert alert-danger">识别引擎初始化失败：'
+            dataContainer.html(idleHtml
+                + '<div class="alert warn">识别引擎预热失败（'
                 + esc(error && error.message ? error.message : String(error))
-                + '。请检查网络后刷新页面重试。</div>');
+                + '），上传图片时会自动重试；若持续失败请检查网络后刷新页面。</div>');
         }
     }
 
     $(document).ready(function () {
         initApp();
 
+        /* 滚动容器是 main（顶栏 sticky、main 内部滚动），不是 window ——
+           监听 window 的话触底事件永远不触发。 */
         var scrollPending = false;
-        $(window).scroll(function () {
+        $('main').scroll(function () {
             if (scrollPending) return;
             scrollPending = true;
             setTimeout(function () {
                 scrollPending = false;
-                if ($(document).scrollTop() + $(window).height() >= $(document).height() - 50) {
+                var el = document.querySelector('main');
+                if (!el) return;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
                     loadMore(pageSize);
                 }
             }, 200);
         });
+
+        /* 显式「加载更多」按钮：比纯无限滚动更可预期，手机上也更好点 */
+        $('#btnMore').click(function () { loadMore(pageSize); });
     });
 
     function validateNumber(num, min, max) {
@@ -403,16 +514,21 @@
     var MAX_COMBINATIONS = 20000;
 
     function renderResult(ssqData, fileInfo) {
-        var html = '<div class="card shadow-sm"><div class="card-body">';
-        html += '<h6 class="card-subtitle mb-2 text-muted"><span>' + ssqData.code + '</span>期 开奖日期: ' + ssqData.drawDate + '</h6>';
+        /* 兜底：fileInfo 缺失时不让整个渲染抛错——否则下面的「解除按钮禁用」执行不到，
+           按钮会永久灰死、用户无法重试 */
+        fileInfo = fileInfo || {};
+        var html = '<div class="result-head"><b>' + esc(ssqData.code) + '</b> 期 · 开奖日期 ' + esc(ssqData.drawDate) + '</div>';
+        /* 每一注之间是「并列」关系，宽屏下横向多列铺排（见 .result-bets）。
+           不要改成一条条整宽的行：单行内容只占约 300px，右侧会空出一大片。 */
+        html += '<div class="result-bets">';
 
         for (var i in ssqData.noteDtos) {
             var bet = ssqData.noteDtos[i];
 
             // 显示投注类型
             if (bet.betType === 'single') {
-                html += '<h6 class="card-text">';
-                html += '<span>' + esc(bet.details[0].zm) + '</span>';
+                html += '<div class="bet">';
+                html += '<span class="zm">' + esc(bet.details[0].zm) + '</span>';
 
                 // 渲染红球
                 for (var j = 1; j <= 6; j++) {
@@ -425,12 +541,15 @@
                 var blueClass = validateNumber(bet.details[0].blue1, 1, 16) ?
                     (bet.details[0].blue1f ? 'num blue bluef' : 'num blue') : 'num err';
                 html += '<span class="' + blueClass + '">' + esc(bet.details[0].blue1) + '</span>';
-                html += '<span>' + bet.bonusText + '</span>';
-                html += '<span>' + bet.rewardValue + '</span>';
-                html += '</h6>';
-            } else if (bet.betType === 'compound') {
-                html += '<h6 class="card-text">复式投注</h6>';
-                html += '<div class="compound-details">';
+                html += '<span class="prize">' + esc(bet.bonusText) + '</span>';
+                html += '<span class="reward">' + esc(bet.rewardValue) + '</span>';
+                html += '</div>';
+            } else if (bet.betType === 'compound' || bet.betType === 'drag') {
+                /* 复式与胆拖的展示逻辑逐字相同，只有标题与容器类名不同 —— 合并成一条分支 */
+                var isDrag = bet.betType === 'drag';
+                html += '<div class="bet">';
+                html += '<div class="bet-type">' + (isDrag ? '胆拖投注' : '复式投注') + '</div>';
+                html += '<div class="' + (isDrag ? 'drag-details' : 'compound-details') + '">';
 
                 // 显示中奖详情
                 var hasPrize = false;
@@ -447,7 +566,7 @@
                     if (redMatchCount > 0 || detail.blue1f) {
                         hasPrize = true;
                         html += '<div class="combination">';
-                        html += '<span>组合:</span>';
+                        html += '<span class="label">组合</span>';
 
                         // 渲染红球
                         for (var m = 0; m < detail.redBalls.length; m++) {
@@ -458,71 +577,33 @@
                         // 渲染蓝球
                         var blueClass = detail.blue1f ? 'num blue bluef' : 'num blue';
                         html += '<span class="' + blueClass + '">' + esc(detail.blueBall) + '</span>';
-                        html += '<span>' + detail.bonusText + '</span>';
-                        html += '<span>' + detail.rewardValue + '</span>';
+                        html += '<span class="prize">' + esc(detail.bonusText) + '</span>';
+                        html += '<span class="reward">' + esc(detail.rewardValue) + '</span>';
                         html += '</div>';
                     }
                 }
 
                 if (!hasPrize) {
-                    html += '<div>未中奖</div>';
+                    html += '<div class="total">未中奖</div>';
                 } else {
-                    html += '<div>总奖金: ' + bet.rewardValue + '</div>';
+                    html += '<div class="total">总奖金 <b>' + esc(bet.rewardValue) + '</b></div>';
                 }
 
-                html += '</div>';
-            } else if (bet.betType === 'drag') {
-                html += '<h6 class="card-text">胆拖投注</h6>';
-                html += '<div class="drag-details">';
-
-                // 显示中奖详情
-                var hasPrize = false;
-                for (var k = 0; k < bet.details.length; k++) {
-                    var detail = bet.details[k];
-                    var redMatchCount = 0;
-                    for (var l = 1; l <= 6; l++) {
-                        if (detail['red' + l + 'f']) {
-                            redMatchCount++;
-                        }
-                    }
-
-                    // 只显示中奖的组合
-                    if (redMatchCount > 0 || detail.blue1f) {
-                        hasPrize = true;
-                        html += '<div class="combination">';
-                        html += '<span>组合:</span>';
-
-                        // 渲染红球
-                        for (var m = 0; m < detail.redBalls.length; m++) {
-                            var className = detail['red' + (m + 1) + 'f'] ? 'num red redf' : 'num red';
-                            html += '<span class="' + className + '">' + esc(detail.redBalls[m]) + '</span>';
-                        }
-
-                        // 渲染蓝球
-                        var blueClass = detail.blue1f ? 'num blue bluef' : 'num blue';
-                        html += '<span class="' + blueClass + '">' + esc(detail.blueBall) + '</span>';
-                        html += '<span>' + detail.bonusText + '</span>';
-                        html += '<span>' + detail.rewardValue + '</span>';
-                        html += '</div>';
-                    }
-                }
-
-                if (!hasPrize) {
-                    html += '<div>未中奖</div>';
-                } else {
-                    html += '<div>总奖金: ' + bet.rewardValue + '</div>';
-                }
-
-                html += '</div>';
+                html += '</div></div>';
             }
         }
 
-        html += '<h6 class="card-subtitle mb-2 text-muted" style="font-size: 0.75rem; margin-top: 1rem;">压缩耗时: ' + fileInfo.compressionTime + '</h6>';
-        html += '<h6 class="card-subtitle mb-2 text-muted" style="font-size: 0.75rem;">压缩前大小: ' + fileInfo.originalSize + '</h6>';
-        html += '<h6 class="card-subtitle mb-2 text-muted" style="font-size: 0.75rem;">压缩后大小: ' + fileInfo.compressedSize + '</h6>';
-        html += '<h6 class="card-subtitle mb-2 text-muted" style="font-size: 0.75rem;">压缩比: ' + fileInfo.compressionRatio + '</h6>';
-        html += '<h6 class="card-subtitle mb-2 text-muted" style="font-size: 0.75rem;">识别耗时: ' + fileInfo.recognitionTime + '</h6>';
-        html += '</div></div>';
+        html += '</div>';   /* /.result-bets */
+
+        /* 缺值的字段显示「—」，避免出现 "undefined" 字样 */
+        var fv = function (v) { return (v === undefined || v === null || v === '') ? '—' : v; };
+        html += '<div class="fileinfo">';
+        html += '<span>压缩耗时 ' + esc(fv(fileInfo.compressionTime)) + '</span>';
+        html += '<span>压缩前 ' + esc(fv(fileInfo.originalSize)) + '</span>';
+        html += '<span>压缩后 ' + esc(fv(fileInfo.compressedSize)) + '</span>';
+        html += '<span>压缩比 ' + esc(fv(fileInfo.compressionRatio)) + '</span>';
+        html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
+        html += '</div>';
 
         dataContainer.html(html);
         $('#up-btn').removeAttr('disabled');
@@ -1349,7 +1430,7 @@
         var code = parseCode(text);
 
         if (!code) {
-            dataContainer.html('<div class="alert alert-danger">无法识别期号: ' + esc(text) + '</div>');
+            dataContainer.html('<div class="alert err">无法识别期号: ' + esc(text) + '</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1357,7 +1438,7 @@
         var ssqData = dataMap[code];
 
         if (!ssqData) {
-            dataContainer.html('<div class="alert alert-danger">未找到期号 ' + esc(code) + ' 的开奖数据</div>');
+            dataContainer.html('<div class="alert err">未找到期号 ' + esc(code) + ' 的开奖数据</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1662,7 +1743,7 @@
 
         /* Compressor 由 CDN 加载，可能不存在；此前不在 try 内，抛错会让按钮永久灰死 */
         if (typeof Compressor === 'undefined') {
-            dataContainer.html('<div class="alert alert-danger">图片压缩库（Compressor.js）加载失败，请检查网络后刷新重试。</div>');
+            dataContainer.html('<div class="alert err">图片压缩库（Compressor.js）加载失败，请检查网络后刷新重试。</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1691,14 +1772,14 @@
                     processOCRResult(result.data.text, fileInfo);
                 } catch (error) {
                     console.error('OCR识别失败:', error);
-                    dataContainer.html('<div class="alert alert-danger">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
+                    dataContainer.html('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
                     $('#up-btn').removeAttr('disabled');
                 }
             },
             error(err) {
                 console.error(err);
                 /* 压缩失败也要清掉加载态，否则按钮永久灰死、转圈永远不停 */
-                dataContainer.html('<div class="alert alert-danger">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
+                dataContainer.html('<div class="alert err">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
                 $('#up-btn').removeAttr('disabled');
             }
         });
@@ -1709,6 +1790,33 @@
         handleImage(this.files[0]);
         this.value = ''; // 立即重置，否则同一张图二次选择不触发 change
     });
+
+    /* ===== 投放区（#dropzone 由 idleHtml 动态生成，故用委托绑定）===== */
+    $(document)
+        .on('click', '#dropzone', function () {
+            $('#input-img').click();
+        })
+        .on('keydown', '#dropzone', function (e) {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                $('#input-img').click();
+            }
+        })
+        .on('dragenter dragover', '#dropzone', function (e) {
+            e.preventDefault();
+            $(this).addClass('dragover');
+        })
+        .on('dragleave drop', '#dropzone', function (e) {
+            e.preventDefault();
+            $(this).removeClass('dragover');
+        })
+        .on('drop', '#dropzone', function (e) {
+            var dt = e.originalEvent && e.originalEvent.dataTransfer;
+            if (dt && dt.files && dt.files[0]) handleImage(dt.files[0]);
+        });
+
+    /* 拖到投放区以外时阻止浏览器直接打开图片（否则整页被替换成那张图） */
+    $(document).on('dragover drop', function (e) { e.preventDefault(); });
 </script>
 
 </html>
