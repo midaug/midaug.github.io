@@ -39,11 +39,12 @@
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;height:100%}
 body{
   background:var(--bg);color:var(--text);
   font-family:var(--font);font-size:14px;line-height:1.5;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  display:flex;flex-direction:column;
 }
 body::before{
   content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
@@ -52,26 +53,42 @@ body::before{
     radial-gradient(520px 260px at 92% 8%, var(--glow-2), transparent 70%);
 }
 a{color:inherit;text-decoration:none}
-/* 顶栏不设上内边距：上留白改由 .bar 自己的 padding-top 承担。
-   否则页顶时顶栏并不在窗口顶部，要往下滚过这段空白才吸顶 —— 顶栏先跟着页面走、
-   再突然钉住并弹出渐隐条，观感上是「卡一下」。留白搬进 sticky 元素内部后，
-   顶栏从首帧起就贴在 top:0，整个滚动过程不再移动。 */
-.shell{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:0 22px 80px}
 
-/* ---------- 顶栏（粘性：搜索框永远看得见）---------- */
-/* 列表不再是自己的滚动容器、改用窗口滚动条，搜索框就会跟着滚走；
-   把品牌行 + 搜索框放进 sticky 顶栏，滚列表时它们停在窗口顶部。
+/* ============ 整页骨架（与其余 19 个工具页同一套）============
+   窗口自己从不滚动：body 是定高 flex 列，顶栏 flex:none，只有 main 内部滚。
+   顶栏因此落在**滚动容器外面** —— 滚到顶/底的惯性回弹（macOS 橡皮筋）平移的是
+   滚动内容，带不动它，顶栏一像素都不会动。
+   ⚠️ 别改回 position:sticky：sticky 元素本身属于滚动内容，回弹时会被一起平移，
+   观感就是「划到顶点和底端的时候 header 动一下」（用户因此让照工具页重做）。 */
+.shell{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column}
+/* 内容列：顶栏与滚动正文共用同一条 760px 轴（box-sizing:border-box，故实宽 716px） */
+.in{max-width:760px;margin:0 auto;padding:0 22px}
+
+/* ---------- 正文区：全站唯一会滚的容器 ---------- */
+/* 滚动条样式与其余工具页逐字一致（10px、3px 实色描边做出「细轨」效果）。 */
+main{
+  flex:1;min-height:0;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--scrollbar) transparent;
+}
+main::-webkit-scrollbar{width:10px;height:10px}
+main::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:10px;border:3px solid var(--bg)}
+main::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
+main::-webkit-scrollbar-track{background:transparent}
+main>.in{padding-bottom:80px}
+
+/* ---------- 顶栏（不滚：搜索框永远看得见）---------- */
+/* 品牌行 + 搜索框放在滚动容器外面的一行里，滚列表时停在窗口顶部。
    顶栏底色用 --bg 实色：滚动中的行要完全被盖住，不能透出来。
-   ⚠️ body 上不能有 overflow:hidden，否则 sticky 失效（这里本来也没有）。 */
+   position:relative + z-index 是为了让下面那条渐隐条盖住面板里的行
+   （`.row` 是 position:relative，不这样会被行压住）。 */
 .bar{
-  position:sticky;top:0;z-index:5;
+  position:relative;z-index:5;flex:none;
   padding:18px 0 12px;
   background:var(--bg);
 }
 /* 吸顶时在下沿补一条渐隐：滚动中的内容淡出，而不是被硬切一刀。
-   顶栏现在从首帧起就贴在窗口顶部，所以判据是「页面是否已经滚动」而不是「顶栏是否到位」。
-   渐隐条常驻在 DOM 里、只切 opacity：页面一滚就淡入，不会出现硬切的一帧；
-   页顶时保持透明，免得糊住面板上缘。 */
+   判据是「正文区是否已经滚动」，渐隐条常驻 DOM、只切 opacity：
+   一滚就淡入，不会出现硬切的一帧；滚回顶部时保持透明，免得糊住面板上缘。 */
 .bar::after{
   content:"";position:absolute;left:0;right:0;top:100%;height:18px;
   pointer-events:none;
@@ -235,7 +252,8 @@ kbd{
 .hints .sep{color:var(--border-2)}
 
 @media (max-width:600px){
-  .shell{padding:0 14px 60px}
+  .in{padding:0 14px}
+  main>.in{padding-bottom:60px}
   .row{grid-template-columns:minmax(0,1fr) 28px;height:44px;padding:0 3px 0 8px}
   .row-hit{grid-template-columns:26px minmax(0,1fr) 14px;gap:10px}
   .row-desc{display:none}
@@ -245,7 +263,7 @@ kbd{
   .bar-top{margin-bottom:10px}
 }
 /* 触屏下搜索框字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大，
-   而搜索框现在是粘性的，被放大会很显眼（全站约定，见 MEMORY.md 窄屏第 3 条）。
+   而搜索框固定在顶栏、被放大会很显眼（全站约定，见 MEMORY.md 窄屏第 3 条）。
    按 `pointer:coarse` 判而不只看宽度 —— 平板竖屏宽度够但同样是触屏。 */
 @media (pointer:coarse),(max-width:600px){
   #q{font-size:16px}
@@ -255,48 +273,57 @@ kbd{
 <body>
 <div class="shell">
 
-  <!-- 品牌 + 搜索框放在 sticky 顶栏里：列表改整页滚动后，搜索框要跟着页面停在顶上 -->
+  <!-- 顶栏在滚动容器之外（与其余工具页同一骨架）：品牌 + 搜索框永远停在窗口顶部 -->
   <header class="bar">
-    <div class="bar-top">
-      <div class="brand">
-        <span class="mark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
-        </span>
-        <h1>工具箱</h1>
+    <div class="in">
+      <div class="bar-top">
+        <div class="brand">
+          <span class="mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          </span>
+          <h1>工具箱</h1>
+        </div>
+        <div class="meta"><span id="count">0</span> 个工具</div>
       </div>
-      <div class="meta"><span id="count">0</span> 个工具</div>
-    </div>
 
-    <div class="cmd">
-      <span class="ico">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </span>
-      <input id="q" type="search" placeholder="搜索工具…" autocomplete="off" spellcheck="false" autofocus>
-      <kbd id="kbd-hint">⌘K</kbd>
+      <div class="cmd">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </span>
+        <input id="q" type="search" placeholder="搜索工具…" autocomplete="off" spellcheck="false" autofocus>
+        <kbd id="kbd-hint">⌘K</kbd>
+      </div>
     </div>
   </header>
 
-  <div class="panel">
-    <div class="list" id="list"></div>
+  <!-- 全站唯一会滚的容器：列表与快捷键提示都在这里滚，顶栏不受影响 -->
+  <main id="main">
+    <div class="in">
 
-    <div class="empty" id="empty">
-      <div class="ei">
-        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <div class="panel">
+        <div class="list" id="list"></div>
+
+        <div class="empty" id="empty">
+          <div class="ei">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          </div>
+          <div class="et">没有找到匹配的工具</div>
+          <div class="es">换个关键词，或按 esc 清空</div>
+        </div>
       </div>
-      <div class="et">没有找到匹配的工具</div>
-      <div class="es">换个关键词，或按 esc 清空</div>
-    </div>
-  </div>
 
-  <div class="hints">
-    <div class="keys">
-      <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
-      <span><kbd>↵</kbd> 打开</span>
-      <span><kbd>esc</kbd> 清空</span>
-      <span class="pin-hint"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 3.7 2.6 5.3 5.8.84-4.2 4.09 1 5.77L12 16.97 6.8 19.7l1-5.77-4.2-4.09 5.8-.84z"/></svg> 点星标置顶</span>
+      <div class="hints">
+        <div class="keys">
+          <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+          <span><kbd>↵</kbd> 打开</span>
+          <span><kbd>esc</kbd> 清空</span>
+          <span class="pin-hint"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="m12 3.7 2.6 5.3 5.8.84-4.2 4.09 1 5.77L12 16.97 6.8 19.7l1-5.77-4.2-4.09 5.8-.84z"/></svg> 点星标置顶</span>
+        </div>
+        <div>未挂菜单 · 仅凭链接访问</div>
+      </div>
+
     </div>
-    <div>未挂菜单 · 仅凭链接访问</div>
-  </div>
+  </main>
 
 </div>
 
@@ -492,14 +519,13 @@ var q = document.getElementById('q');
 var listEl = document.getElementById('list');
 var emptyEl = document.getElementById('empty');
 var barEl = document.querySelector('.bar');
+var mainEl = document.getElementById('main');
 var active = 0;
 
-/* 页面一旦滚动就给顶栏挂 .stuck（下沿渐隐条淡入）。
-   判据用 scrollY 而不是 bar.getBoundingClientRect().top —— 上留白搬进 .bar 之后，
-   顶栏从首帧起就贴在 top:0，bar.top 恒为 0，拿它当判据会一直为真、
-   页顶就把渐隐条压在面板上缘。 */
+/* 正文区一旦滚动就给顶栏挂 .stuck（下沿渐隐条淡入）。
+   判据取 main.scrollTop 而不是顶栏位置 —— 顶栏现在压根不参与滚动，位置恒定。 */
 function syncBar(){
-  barEl.classList.toggle('stuck', window.scrollY > 0);
+  barEl.classList.toggle('stuck', mainEl.scrollTop > 0);
 }
 
 function visibleRows(){
@@ -508,17 +534,17 @@ function visibleRows(){
   });
 }
 
-/* 列表没有自己的滚动容器了，把选中行限进视野要靠窗口滚动。
-   （原来是改 listEl.scrollTop —— 现在 listEl 不滚，改了没有任何效果。）
-   上边界要取顶栏的实际底边：顶栏是 sticky 的，行滚到窗口顶部会藏在它后面。 */
+/* 把选中行限进视野：滚的是 main（它是全站唯一会滚的容器），不是窗口。
+   上边界取顶栏实际底边（行滚上去会藏在顶栏后面），下边界取 main 的底边。
+   （曾经改过 mainEl.scrollTop —— 那时 main 还不是滚动容器，改了没有任何效果。） */
 function keepInView(el, isFirst){
-  /* 第一行的正上方就是搜索框，回到第一行时顺势滚到页顶，把整个顶栏露出 */
-  if(isFirst){ window.scrollTo(0, 0); return; }
+  /* 第一行的正上方就是搜索框，回到第一行时顺势滚到顶，把整个面板顶部露出 */
+  if(isFirst){ mainEl.scrollTop = 0; return; }
   var r = el.getBoundingClientRect();
   var top = barEl.getBoundingClientRect().bottom + 8;
-  var vh = window.innerHeight, pad = 12;
-  if(r.top < top) window.scrollBy(0, r.top - top);
-  else if(r.bottom > vh - pad) window.scrollBy(0, r.bottom - (vh - pad));
+  var bottom = mainEl.getBoundingClientRect().bottom - 12;
+  if(r.top < top) mainEl.scrollBy(0, r.top - top);
+  else if(r.bottom > bottom) mainEl.scrollBy(0, r.bottom - bottom);
 }
 
 /* noScroll：鼠标划过时只换高亮、不挪页面 —— 悬停本身说明那一行已经看得见，
@@ -557,12 +583,12 @@ function togglePin(path){
   if(i > -1) pins.splice(i, 1); else pins.unshift(path);   /* 最新置顶排最前，点了立刻在顶上看到 */
   savePins();
 
-  /* 重建 DOM 会让文档高度变化、把窗口滚动位置带偏，先存后还，
+  /* 重建 DOM 会让内容高度变化、把 main 的滚动位置带偏，先存后还，
      这样在列表底部点星标时视野不会跳。 */
-  var keepScroll = window.scrollY;
+  var keepScroll = mainEl.scrollTop;
   render();
   filter();
-  window.scrollTo(0, keepScroll);
+  mainEl.scrollTop = keepScroll;
 
   /* DOM 重建会丢焦点，把它还给同一个星标，键盘用户不至于迷路 */
   var btn = null;
@@ -611,7 +637,8 @@ listEl.addEventListener('mousemove', function(e){
 });
 
 document.getElementById('kbd-hint').addEventListener('click', function(){ q.focus(); });
-window.addEventListener('scroll', syncBar, { passive:true });
+/* 滚的是 main，所以监听它也挂在 main 上（窗口自己不会滚，监听 window 收不到） */
+mainEl.addEventListener('scroll', syncBar, { passive:true });
 window.addEventListener('resize', syncBar);
 
 /* 快捷键标签按平台显示 */
