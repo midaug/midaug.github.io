@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>数据格式互转</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+  code { font-family: var(--mono); }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input, textarea {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input / textarea —— 它们要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  textarea { cursor: text; resize: vertical; width: 100%; font: 12px/1.6 var(--mono); }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  /* ★ 内容型页面收窄，不要吃满 1440px */
+  .grid {
+    max-width: 1140px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row:last-child { margin-bottom: 0; }
+  .row > label.k { width: 72px; color: var(--text-2); flex: none; }
+
+  .out {
+    margin: 0; padding: 10px 12px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px;
+    font: 12px/1.6 var(--mono); white-space: pre-wrap; word-break: break-all;
+    min-height: 180px; max-height: 46vh; overflow: auto; color: var(--text);
+  }
+  .out::-webkit-scrollbar { width: 8px; height: 8px; }
+  .out::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; }
+  .out .ph { color: var(--text-3); }
+  .out .bad { color: var(--err); }
+
+  .badge {
+    font-size: 11px; padding: 1px 8px; border-radius: 20px; font-weight: 600;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .badge.ok { color: var(--ok); background: rgba(13,122,82,.1); border-color: rgba(13,122,82,.25); }
+  .badge.bad { color: var(--err); background: rgba(209,36,47,.1); border-color: rgba(209,36,47,.25); }
+  .badge.warn { color: var(--num); background: rgba(178,94,9,.1); border-color: rgba(178,94,9,.25); }
+  .badge.mute { color: var(--text-3); background: var(--surface-1); border-color: var(--border); }
+
+  .kv { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .kv span { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; }
+  .kv b { color: var(--accent); font-weight: 600; }
+
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .tip b { color: var(--text-2); font-weight: 600; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+
+  .tbl-wrap { overflow-x: auto; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th, .tbl td {
+    text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--border);
+    vertical-align: top; line-height: 1.6;
+  }
+  .tbl th { color: var(--text-2); font-weight: 600; white-space: nowrap; background: var(--panel-2); }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl td code { color: var(--num); font-size: 11.5px; }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; }
+    .grid { gap: 10px; }
+    .card { padding: 12px; }
+    .row > label.k { width: 64px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大
+       （select 同样会被 iOS 缩放，所以这里一并提上去） */
+    input[type="text"], select, textarea { font-size: 16px; }
+    /* 输出区是只读展示，不参与输入法缩放，保持 12px 的紧凑行高更好读 */
+    .out { font-size: 12px; max-height: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Format<span>Convert</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">等待输入</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">转换全部在本地完成，内容不出浏览器</span>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<main>
+<div class="grid">
+
+  <!-- ============ 1. 输入 ============ -->
+  <section class="card">
+    <h2>
+      输入
+      <span class="right">
+        <button class="mini" id="btnDemo">示例</button>
+        <button class="mini" id="btnUp">打开文件</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label class="k" for="srcFmt">源格式</label>
+      <select id="srcFmt" style="flex:1"></select>
+      <span id="guessBadge"></span>
+    </div>
+    <textarea id="inp" rows="14" placeholder="把 JSON / YAML / XML / properties 内容粘进来…" spellcheck="false" autocomplete="off"></textarea>
+    <input type="file" id="fileIn" accept=".json,.yaml,.yml,.xml,.properties,.props,.conf,.txt,text/*" hidden />
+    <div class="tip" id="inTip" style="margin-top:8px"></div>
+  </section>
+
+  <!-- ============ 2. 输出 ============ -->
+  <section class="card">
+    <h2>
+      输出
+      <span class="right">
+        <button class="mini" id="btnSwap">交换</button>
+        <button class="mini" id="btnCopy" disabled>复制</button>
+        <button class="mini" id="btnDl" disabled>下载</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label class="k" for="dstFmt">目标格式</label>
+      <select id="dstFmt" style="flex:1"></select>
+      <span id="outBadge"></span>
+    </div>
+    <pre class="out" id="out"><span class="ph">转换结果会出现在这里。</span></pre>
+    <div class="tip" id="yamlWarn"></div>
+    <div class="tip" id="outTip" style="margin-top:8px"></div>
+  </section>
+
+  <!-- ============ 3. 选项 ============ -->
+  <section class="card wide">
+    <h2>
+      转换选项
+      <span class="hint">只影响对应格式的输出</span>
+    </h2>
+    <div class="row">
+      <label class="k" for="indent">缩进</label>
+      <select id="indent">
+        <option value="2" selected>2 空格</option>
+        <option value="4">4 空格</option>
+        <option value="0">Tab</option>
+      </select>
+      <span class="tip">JSON 与 XML 用</span>
+    </div>
+    <div class="row">
+      <label class="k" for="rootName">根元素名</label>
+      <input type="text" id="rootName" value="root" style="flex:1;max-width:220px" autocomplete="off" spellcheck="false" />
+      <span class="tip">输出 XML 时，若对象不是「恰好一个键」就用它当根元素</span>
+    </div>
+    <div class="row">
+      <label class="k" for="propSep">分隔符</label>
+      <select id="propSep">
+        <option value="=" selected>= 等号</option>
+        <option value=":">: 冒号</option>
+        <option value=" ">空格</option>
+      </select>
+      <span class="tip">properties 输出用</span>
+    </div>
+    <div class="row">
+      <label class="k">选项</label>
+      <label class="chk"><input type="checkbox" id="optAscii">properties 里的非 ASCII 转义成 \uXXXX</label>
+      <label class="chk"><input type="checkbox" id="optNest">properties 的点号展开成嵌套</label>
+    </div>
+    <div class="tip" style="margin-top:8px">
+      「非 ASCII 转义」按 Java 规范把中文写成 <code>\u4F60</code>；<b>Spring Boot 2.4+ 默认按 UTF-8 读，可以不勾</b>。<br>
+      「点号展开」只影响 <b>properties → 其它格式</b>：勾上后 <code>a.b=1</code> 会变成 <code>{"a":{"b":"1"}}</code>；
+      不勾则保持扁平的键（键里本来就有点的场景更安全）。
+    </div>
+  </section>
+
+  <!-- ============ 4. 格式与约定 ============ -->
+  <section class="card wide">
+    <h2>
+      格式与映射约定
+      <span class="hint">转换有损的地方都写在这里</span>
+    </h2>
+    <div class="tbl-wrap">
+      <table class="tbl fit">
+        <thead><tr><th>格式</th><th>特点</th><th>会丢的东西</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>JSON</b></td>
+            <td>对象 / 数组 / 字符串 / 数字 / 布尔 / null。解析失败会给出<b>行列位置</b>。</td>
+            <td><code>Infinity</code> 与 <code>NaN</code> 会被写成 <code>null</code>（页面会给出警告）；<code>undefined</code> 字段会被丢掉。</td>
+          </tr>
+          <tr>
+            <td><b>YAML</b></td>
+            <td>按 <b>JSON 兼容 schema</b> 解析：日期、<code>.inf</code> 这类不会被特殊处理，保持原样，避免转 JSON 时静默变样。</td>
+            <td><b>注释全部丢失</b>（YAML 的 <code>#</code> 注释、锚点与别名 <code>&amp;a</code> / <code>*a</code> 展开后不再保留）；多文档只取第一份。</td>
+          </tr>
+          <tr>
+            <td><b>XML</b></td>
+            <td>用浏览器原生解析器，非良构时给出行列位置。映射约定见下表。</td>
+            <td>注释、处理指令、CDATA 边界、命名空间前缀（保留为标签名的一部分）、属性顺序。</td>
+          </tr>
+          <tr>
+            <td><b>properties</b></td>
+            <td>支持 <code>=</code> / <code>:</code> / 空格三种分隔符、<code>\</code> 续行、<code>\uXXXX</code> 与 <code>\n\t\\</code> 转义、<code>#</code> 与 <code>!</code> 注释。键前后的空白会去掉。</td>
+            <td><b>值一律是字符串</b>（<code>port=8080</code> 出来是 <code>"8080"</code> 不是数字）；注释丢失；重复键只留最后一个；<b>值末尾的空白按 Java 规范保留</b>（<code>a=x␣␣</code> 的值是 <code>"x  "</code>）。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 style="margin-top:16px">XML ↔ JSON 的映射约定</h2>
+    <div class="tbl-wrap">
+      <table class="tbl fit">
+        <thead><tr><th>XML</th><th>JSON</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>&lt;n id="1"&gt;x&lt;/n&gt;</code></td><td><code>{"n":{"@id":"1","#text":"x"}}</code></td><td>属性加 <code>@</code> 前缀；文本放 <code>#text</code></td></tr>
+          <tr><td><code>&lt;n&gt;x&lt;/n&gt;</code></td><td><code>{"n":"x"}</code></td><td>既无属性又无子元素时直接给字符串</td></tr>
+          <tr><td><code>&lt;l&gt;&lt;i&gt;1&lt;/i&gt;&lt;i&gt;2&lt;/i&gt;&lt;/l&gt;</code></td><td><code>{"l":{"i":["1","2"]}}</code></td><td>同名子元素重复出现 → 数组</td></tr>
+          <tr><td><code>&lt;root&gt;…&lt;/root&gt;</code></td><td><code>{"root":{…}}</code></td><td><b>根元素会被包成一层键</b>，这样 XML → JSON → XML 能原样回去</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tip" style="margin-top:10px">
+      YAML 由本机 <code>vendor/js-yaml-4.1.0.min.js</code> 解析（本地优先，缺失时回退锁版本的 CDN）；
+      JSON 用浏览器原生 <code>JSON.parse</code>，XML 用原生 <code>DOMParser</code>，properties 是本页自写解析器 —— 其余三种格式零外部依赖。
+    </div>
+  </section>
+
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- 本地优先 + CDN 兜底：解析期同步依赖，必须用 document.write（异步 appendChild 会让主脚本在库就绪前跑） -->
+<script src="vendor/js-yaml-4.1.0.min.js"></script>
+<script>window.jsyaml || document.write('<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"><\/script>');</script>
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ============================================================
+     一、JSON
+     ============================================================ */
+
+  /* 自写递归下降扫描器，只为拿「出错位置」——
+     ★ 新版 V8 的 JSON.parse 报错已经没有 `position N` 了（形如
+       `Unexpected token '}', ..."a": }\n" is not valid JSON`），
+       靠正则从 message 里抠下标彻底不可用，所以自己扫一遍。 */
+  function jsonScanError(s) {
+    let i = 0;
+    const err = m => { const e = new Error(m); e.pos = i; return e; };
+    const ws = () => {
+      while (i < s.length) {
+        const c = s.charCodeAt(i);
+        if (c === 32 || c === 9 || c === 10 || c === 13) i++; else break;
+      }
+    };
+    function str() {
+      i++;
+      while (i < s.length) {
+        const c = s[i];
+        if (c === "\\") { i += 2; continue; }
+        if (c === '"') { i++; return; }
+        if (s.charCodeAt(i) < 0x20) throw err("字符串里有未转义的控制字符");
+        i++;
+      }
+      throw err("字符串缺少闭合的引号");
+    }
+    function num() {
+      const st = i;
+      if (s[i] === "-") i++;
+      if (s[i] === "0") i++;
+      else if (s[i] >= "1" && s[i] <= "9") { while (i < s.length && s[i] >= "0" && s[i] <= "9") i++; }
+      else throw err("数字格式不对");
+      if (s[i] === ".") { i++; if (!(s[i] >= "0" && s[i] <= "9")) throw err("小数点后缺数字"); while (i < s.length && s[i] >= "0" && s[i] <= "9") i++; }
+      if (s[i] === "e" || s[i] === "E") {
+        i++;
+        if (s[i] === "+" || s[i] === "-") i++;
+        if (!(s[i] >= "0" && s[i] <= "9")) throw err("指数部分缺数字");
+        while (i < s.length && s[i] >= "0" && s[i] <= "9") i++;
+      }
+      if (i === st) throw err("无法识别的值");
+    }
+    function obj() {
+      i++; ws();
+      if (s[i] === "}") { i++; return; }
+      for (;;) {
+        ws();
+        /* ★ 先判「到底了」再判「不是引号」：截断输入 `{` 若直接落到
+           「对象的键必须是双引号字符串」，用户会以为是引号写错了。 */
+        if (i >= s.length) throw err("内容意外结束：对象没有闭合");
+        if (s[i] !== '"') throw err("对象的键必须是双引号字符串");
+        str(); ws();
+        if (s[i] !== ":") throw err("键后面缺少冒号");
+        i++;
+        value(); ws();
+        if (i >= s.length) throw err("内容意外结束：对象没有闭合");
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "}") { i++; return; }
+        throw err("对象里缺少逗号或右花括号");
+      }
+    }
+    function arr() {
+      i++; ws();
+      if (s[i] === "]") { i++; return; }
+      for (;;) {
+        value(); ws();
+        if (i >= s.length) throw err("内容意外结束：数组没有闭合");
+        if (s[i] === ",") { i++; continue; }
+        if (s[i] === "]") { i++; return; }
+        throw err("数组里缺少逗号或右方括号");
+      }
+    }
+    function value() {
+      ws();
+      if (i >= s.length) throw err("内容意外结束");
+      const c = s[i];
+      if (c === "{") return obj();
+      if (c === "[") return arr();
+      if (c === '"') return str();
+      if (c === "-" || (c >= "0" && c <= "9")) return num();
+      if (s.startsWith("true", i)) { i += 4; return; }
+      if (s.startsWith("false", i)) { i += 5; return; }
+      if (s.startsWith("null", i)) { i += 4; return; }
+      throw err("无法识别的值（" + c + "）");
+    }
+    try {
+      value(); ws();
+      if (i < s.length) throw err("JSON 结束后还有多余内容");
+      return null;
+    } catch (e) { return e; }
+  }
+
+  function posToLineCol(s, pos) {
+    let line = 1, col = 1;
+    for (let i = 0; i < pos && i < s.length; i++) {
+      if (s[i] === "\n") { line++; col = 1; } else col++;
+    }
+    return { line: line, col: col };
+  }
+
+  function errAt(s, e, label) {
+    const pos = typeof e.pos === "number" ? e.pos : null;
+    if (pos === null) return new Error(label + "：" + (e && e.message || e));
+    const lc = posToLineCol(s, pos);
+    const line = s.split(/\r\n|\r|\n/)[lc.line - 1] || "";
+    const out = new Error(label + "第 " + lc.line + " 行第 " + lc.col + " 列：" + (e.message || e)
+      + (line.trim() ? "\n  " + line.trim().slice(0, 120) : ""));
+    out.line = lc.line;
+    out.col = lc.col;
+    return out;
+  }
+
+  function parseJSON(text) {
+    try { return JSON.parse(text); }
+    catch (e) {
+      const se = jsonScanError(text);
+      throw errAt(text, se || e, "JSON 解析失败：");
+    }
+  }
+
+  /* 非有限数在 JSON.stringify 下会静默变成 null —— 先找出来给用户提示 */
+  function findNonFinite(v, path, out) {
+    if (out.length > 3) return out;
+    if (typeof v === "number") {
+      if (!isFinite(v)) out.push(path || "(根)");
+      return out;
+    }
+    if (Array.isArray(v)) {
+      v.forEach((x, i) => findNonFinite(x, path + "[" + i + "]", out));
+      return out;
+    }
+    if (v && typeof v === "object") {
+      for (const k of Object.keys(v)) findNonFinite(v[k], path ? path + "." + k : k, out);
+    }
+    return out;
+  }
+
+  function dumpJSON(v, ind) {
+    const sp = ind === 0 ? "\t" : " ".repeat(ind);
+    return JSON.stringify(v, null, sp) + "\n";
+  }
+
+  /* ============================================================
+     二、YAML
+     ============================================================ */
+  const HAS_YAML = !!window.jsyaml;
+
+  function parseYAML(text) {
+    if (!HAS_YAML) throw new Error("YAML 解析库未加载：vendor/js-yaml-4.1.0.min.js 不可用，且 CDN 兜底也失败了。");
+    try {
+      /* ★ 用 JSON_SCHEMA 而不是默认 schema：默认 schema 会把 `2026-10-15`
+         解析成 Date，转 JSON 时静默变成 "2026-10-15T00:00:00.000Z" —— 对转换器来说
+         这是不该有的「自作聪明」。JSON_SCHEMA 只认 JSON 兼容类型，保持无损。 */
+      return jsyaml.load(text, { schema: jsyaml.JSON_SCHEMA });
+    } catch (e) {
+      const mark = e && e.mark;
+      const m = new Error("YAML 解析失败：" + (e && e.reason || e && e.message || e)
+        + (mark ? "\n  第 " + (mark.line + 1) + " 行第 " + (mark.column + 1) + " 列" : ""));
+      if (mark) { m.line = mark.line + 1; m.col = mark.column + 1; }
+      throw m;
+    }
+  }
+
+  function dumpYAML(v, ind) {
+    if (!HAS_YAML) throw new Error("YAML 解析库未加载。");
+    /* noRefs：同一个对象出现两次时不要生成 &锚点 / *引用（读起来莫名其妙）
+       lineWidth: -1 关掉自动折行，长字符串不要被切开 */
+    return jsyaml.dump(v, { noRefs: true, lineWidth: -1, indent: ind === 0 ? 2 : ind });
+  }
+
+  /* ============================================================
+     三、XML
+     ============================================================ */
+  const XML_ESC = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
+
+  /* ★ 安全写属性：一律用 defineProperty 建**自有**数据属性。
+     直接 `obj["__proto__"] = v` 会走原型访问器 —— 轻则静默丢数据，
+     重则把 `Object.prototype` 污染掉（`__proto__.x=1` 这种 properties 就能做到）。
+     用 defineProperty 建的 `__proto__` 是普通自有属性，读回来也是它，JSON / YAML 都能正常输出。 */
+  function setOwn(o, k, v) {
+    Object.defineProperty(o, k, { value: v, writable: true, enumerable: true, configurable: true });
+  }
+  const OWN = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+  function xmlNodeToJs(node) {
+    const obj = {};
+    let hasAttr = false;
+    for (let i = 0; i < node.attributes.length; i++) {
+      const a = node.attributes[i];
+      obj["@" + a.name] = a.value;
+      hasAttr = true;
+    }    const kids = [];
+    for (let i = 0; i < node.childNodes.length; i++) {
+      const n = node.childNodes[i];
+      if (n.nodeType === 1) kids.push(n);
+    }
+    let text = "";
+    for (let i = 0; i < node.childNodes.length; i++) {
+      const n = node.childNodes[i];
+      if (n.nodeType === 3 || n.nodeType === 4) text += n.nodeValue;
+    }
+    text = text.trim();
+
+    if (!kids.length) {
+      if (!hasAttr) return text;                 /* 只有文本 → 直接给字符串 */
+      if (text) obj["#text"] = text;
+      return obj;
+    }
+    if (text) obj["#text"] = text;
+    for (const k of kids) {
+      const name = k.nodeName;
+      const v = xmlNodeToJs(k);
+      if (!OWN(obj, name)) setOwn(obj, name, v);
+      else if (Array.isArray(obj[name])) obj[name].push(v);
+      else setOwn(obj, name, [obj[name], v]);
+    }
+    return obj;
+  }
+
+  function xmlParserError(doc) {
+    const de = doc.documentElement;
+    if (de && de.nodeName === "parsererror") return de;
+    const list = doc.getElementsByTagName("parsererror");
+    return list.length ? list[0] : null;
+  }
+
+  function parseXML(text) {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    const pe = xmlParserError(doc);
+    if (pe) {
+      const raw = (pe.textContent || "").replace(/\s+/g, " ").trim();
+      const m = raw.match(/line (\d+) at column (\d+)/i);
+      const detail = raw.replace(/^error on line \d+ at column \d+:\s*/i, "") || raw;
+      const e = new Error("XML 解析失败：" + detail + (m ? "\n  第 " + m[1] + " 行第 " + m[2] + " 列" : ""));
+      if (m) { e.line = +m[1]; e.col = +m[2]; }
+      throw e;
+    }
+    const root = doc.documentElement;
+    if (!root) throw new Error("XML 里没有根元素。");
+    const out = {};
+    out[root.nodeName] = xmlNodeToJs(root);
+    return out;
+  }
+
+  function jsToXml(name, v, pad, level) {
+    const ind = pad.repeat(level);
+    if (v === null || v === undefined) return ind + "<" + name + "/>";
+    if (typeof v !== "object") return ind + "<" + name + ">" + XML_ESC(v) + "</" + name + ">";
+    if (Array.isArray(v)) {
+      if (!v.length) return ind + "<" + name + "/>";
+      return v.map(x => jsToXml(name, x, pad, level)).join("\n");
+    }
+    const attrs = [], kids = [];
+    let text = null;
+    for (const k of Object.keys(v)) {
+      if (k.charAt(0) === "@") attrs.push(k.slice(1) + '="' + XML_ESC(v[k]) + '"');
+      else if (k === "#text") text = String(v[k]);
+      else kids.push([k, v[k]]);
+    }
+    const open = "<" + name + (attrs.length ? " " + attrs.join(" ") : "");
+    if (!kids.length && (text === null || text === "")) return ind + open + "/>";
+    if (!kids.length) return ind + open + ">" + XML_ESC(text) + "</" + name + ">";
+    const inner = kids.map(([k, val]) => jsToXml(k, val, pad, level + 1)).join("\n");
+    return ind + open + ">" + (text ? XML_ESC(text) : "") + "\n" + inner + "\n" + ind + "</" + name + ">";
+  }
+
+  function dumpXML(v, ind, rootName) {
+    const pad = ind === 0 ? "\t" : " ".repeat(ind || 2);
+    if (v === null || typeof v !== "object" || Array.isArray(v)) {
+      return '<?xml version="1.0" encoding="UTF-8"?>\n' + jsToXml(safeTag(rootName), v, pad, 0) + "\n";
+    }
+    const keys = Object.keys(v);
+    /* 恰好一个键 → 直接拿它当根元素（这是 XML → JSON 的包装约定，能原样回去） */
+    if (keys.length === 1) {
+      return '<?xml version="1.0" encoding="UTF-8"?>\n' + jsToXml(safeTag(keys[0]), v[keys[0]], pad, 0) + "\n";
+    }
+    const inner = keys.map(k => jsToXml(safeTag(k), v[k], pad, 1)).join("\n");
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<' + safeTag(rootName) + ">\n" + inner + "\n</" + safeTag(rootName) + ">\n";
+  }
+
+  /* XML 标签名不能有空格、不能以数字开头、不能有 @ # 这些符号 */
+  function safeTag(s) {
+    let t = String(s == null ? "" : s).replace(/[^A-Za-z0-9_.\-]/g, "_");
+    if (!t || /^[0-9.\-]/.test(t)) t = "_" + t;
+    return t;
+  }
+
+  /* ============================================================
+     四、properties
+     ============================================================ */
+  function endsWithOddBackslash(s) {
+    let n = 0;
+    for (let i = s.length - 1; i >= 0 && s[i] === "\\"; i--) n++;
+    return n % 2 === 1;
+  }
+
+  function unescapeProp(s) {
+    let out = "";
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] !== "\\") { out += s[i]; continue; }
+      const c = s[++i];
+      if (c === undefined) { out += "\\"; break; }
+      if (c === "t") out += "\t";
+      else if (c === "n") out += "\n";
+      else if (c === "r") out += "\r";
+      else if (c === "f") out += "\f";
+      else if (c === "u") {
+        const hex = s.substr(i + 1, 4);
+        if (/^[0-9a-fA-F]{4}$/.test(hex)) { out += String.fromCharCode(parseInt(hex, 16)); i += 4; }
+        else out += "u";
+      } else out += c;
+    }
+    return out;
+  }
+
+  function parseProps(text) {
+    const raw = text.split(/\r\n|\r|\n/);
+    const logical = [];
+    let buf = null;
+    for (const line of raw) {
+      if (buf === null) buf = line;
+      else buf += line.replace(/^[ \t\f]+/, "");       /* 续行：去掉下一行的前导空白 */
+      if (endsWithOddBackslash(buf)) { buf = buf.slice(0, -1); continue; }
+      logical.push(buf);
+      buf = null;
+    }
+    if (buf !== null) logical.push(buf);
+
+    const pairs = [];
+    for (const line of logical) {
+      const t = line.replace(/^[ \t\f]+/, "");
+      if (!t || t.charAt(0) === "#" || t.charAt(0) === "!") continue;   /* 注释 */
+      /* 找第一个未转义的分隔符：= : 或空白 */
+      let sep = -1;
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] === "\\") { i++; continue; }
+        if (t[i] === "=" || t[i] === ":" || t[i] === " " || t[i] === "\t" || t[i] === "\f") { sep = i; break; }
+      }
+      let key, val;
+      if (sep < 0) { key = t; val = ""; }
+      else {
+        key = t.slice(0, sep);
+        let j = sep;
+        while (j < t.length && (t[j] === " " || t[j] === "\t" || t[j] === "\f")) j++;
+        if (t[j] === "=" || t[j] === ":") { j++; }
+        while (j < t.length && (t[j] === " " || t[j] === "\t" || t[j] === "\f")) j++;
+        val = t.slice(j);
+      }
+      pairs.push([unescapeProp(key), unescapeProp(val)]);
+    }
+    return pairs;
+  }
+
+  function propsToValue(text, nest) {
+    const pairs = parseProps(text);
+    const flat = {};
+    /* ★ 用 setOwn：`__proto__=x` 这种键在普通赋值下是 no-op（数据静默消失） */
+    for (const [k, v] of pairs) setOwn(flat, k, v);
+    if (!nest) return flat;
+    const out = {};
+    for (const k of Object.keys(flat)) {
+      const parts = k.split(".");
+      let cur = out;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const p = parts[i];
+        /* ★ 判「有没有这个自有属性」而不是判 typeof ——
+           `cur["__proto__"]` 在没建过自有属性时会返回 Object.prototype（一个对象），
+           于是 `cur = Object.prototype`，下一行的赋值就把全局原型污染了。 */
+        if (!OWN(cur, p) || cur[p] === null || typeof cur[p] !== "object") setOwn(cur, p, {});
+        cur = cur[p];
+      }
+      const last = parts[parts.length - 1];
+      if (!OWN(cur, last)) setOwn(cur, last, flat[k]);
+    }
+    return out;
+  }
+
+  function escProp(s, isKey, ascii) {
+    let out = "";
+    let idx = 0;
+    for (const ch of String(s)) {
+      const cp = ch.codePointAt(0);
+      if (ch === "\\") out += "\\\\";
+      else if (ch === "\n") out += "\\n";
+      else if (ch === "\r") out += "\\r";
+      else if (ch === "\t") out += "\\t";
+      else if (ch === "\f") out += "\\f";
+      else if (isKey && (ch === "=" || ch === ":" || ch === " " || (idx === 0 && (ch === "#" || ch === "!")))) out += "\\" + ch;
+      /* ★ Java 规范：**值的首字符**如果是空格也要转义。
+         否则写出去是 `a= x`，读回来时那一段「分隔符之后的前导空白」会被跳过，
+         值就变成 `x` —— 往返不一致（值中间与末尾的空白都保留，不用转义）。 */
+      else if (!isKey && idx === 0 && ch === " ") out += "\\ ";
+      else if (cp < 0x20 || cp === 0x7f) out += "\\u" + cp.toString(16).toUpperCase().padStart(4, "0");
+      else if (ascii && cp > 0x7e) {
+        if (cp > 0xffff) {
+          out += "\\u" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0")
+            + "\\u" + ch.charCodeAt(1).toString(16).toUpperCase().padStart(4, "0");
+        } else out += "\\u" + cp.toString(16).toUpperCase().padStart(4, "0");
+      } else out += ch;
+      idx++;
+    }
+    return out;
+  }
+
+  function flatEntries(v, prefix, out) {
+    if (v === null || v === undefined) { out.push([prefix, ""]); return out; }
+    if (Array.isArray(v)) {
+      if (!v.length) { out.push([prefix, ""]); return out; }
+      v.forEach((x, i) => flatEntries(x, prefix ? prefix + "." + i : String(i), out));
+      return out;
+    }
+    if (typeof v === "object") {
+      const keys = Object.keys(v);
+      if (!keys.length) { out.push([prefix, ""]); return out; }
+      for (const k of keys) flatEntries(v[k], prefix ? prefix + "." + k : k, out);
+      return out;
+    }
+    out.push([prefix, v]);
+    return out;
+  }
+
+  function dumpProps(v, sep, ascii, rootName) {
+    const list = [];
+    if (v === null || typeof v !== "object" || Array.isArray(v)) {
+      /* 根不是对象时给一条「根元素名=值」—— 这里的键是 properties 的键，
+         不是 XML 标签名，所以不做标签名净化。 */
+      list.push([String(rootName || "root"), v === null || v === undefined ? "" : v]);
+    } else {
+      flatEntries(v, "", list);
+    }
+    if (!list.length) return "";
+    return list.map(([k, val]) => escProp(k, true, ascii) + sep + escProp(val, false, ascii)).join("\n") + "\n";
+  }
+
+  /* ============================================================
+     格式表 —— ★ 唯一来源：两个下拉、扩展名、说明都由它渲染
+     ============================================================ */
+  const FORMATS = [
+    { id: "json", name: "JSON", ext: "json", canParse: true, parse: (t) => parseJSON(t) },
+    { id: "yaml", name: "YAML", ext: "yaml", canParse: true, parse: (t) => parseYAML(t) },
+    { id: "xml", name: "XML", ext: "xml", canParse: true, parse: (t) => parseXML(t) },
+    { id: "props", name: "properties", ext: "properties", canParse: true, parse: (t) => propsToValue(t, $("optNest").checked) }
+  ];
+  const FMT = {};
+  FORMATS.forEach(f => { FMT[f.id] = f; });
+
+  function dump(v, id) {
+    const ind = +$("indent").value;
+    switch (id) {
+      case "json": return dumpJSON(v, ind);
+      case "yaml": return dumpYAML(v, ind);
+      case "xml": return dumpXML(v, ind, $("rootName").value || "root");
+      case "props": return dumpProps(v, $("propSep").value, $("optAscii").checked, $("rootName").value || "root");
+      default: throw new Error("未知格式：" + id);
+    }
+  }
+
+  /* ============================================================
+     自动识别
+     ============================================================ */
+  function guessFormat(s) {
+    const t = String(s).trim();
+    if (!t) return null;
+    if (t.charAt(0) === "{" || t.charAt(0) === "[") return "json";
+    if (/^<\?xml/i.test(t) || /^<[A-Za-z_]/.test(t)) return "xml";
+    const lines = t.split(/\r\n|\r|\n/).filter(l => l.trim() && !/^\s*[#!]/.test(l));
+    /* ★ properties 与 YAML 都用 `key: value` 这种形态，天然歧义。
+       判据取「有没有用 = 当分隔符」—— .properties 基本都用 =，YAML 基本都用 :。 */
+    if (lines.length && lines.every(l => /^\s*[^=:\s][^=:]*=/.test(l))) return "props";
+    return "yaml";
+  }
+
+  /* ============================================================
+     主流程
+     ============================================================ */
+  let lastOut = "";
+  let warnNote = "";
+
+  function setOut(html, cls) {
+    $("out").innerHTML = html;
+    $("outBadge").innerHTML = cls || "";
+  }
+
+  function convert() {
+    const text = $("inp").value;
+    const srcSel = $("srcFmt").value;
+    const dst = $("dstFmt").value;
+    lastOut = "";
+    warnNote = "";
+
+    if (!text.trim()) {
+      setOut('<span class="ph">转换结果会出现在这里。</span>', "");
+      $("stat").textContent = "等待输入";
+      $("inTip").textContent = "";
+      $("outTip").textContent = "";
+      $("guessBadge").innerHTML = "";
+      $("btnCopy").disabled = $("btnDl").disabled = true;
+      return;
+    }
+
+    let src = srcSel;
+    if (src === "auto") {
+      src = guessFormat(text);
+      $("guessBadge").innerHTML = src
+        ? '<span class="badge mute">识别为 ' + eh(FMT[src].name) + "</span>"
+        : '<span class="badge mute">识别不出</span>';
+      if (!src) {
+        setOut('<span class="bad">识别不出输入格式，请在左边手动选一个源格式。</span>', "");
+        $("stat").textContent = "无法识别";
+        $("btnCopy").disabled = $("btnDl").disabled = true;
+        return;
+      }
+    } else {
+      $("guessBadge").innerHTML = "";
+    }
+
+    let value;
+    try {
+      value = FMT[src].parse(text);
+    } catch (e) {
+      setOut('<span class="bad">' + eh(e && e.message || e) + "</span>", '<span class="badge bad">解析失败</span>');
+      $("stat").textContent = "解析失败";
+      $("inTip").innerHTML = "";
+      $("outTip").innerHTML = "";
+      $("btnCopy").disabled = $("btnDl").disabled = true;
+      return;
+    }
+
+    /* 解析成功 → 输出 */
+    $("inTip").innerHTML = '<span class="ok-tip">解析成功</span> · ' + eh(FMT[src].name)
+      + " 共 <b>" + countNodes(value) + "</b> 个节点";
+
+    let outText;
+    try {
+      outText = dump(value, dst);
+    } catch (e) {
+      setOut('<span class="bad">' + eh(e && e.message || e) + "</span>", '<span class="badge bad">输出失败</span>');
+      $("stat").textContent = "输出失败";
+      $("btnCopy").disabled = $("btnDl").disabled = true;
+      return;
+    }
+
+    lastOut = outText;
+    setOut(eh(outText), '<span class="badge ok">' + eh(FMT[src].name) + " → " + eh(FMT[dst].name) + "</span>");
+    $("stat").innerHTML = "<b>" + eh(FMT[src].name) + "</b> → <b>" + eh(FMT[dst].name) + "</b>";
+    $("btnCopy").disabled = $("btnDl").disabled = false;
+
+    const notes = [];
+    notes.push("输出 <b>" + outText.length + "</b> 字符 / " + outText.split("\n").length + " 行");
+
+    if (dst === "json") {
+      const bad = findNonFinite(value, "", []);
+      if (bad.length) {
+        notes.push('<span class="err-tip">有 ' + bad.length + " 处非有限数（" + eh(bad.join("、"))
+          + "）在 JSON 里只能写成 <code>null</code> —— 这是 JSON 格式本身的限制。</span>");
+      }
+    }
+    if (dst === "props") {
+      notes.push('properties 的值<b>一律是字符串</b>，数字与布尔都会被加上引号式地写成文本。');
+    }
+    if (dst === "xml") {
+      notes.push("标签名里不合法的字符（空格、<code>@</code>、<code>#</code> 等）会被替换成下划线。");
+    }
+    if (src === "props") {
+      notes.push("properties 的值读进来都是<b>字符串</b>（<code>8080</code> 是 <code>\"8080\"</code>）。");
+    }
+    $("outTip").innerHTML = notes.join("<br>");
+  }
+
+  function countNodes(v) {
+    if (v === null || typeof v !== "object") return 1;
+    if (Array.isArray(v)) return v.reduce((n, x) => n + countNodes(x), 0);
+    return Object.keys(v).reduce((n, k) => n + countNodes(v[k]), 0);
+  }
+
+  /* ============================================================
+     复制 / 下载 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else fallbackCopy(s, done);
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     静态渲染
+     ============================================================ */
+  function buildSelects() {
+    const opts = FORMATS.map(f => '<option value="' + f.id + '">' + eh(f.name) + "</option>").join("");
+    $("srcFmt").innerHTML = '<option value="auto">自动识别</option>' + opts;
+    $("dstFmt").innerHTML = opts;
+    $("srcFmt").value = "auto";
+    $("dstFmt").value = "json";
+  }
+
+  const DEMO = `# 一段示例配置：注释、嵌套、数组、多行字符串
+server:
+  host: 0.0.0.0
+  port: 8080
+  tls: true
+database:
+  url: jdbc:mysql://127.0.0.1:3306/app
+  pool:
+    min: 2
+    max: 16
+  tags:
+    - primary
+    - cn-shanghai
+features:
+  beta: false
+  ratio: 0.75
+  desc: |
+    这是多行字符串，
+    会被原样保留。
+empty_value: null
+`;
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  buildSelects();
+
+  let timer = 0;
+  function soon() {
+    clearTimeout(timer);
+    timer = setTimeout(convert, 200);
+  }
+
+  $("inp").addEventListener("input", soon);
+  $("srcFmt").addEventListener("change", convert);
+  $("dstFmt").addEventListener("change", convert);
+  for (const id of ["indent", "propSep", "rootName", "optAscii", "optNest"]) {
+    $(id).addEventListener("input", soon);
+    $(id).addEventListener("change", soon);
+  }
+
+  $("btnDemo").addEventListener("click", () => {
+    $("inp").value = DEMO;
+    $("srcFmt").value = "auto";
+    $("dstFmt").value = "json";
+    convert();
+    toast("已填入示例 YAML");
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("inp").value = "";
+    convert();
+    toast("已清空");
+  });
+
+  $("btnCopy").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有可复制的结果"); return; }
+    copyText(lastOut, "已复制转换结果");
+  });
+
+  $("btnDl").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有可下载的结果"); return; }
+    const f = FMT[$("dstFmt").value];
+    const blob = new Blob([lastOut], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "converted." + f.ext;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("已下载 converted." + f.ext);
+  });
+
+  /* 交换：把输出当成新的输入，源/目标格式对调 */
+  $("btnSwap").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有可交换的结果"); return; }
+    const s = $("srcFmt").value, d = $("dstFmt").value;
+    $("inp").value = lastOut;
+    $("srcFmt").value = d;
+    $("dstFmt").value = (s === "auto") ? (guessFormat(lastOut) || "json") : s;
+    convert();
+    toast("已交换");
+  });
+
+  $("btnUp").addEventListener("click", () => $("fileIn").click());
+  $("fileIn").addEventListener("change", () => {
+    const f = $("fileIn").files && $("fileIn").files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      $("inp").value = String(fr.result);
+      /* 按扩展名顺手选好源格式 */
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      const map = { json: "json", yaml: "yaml", yml: "yaml", xml: "xml", properties: "props", props: "props" };
+      $("srcFmt").value = map[ext] || "auto";
+      convert();
+      toast("已读入 " + f.name);
+    };
+    fr.onerror = () => toast("读取文件失败");
+    fr.readAsText(f);
+    $("fileIn").value = "";
+  });
+
+  /* 初始化 */
+  /* ★ YAML 库缺失的提示要「一次写死、不被后续渲染覆盖」——
+     放进 outTip 会被每次 convert() 冲掉，用户就再也看不到了。 */
+  if (!HAS_YAML) {
+    $("yamlWarn").innerHTML = '<span class="err-tip">YAML 解析库未加载：'
+      + "<code>vendor/js-yaml-4.1.0.min.js</code> 不可用，且锁版本的 CDN 兜底也失败了 —— "
+      + "YAML 相关的转换不可用，其余三种格式不受影响。</span>";
+  }
+  convert();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>随机 ID 生成</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+  code { font-family: var(--mono); }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input —— 输入框要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="number"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  /* ★ 内容型页面收窄，不要吃满 1440px（用户明确要求过「限制卡片宽度」） */
+  .grid {
+    max-width: 1040px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row:last-child { margin-bottom: 0; }
+  .row > label.k { width: 62px; color: var(--text-2); flex: none; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  /* 生成结果 */
+  .idlist { display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow: auto; padding-right: 2px; }
+  .idlist::-webkit-scrollbar { width: 8px; }
+  .idlist::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; }
+  .id {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .id .no { font-size: 11px; color: var(--text-3); flex: none; min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; }
+  .id code {
+    font: 13px/1.5 var(--mono); letter-spacing: .3px; color: var(--text);
+    flex: 1; min-width: 0; word-break: break-all; user-select: all;
+  }
+  .id .tag { font-size: 10.5px; color: var(--text-3); flex: none; }
+  .ph { color: var(--text-3); font-size: 12.5px; padding: 14px 2px; }
+
+  .kv { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .kv span { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; }
+  .kv b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .tip b { color: var(--text-2); font-weight: 600; }
+  .err-tip { color: var(--err); }
+
+  /* 说明表 */
+  .tbl-wrap { overflow-x: auto; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th, .tbl td {
+    text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--border);
+    vertical-align: top; line-height: 1.6;
+  }
+  .tbl th { color: var(--text-2); font-weight: 600; white-space: nowrap; background: var(--panel-2); }
+  .tbl td code { font-size: 11.5px; color: var(--num); }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; }
+    .grid { gap: 10px; }
+    .card { padding: 12px; }
+    .row > label.k { width: 56px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大
+       （select 同样会被 iOS 缩放，所以这里一并提上去） */
+    input[type="text"], input[type="number"], select { font-size: 16px; }
+    .idlist { max-height: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">UUID<span>Gen</span></div>
+  <span class="sep"></span>
+  <span class="stat">WebCrypto 真随机</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内生成，不联网、不留存</span>
+  <button class="mini" id="btnClear" title="清空生成结果">清空</button>
+</header>
+
+<main>
+<div class="grid">
+
+  <!-- ============ 1. 生成设置 ============ -->
+  <section class="card">
+    <h2>
+      生成设置
+      <span class="hint" id="typeHint"></span>
+    </h2>
+
+    <div class="row">
+      <label class="k" for="type">类型</label>
+      <select id="type" style="flex:1"></select>
+    </div>
+
+    <div class="row" id="rowLen">
+      <label class="k" for="len">长度</label>
+      <input type="number" id="len" min="4" max="128" step="1" value="21" style="flex:1" />
+    </div>
+
+    <div class="row" id="rowSet">
+      <label class="k">字符集</label>
+      <label class="chk"><input type="checkbox" id="cUpper" checked>大写</label>
+      <label class="chk"><input type="checkbox" id="cLower" checked>小写</label>
+      <label class="chk"><input type="checkbox" id="cDigit" checked>数字</label>
+      <label class="chk"><input type="checkbox" id="cSymbol">符号</label>
+      <label class="chk"><input type="checkbox" id="cNoAmb">排除易混淆 0O1lI</label>
+    </div>
+
+    <div class="row">
+      <label class="k" for="count">数量</label>
+      <select id="count">
+        <option value="1">1 个</option>
+        <option value="5">5 个</option>
+        <option value="10" selected>10 个</option>
+        <option value="20">20 个</option>
+        <option value="50">50 个</option>
+      </select>
+      <span style="flex:1"></span>
+      <button class="primary" id="btnGen">生成</button>
+    </div>
+
+    <div class="tip" id="setTip" style="margin-top:10px"></div>
+  </section>
+
+  <!-- ============ 2. 输出格式 ============ -->
+  <section class="card">
+    <h2>
+      输出格式
+      <span class="hint">只影响复制/下载的形态</span>
+    </h2>
+
+    <div class="row">
+      <label class="k" for="prefix">前缀</label>
+      <input type="text" id="prefix" placeholder="可留空，如 user_" style="flex:1" autocomplete="off" spellcheck="false" />
+    </div>
+
+    <div class="row">
+      <label class="k" for="case">大小写</label>
+      <select id="case" style="flex:1">
+        <option value="keep">原样</option>
+        <option value="upper">全部大写</option>
+        <option value="lower">全部小写</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label class="k">选项</label>
+      <label class="chk"><input type="checkbox" id="cNoDash">去掉连字符</label>
+      <label class="chk"><input type="checkbox" id="cQuote">加引号</label>
+    </div>
+
+    <div class="row">
+      <label class="k" for="exp">导出为</label>
+      <select id="exp" style="flex:1">
+        <option value="lines">每行一个</option>
+        <option value="csv">逗号分隔一行</option>
+        <option value="json">JSON 数组</option>
+        <option value="sql">SQL IN 列表</option>
+        <option value="yaml">YAML 列表</option>
+      </select>
+    </div>
+
+    <div class="tip" id="quoteTip" style="margin-top:10px">
+      「去掉连字符」只对 UUID 有意义；「加引号」用于直接贴进代码或 SQL。
+    </div>
+  </section>
+
+  <!-- ============ 3. 生成结果 ============ -->
+  <section class="card wide">
+    <h2>
+      生成结果
+      <span class="hint" id="resHint">点「生成」开始</span>
+      <span class="right">
+        <button class="mini" id="btnCopyAll" disabled>复制全部</button>
+        <button class="mini" id="btnDl" disabled>下载</button>
+        <button class="mini" id="btnRegen">重新生成</button>
+      </span>
+    </h2>
+    <div id="resWrap">
+      <div class="idlist" id="idlist"></div>
+      <div class="kv" id="resKv" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ============ 4. 类型说明 ============ -->
+  <section class="card wide">
+    <h2>
+      类型说明
+      <span class="hint">「随机位」决定碰撞难度，「可排序」决定能不能当数据库主键</span>
+    </h2>
+    <div class="tbl-wrap">
+      <table class="tbl fit" id="typeTbl">
+        <thead>
+          <tr><th>类型</th><th>长度</th><th>随机位</th><th>可排序</th><th>说明</th></tr>
+        </thead>
+        <tbody id="typeBody"></tbody>
+      </table>
+    </div>
+    <div class="tip" style="margin-top:10px">
+      随机源一律是 <b>crypto.getRandomValues</b>（密码学安全），不用 <code>Math.random()</code> —— 后者的状态可被反推，
+      拿它生成的 ID 能被预测。<br>
+      <b>注意</b>：UUID v7 / ULID / ObjectId 里嵌入的是「生成时刻」，会暴露创建时间；对外场景若不想泄露时间，
+      请用 v4 或 NanoID。
+    </div>
+  </section>
+
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ============================================================
+     随机源
+     -- 必须用密码学随机源。Math.random 是可预测的（V8 下状态可被反推）。
+     -- crypto.getRandomValues 在 file:// 下也可用（受限的是 crypto.subtle，
+        不属于这里）。
+     -- 直接 rand % n 会有取模偏差（2^32 不是 n 的整数倍时前几个值概率偏高），
+        下面一律用拒绝采样把偏差去干净。
+     ============================================================ */
+  const HAS_RNG = !!(window.crypto && window.crypto.getRandomValues);
+  const rbuf = new Uint32Array(1);
+  function randInt(n) {
+    if (n <= 1) return 0;
+    const limit = Math.floor(4294967296 / n) * n;   /* 2^32 */
+    let v;
+    do { crypto.getRandomValues(rbuf); v = rbuf[0]; } while (v >= limit);
+    return v % n;
+  }
+
+  const HEX = "0123456789abcdef";
+  function randBytes(n) {
+    const b = new Uint8Array(n);
+    crypto.getRandomValues(b);
+    return b;
+  }
+  function hexOf(b) {
+    let s = "";
+    for (let i = 0; i < b.length; i++) s += HEX[b[i] >> 4] + HEX[b[i] & 15];
+    return s;
+  }
+
+  /* ============================================================
+     各类型生成器
+     ============================================================ */
+
+  /* UUID v4：16 字节随机，第 6 字节高 4 位写版本 4、第 8 字节高 2 位写变体 10 */
+  function uuidV4() {
+    const b = randBytes(16);
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = hexOf(b);
+    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+  }
+
+  /* UUID v7（RFC 9562）：前 48 位是毫秒时间戳，其余 74 位随机
+     0        6        8        10       16
+     |  ts(48) |ver|ra|var|      rand_b(62)     |
+     ★ 同一毫秒内不保证严格递增 —— 随机位决定顺序。要严格单调请生成后自行排序，
+       或改用数据库自增主键。 */
+  function uuidV7() {
+    const b = randBytes(16);
+    let ts = Date.now();
+    for (let i = 5; i >= 0; i--) { b[i] = ts & 0xff; ts = Math.floor(ts / 256); }
+    b[6] = (b[6] & 0x0f) | 0x70;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = hexOf(b);
+    return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+  }
+
+  /* ULID：Crockford Base32（去掉易混的 I L O U），26 字符
+     前 10 字符 = 48 位毫秒时间戳（50 位里高 2 位补零），后 16 字符 = 80 位随机 */
+  const CROCK = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  function ulid() {
+    let v = BigInt(Date.now()), head = "";
+    for (let i = 0; i < 10; i++) { head = CROCK[Number(v & 31n)] + head; v >>= 5n; }
+    let r = 0n;
+    for (const byte of randBytes(10)) r = (r << 8n) | BigInt(byte);
+    let tail = "";
+    for (let i = 0; i < 16; i++) { tail = CROCK[Number(r & 31n)] + tail; r >>= 5n; }
+    return head + tail;
+  }
+
+  /* ObjectId：4 字节秒级时间戳 + 5 字节随机 + 3 字节计数器，24 个十六进制字符 */
+  let oidCounter = randInt(0x1000000);
+  function objectId() {
+    const b = new Uint8Array(12);
+    let ts = Math.floor(Date.now() / 1000);
+    for (let i = 3; i >= 0; i--) { b[i] = ts & 0xff; ts = Math.floor(ts / 256); }
+    b.set(randBytes(5), 4);
+    oidCounter = (oidCounter + 1) & 0xffffff;
+    b[9] = (oidCounter >> 16) & 0xff;
+    b[10] = (oidCounter >> 8) & 0xff;
+    b[11] = oidCounter & 0xff;
+    return hexOf(b);
+  }
+
+  /* 任意字母表的随机串 —— 用 nanoid 的掩码拒绝采样：
+     先取「刚好盖住字母表大小的位宽」，超出范围的字节直接丢弃，
+     这样每个字符等概率，且不用逐字符调 randInt（快一个数量级）。 */
+  function randStr(alphabet, size) {
+    if (!alphabet.length || size <= 0) return "";
+    const mask = (2 << (31 - Math.clz32((alphabet.length - 1) | 1))) - 1;
+    const step = Math.ceil((1.6 * mask * size) / alphabet.length);
+    let out = "";
+    for (;;) {
+      const bytes = randBytes(step);
+      for (let i = 0; i < step; i++) {
+        const v = bytes[i] & mask;
+        if (v < alphabet.length) {
+          out += alphabet[v];
+          if (out.length === size) return out;
+        }
+      }
+    }
+  }
+
+  /* ============================================================
+     类型表 —— ★ 唯一来源：下拉、提示、说明表都由它渲染，加一类只改这里
+     ============================================================ */
+  const SET_ALNUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const SET_NANO = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  const TYPES = [
+    {
+      id: "v4", name: "UUID v4", len: null, hint: "122 位随机 · 最通用",
+      tbl: ["36（32 位十六进制 + 4 个连字符）", "122", "否",
+        "RFC 9562。纯随机、不含任何时间或机器信息，最不容易出错的选择。"],
+      gen: () => uuidV4()
+    },
+    {
+      id: "v7", name: "UUID v7", len: null, hint: "前 48 位是毫秒时间戳 · 适合当主键",
+      tbl: ["36", "74", "是（毫秒级）",
+        "RFC 9562。前 48 位是毫秒时间戳，索引局部性好，适合当数据库主键；代价是会暴露创建时间。"],
+      gen: () => uuidV7()
+    },
+    {
+      id: "ulid", name: "ULID", len: null, hint: "26 字符 · 无连字符 · 可排序",
+      tbl: ["26", "80", "是（毫秒级）",
+        "Crockford Base32，字母表去掉了易混的 I L O U。比 UUID 短且没有连字符，同样按时间有序。"],
+      gen: () => ulid()
+    },
+    {
+      id: "nanoid", name: "NanoID", len: 21, hint: "默认 21 字符 · 熵比 UUID 还高",
+      tbl: ["默认 21（可调）", "长度 × 6（默认 126）", "否",
+        "字母表 64 个（含 <code>_</code> 与 <code>-</code>）。默认 21 字符就有 126 位随机，短小且安全。"],
+      gen: () => randStr(SET_NANO, +$("len").value)
+    },
+    {
+      id: "oid", name: "ObjectId", len: null, hint: "MongoDB 主键 · 24 位十六进制",
+      tbl: ["24", "40 + 24（计数器）", "是（秒级）",
+        "MongoDB 的 <code>_id</code> 格式：4 字节秒级时间戳 + 5 字节随机 + 3 字节递增计数器。"],
+      gen: () => objectId()
+    },
+    {
+      id: "custom", name: "自定义短 ID", len: 12, hint: "自选长度与字符集",
+      tbl: ["自定", "长度 × log₂(字母表)", "否",
+        "按需拼字母表。适合短链、邀请码、订单号这类要短又要够随机的场景。"],
+      gen: () => randStr(currentAlphabet(), +$("len").value)
+    }
+  ];
+  const TYPE_BY_ID = {};
+  TYPES.forEach(t => { TYPE_BY_ID[t.id] = t; });
+
+  const AMBIG = new Set("0O1lI");
+  const SETS = { upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", lower: "abcdefghijklmnopqrstuvwxyz", digit: "0123456789", symbol: "-_!@#$%^&*+=" };
+
+  function currentAlphabet() {
+    const on = { upper: $("cUpper").checked, lower: $("cLower").checked, digit: $("cDigit").checked, symbol: $("cSymbol").checked };
+    const noAmb = $("cNoAmb").checked;
+    let s = "";
+    for (const k of ["upper", "lower", "digit", "symbol"]) {
+      if (!on[k]) continue;
+      s += SETS[k];
+    }
+    if (noAmb) s = s.split("").filter(c => !AMBIG.has(c)).join("");
+    /* 去重：symbol 里可能和别的集合有重叠 */
+    return Array.from(new Set(s)).join("");
+  }
+
+  function curType() { return TYPE_BY_ID[$("type").value] || TYPES[0]; }
+
+  /* ============================================================
+     熵与碰撞概率
+     ============================================================ */
+  function bitsOf(t) {
+    if (t.id === "custom") {
+      const a = currentAlphabet().length;
+      return a > 1 ? (+$("len").value) * Math.log2(a) : 0;
+    }
+    /* oid：5 字节随机（40 位）+ 3 字节计数器（24 位）。本页每次重新取随机字节，
+       所以按 64 位算 —— 真正的 ObjectId 是「每进程一次随机 + 计数器」，位数一样。 */
+    const map = { v4: 122, v7: 74, ulid: 80, oid: 64, nanoid: (+$("len").value) * 6 };
+    return map[t.id] || 0;
+  }
+  /* 生日问题：从 2^b 的空间里抽 k 个，至少一对相同的概率 ≈ k² / 2^(b+1) */
+  function collideProb(bits, k) {
+    if (bits <= 0) return 1;
+    const p = (k * k) / Math.pow(2, bits + 1);
+    return Math.min(1, p);
+  }
+  function fmtProb(p) {
+    if (p <= 0) return "0";
+    if (p >= 1e-4) return (p * 100).toFixed(6) + "%";
+    const e = Math.floor(Math.log10(p));
+    return "约 10^" + e + "（即 " + (p * Math.pow(10, -e)).toFixed(1) + " × 10^" + e + "）";
+  }
+
+  /* ============================================================
+     生成与渲染
+     ============================================================ */
+  /* ★ 只存「原始生成值」。前缀 / 大小写 / 去掉连字符都在**展示与导出时**才套用 ——
+     这三个控件属于「输出格式」卡（卡上写着「只影响复制/下载的形态」），
+     改它们绝不能把 ID 本体换掉。旧实现是改一次就整批重新生成，
+     于是「换个大小写」等于把刚生成的 50 个 ID 全丢了。 */
+  let raw = [];
+  let rawType = null;      /* raw 是用哪个类型生成的 */
+  let rawBits = 0;         /* 生成那一刻的随机位数（长度/字符集改了也不该跟着变） */
+  function shown() { return raw.map(applyFormat); }
+
+  function applyFormat(s) {
+    let v = s;
+    const cs = $("case").value;
+    if (cs === "upper") v = v.toUpperCase();
+    else if (cs === "lower") v = v.toLowerCase();
+    if ($("cNoDash").checked) v = v.replace(/-/g, "");
+    return $("prefix").value + v;
+  }
+
+  /* ★ JSON / SQL / YAML 三种目标语法里，字符串**必须**带引号 —— 不勾就导出
+     `[abc-123]` 这种非法 JSON、`(abc-123)` 这种非法 SQL。所以这三种强制加引号，
+     把勾选框禁用掉并说明原因，免得用户以为是自己没勾对。
+     「每行一个」「逗号分隔」不受语法约束，才交给勾选框。 */
+  const FORCE_QUOTE = { json: true, sql: true, yaml: true };
+
+  function exportText() {
+    const q = $("cQuote").checked;
+    const one = s => q ? '"' + s + '"' : s;
+    const arr = shown().map(one);
+    switch ($("exp").value) {
+      case "csv": return arr.join(", ");
+      case "json": return "[\n" + arr.map(s => "  " + s).join(",\n") + "\n]";
+      case "sql": return "(" + arr.join(", ") + ")";
+      case "yaml": return arr.map(s => "- " + s).join("\n");
+      default: return arr.join("\n");
+    }
+  }
+
+  /* 用户自己的勾选偏好要记住 —— 切到强制加引号的格式再切回来时还原，别被覆盖 */
+  let userQuote = false;
+  let userNoDash = false;
+
+  /* 两个勾选框的可用性 + 提示，一起同步。
+     ★「去掉连字符」只对 UUID 有意义：ULID / ObjectId 本来就没有连字符，
+     而 NanoID 与自定义 ID 的字母表里 `-` 是**数据字符**（不是分隔符）——
+     对它做「去掉」会把随机内容删掉，ID 变短、熵变低（21 位能掉到 19 位）。
+     所以这两类直接禁用该选项，并在提示里写明原因，而不是让用户拿到一个悄悄变短的 ID。 */
+  function syncQuote() {
+    const forced = !!FORCE_QUOTE[$("exp").value];
+    $("cQuote").disabled = forced;
+    $("cQuote").checked = forced ? true : userQuote;
+
+    const t = curType();
+    const dashy = (t.id === "v4" || t.id === "v7");
+    $("cNoDash").disabled = !dashy;
+    $("cNoDash").checked = dashy ? userNoDash : false;
+
+    const qt = forced
+      ? "当前格式（" + $("exp").selectedOptions[0].textContent + "）语法上要求字符串带引号，已强制开启。"
+      : "「加引号」用于直接贴进代码或 SQL。";
+    const dt = dashy
+      ? "「去掉连字符」去掉的是 UUID 的分隔符，不改随机内容。"
+      : (t.id === "nanoid" || t.id === "custom")
+        ? "「去掉连字符」只对 UUID 有意义 —— " + eh(t.name) + " 的字母表里 <code>-</code> 是数据字符，"
+          + "去掉会让 ID 变短、熵变低，所以这里不可选。"
+        : "「去掉连字符」只对 UUID 有意义 —— " + eh(t.name) + " 本来就不含连字符。";
+    $("quoteTip").innerHTML = qt + " " + dt;
+  }
+
+  function render() {
+    const list = $("idlist");
+    list.textContent = "";
+    /* ★ 用「生成时」的类型与熵，不用当前设置 ——
+       切了类型 / 改了长度但还没点生成时，结果区仍必须如实描述里面那批值，
+       否则会出现「标题写 UUID v4、列出来的却是自定义短 ID」这种不一致。 */
+    const t = rawType || curType();
+    const bits = rawBits;
+    if (!raw.length) {
+      const d = document.createElement("div");
+      d.className = "ph";
+      d.textContent = "点「生成」开始";
+      list.appendChild(d);
+      $("resHint").textContent = "点「生成」开始";
+      $("resKv").textContent = "";
+      $("btnCopyAll").disabled = $("btnDl").disabled = true;
+      return;
+    }
+    const vals = shown();
+    vals.forEach((v, i) => {
+      const row = document.createElement("div");
+      row.className = "id";
+      const no = document.createElement("span");
+      no.className = "no";
+      no.textContent = (i + 1) + ".";
+      const c = document.createElement("code");
+      c.textContent = v;                       /* textContent：绝不拼 innerHTML */
+      const b = document.createElement("button");
+      b.className = "mini";
+      b.textContent = "复制";
+      b.addEventListener("click", () => copyText(v, "已复制第 " + (i + 1) + " 个"));
+      row.append(no, c, b);
+      list.appendChild(row);
+    });
+
+    $("resHint").textContent = "共 " + raw.length + " 个 · " + t.name;
+    $("btnCopyAll").disabled = $("btnDl").disabled = false;
+
+    const kv = $("resKv");
+    kv.textContent = "";
+    const chips = [
+      "类型 <b>" + t.name + "</b>",
+      "每个长度 <b>" + vals[0].length + "</b> 字符",
+      "随机位 <b>" + bits.toFixed(0) + " bit</b>",
+      "本批碰撞概率 <b>" + fmtProb(collideProb(bits, raw.length)) + "</b>"
+    ];
+    for (const h of chips) {
+      const s = document.createElement("span");
+      s.innerHTML = h;
+      kv.appendChild(s);
+    }
+  }
+
+  function doGen() {
+    if (!HAS_RNG) { toast("当前环境没有随机数源，无法生成"); return; }
+    const t = curType();
+    if (t.id === "custom") {
+      const a = currentAlphabet();
+      if (a.length < 2) { toast("自定义类型至少要勾选一类字符集"); return; }
+      if (+$("len").value < 4) { toast("长度至少 4"); return; }
+    }
+    if (t.id === "nanoid" && (+$("len").value < 4 || +$("len").value > 128)) { toast("长度请填 4–128"); return; }
+    const n = +$("count").value;
+    raw = [];
+    rawType = t;
+    rawBits = bitsOf(t);
+    for (let i = 0; i < n; i++) raw.push(t.gen());
+    render();
+  }
+
+  /* ============================================================
+     复制 / 下载 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     静态渲染：下拉、说明表
+     ============================================================ */
+  function buildStatic() {
+    $("type").innerHTML = TYPES.map(t =>
+      '<option value="' + t.id + '">' + eh(t.name) + "</option>").join("");
+    $("typeBody").innerHTML = TYPES.map(t =>
+      "<tr><td>" + eh(t.name) + "</td><td>" + eh(t.tbl[0]) + "</td><td>" + eh(t.tbl[1])
+      + "</td><td>" + eh(t.tbl[2]) + "</td><td>" + t.tbl[3] + "</td></tr>").join("");
+  }
+
+  function syncType() {
+    const t = curType();
+    $("typeHint").textContent = t.hint;
+    const custom = t.id === "custom";
+    const nano = t.id === "nanoid";
+    $("rowLen").style.display = (custom || nano) ? "" : "none";
+    $("rowSet").style.display = custom ? "" : "none";
+    if (t.len != null) $("len").value = t.len;
+    updateSetTip();
+    syncQuote();          /* 「去掉连字符」的可用性随类型变 */
+    /* 切类型可能把「去掉连字符」从勾选变成禁用（值里的连字符会回来），要重排一次 */
+    if (raw.length) render();
+  }
+
+  function updateSetTip() {
+    const t = curType();
+    const bits = bitsOf(t);
+    if (t.id === "custom") {
+      const a = currentAlphabet().length;
+      if (a < 2) { $("setTip").innerHTML = '<span class="err-tip">至少要勾选一类字符集</span>'; return; }
+      $("setTip").innerHTML = "字母表 <b style='color:var(--accent)'>" + a + "</b> 个字符，"
+        + $("len").value + " 位约 <b style='color:var(--accent)'>" + bits.toFixed(1) + " bit</b> 熵";
+      return;
+    }
+    $("setTip").innerHTML = t.name + " 固定 <b style='color:var(--accent)'>" + bits.toFixed(0)
+      + " bit</b> 随机位" + (t.id === "nanoid" ? "（长度 " + $("len").value + " × 6）" : "") + "。";
+  }
+
+  /* ============================================================
+     事件绑定
+     ============================================================ */
+  buildStatic();
+  syncType();
+
+  $("type").addEventListener("change", syncType);
+  $("len").addEventListener("input", updateSetTip);
+  for (const id of ["cUpper", "cLower", "cDigit", "cSymbol", "cNoAmb"]) {
+    $(id).addEventListener("change", updateSetTip);
+  }
+  $("btnGen").addEventListener("click", doGen);
+  $("btnRegen").addEventListener("click", doGen);
+  $("btnCopyAll").addEventListener("click", () => {
+    if (!raw.length) { toast("还没有生成结果"); return; }
+    copyText(exportText(), "已复制 " + raw.length + " 个");
+  });
+  $("btnDl").addEventListener("click", () => {
+    if (!raw.length) { toast("还没有生成结果"); return; }
+    const ext = { json: "json", yaml: "yaml", csv: "csv", sql: "sql", lines: "txt" }[$("exp").value] || "txt";
+    const blob = new Blob([exportText() + "\n"], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ids." + ext;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("已下载 ids." + ext);
+  });
+  $("btnClear").addEventListener("click", () => {
+    raw = [];
+    render();
+    toast("已清空");
+  });
+  /* ★ 「输出格式」卡的三个控件都只重排已有结果，**不重新生成** ——
+     卡片上写明「只影响复制/下载的形态」，换大小写/加前缀/去连字符都不该换掉 ID 本体。
+     （同时这也是性能上的好事：敲前缀不再每键重跑一遍 crypto 生成。） */
+  $("case").addEventListener("change", () => { if (raw.length) render(); });
+  $("prefix").addEventListener("input", () => { if (raw.length) render(); });
+  $("cNoDash").addEventListener("change", () => {
+    if (!$("cNoDash").disabled) userNoDash = $("cNoDash").checked;
+    if (raw.length) render();
+  });
+  /* 这两个只改导出形态，也不必重新生成 */
+  $("cQuote").addEventListener("change", () => {
+    if (!$("cQuote").disabled) userQuote = $("cQuote").checked;
+    if (raw.length) render();
+  });
+  $("exp").addEventListener("change", () => {
+    syncQuote();
+    if (raw.length) render();
+  });
+  syncQuote();
+
+  /* 初始化 */
+  if (!HAS_RNG) {
+    $("btnGen").disabled = true;
+    $("setTip").innerHTML = '<span class="err-tip">当前环境没有 crypto.getRandomValues，无法生成安全 ID（请更新浏览器）。</span>';
+  }
+  render();
+})();
+</script>
+</body>
+</html>

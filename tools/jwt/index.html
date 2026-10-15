@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JWT 解析</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+  code { font-family: var(--mono); }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  .stat .ok { color: var(--ok); font-weight: 600; }
+  .stat .bad { color: var(--err); font-weight: 600; }
+
+  button, select, input, textarea {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input / textarea —— 它们要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  input[type="text"], input[type="password"] { cursor: text; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  textarea { cursor: text; resize: vertical; width: 100%; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  /* ★ 内容型页面收窄，不要吃满 1440px */
+  .grid {
+    max-width: 1080px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row:last-child { margin-bottom: 0; }
+  .row > label.k { width: 62px; color: var(--text-2); flex: none; }
+
+  /* 令牌分段着色 */
+  .seg-view { margin-top: 8px; font-size: 12px; line-height: 1.9; word-break: break-all; }
+  .seg-view code { user-select: all; }
+  .seg-view .s1 { color: var(--err); }
+  .seg-view .s2 { color: var(--accent); }
+  .seg-view .s3 { color: var(--ok); }
+  .seg-view .dt { color: var(--text-3); }
+
+  /* JSON 高亮 */
+  .json {
+    margin: 0; padding: 10px 12px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px;
+    font: 12px/1.65 var(--mono); white-space: pre-wrap; word-break: break-all;
+    max-height: 320px; overflow: auto; color: var(--text);
+  }
+  .json::-webkit-scrollbar { width: 8px; height: 8px; }
+  .json::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; }
+  .j-key { color: var(--accent); }
+  .j-str { color: var(--ok); }
+  .j-num { color: var(--num); }
+  .j-bool { color: var(--accent-2); }
+  .j-null { color: var(--text-3); }
+
+  /* 有效期 */
+  .tl { margin-bottom: 12px; }
+  .tl-bar { height: 8px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+  .tl-bar > i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .25s, background .25s; }
+  .tl-txt { font-size: 12px; color: var(--text-2); margin-top: 6px; }
+  .tl-txt b { color: var(--text); }
+
+  .kv { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .kv span { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; }
+  .kv b { color: var(--accent); font-weight: 600; }
+
+  .badge {
+    font-size: 11px; padding: 1px 8px; border-radius: 20px; font-weight: 600;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .badge.ok { color: var(--ok); background: rgba(13,122,82,.1); border-color: rgba(13,122,82,.25); }
+  .badge.bad { color: var(--err); background: rgba(209,36,47,.1); border-color: rgba(209,36,47,.25); }
+  .badge.warn { color: var(--num); background: rgba(178,94,9,.1); border-color: rgba(178,94,9,.25); }
+  .badge.mute { color: var(--text-3); background: var(--surface-1); border-color: var(--border); }
+
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .tip b { color: var(--text-2); font-weight: 600; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .ph { color: var(--text-3); font-size: 12.5px; padding: 12px 2px; }
+
+  .tbl-wrap { overflow-x: auto; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tbl th, .tbl td {
+    text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--border);
+    vertical-align: top; line-height: 1.6;
+  }
+  .tbl th { color: var(--text-2); font-weight: 600; white-space: nowrap; background: var(--panel-2); }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl td.k { color: var(--accent); white-space: nowrap; font-weight: 600; }
+  .tbl td.v { word-break: break-all; }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+  .tbl .sub { color: var(--text-3); font-size: 11px; }
+
+  .warn-list { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-2); line-height: 1.9; }
+  .warn-list b { color: var(--text); }
+  .warn-list code { color: var(--num); font-size: 11.5px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; }
+    .grid { gap: 10px; }
+    .card { padding: 12px; }
+    .row > label.k { width: 56px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大
+       （select 同样会被 iOS 缩放，所以这里一并提上去） */
+    input[type="text"], input[type="password"], select, textarea { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">JWT<span>Parse</span></div>
+  <span class="sep"></span>
+  <span class="stat" id="stat">等待输入</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">解码与验签全部在本地完成，令牌不出浏览器</span>
+  <button class="mini" id="btnSample">示例</button>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<main>
+<div class="grid">
+
+  <!-- ============ 1. 令牌 ============ -->
+  <section class="card wide">
+    <h2>
+      令牌
+      <span class="hint">可直接粘贴 <code>Authorization: Bearer …</code> 整行，会自动挑出令牌</span>
+      <span class="right">
+        <button class="mini" id="btnDemo">填入示例令牌</button>
+      </span>
+    </h2>
+    <textarea id="tok" rows="4" placeholder="粘贴 JWT（形如 xxx.yyy.zzz）…" spellcheck="false" autocomplete="off"></textarea>
+    <div class="seg-view" id="segView"><span class="dt">等待输入…</span></div>
+    <div class="row" style="margin-top:10px">
+      <span class="kv" id="tokKv"></span>
+    </div>
+  </section>
+
+  <!-- ============ 2. 头部 / 载荷 ============ -->
+  <section class="card">
+    <h2>
+      头部 Header
+      <span class="hint">算法与类型</span>
+      <span class="right"><button class="mini" id="btnCopyH" disabled>复制</button></span>
+    </h2>
+    <pre class="json" id="hdr"><span class="ph">—</span></pre>
+  </section>
+
+  <section class="card">
+    <h2>
+      载荷 Payload
+      <span class="hint">业务声明</span>
+      <span class="right"><button class="mini" id="btnCopyP" disabled>复制</button></span>
+    </h2>
+    <pre class="json" id="pld"><span class="ph">—</span></pre>
+  </section>
+
+  <!-- ============ 3. 声明解读 ============ -->
+  <section class="card wide">
+    <h2>
+      声明解读
+      <span class="hint">把注册声明翻译成人话</span>
+    </h2>
+    <div class="tl" id="tlWrap" style="display:none">
+      <div class="tl-bar"><i id="tlBar"></i></div>
+      <div class="tl-txt" id="tlTxt"></div>
+    </div>
+    <div id="claimsWrap"><div class="ph">解析后在这里列出每个声明的含义。</div></div>
+  </section>
+
+  <!-- ============ 4. 签名与验签 ============ -->
+  <section class="card wide">
+    <h2>
+      签名与验签
+      <span class="hint">验签只证明「签名有效」，不代表令牌没被吊销</span>
+      <span class="right"><span id="sigBadge"></span></span>
+    </h2>
+
+    <div class="row">
+      <label class="k">签名</label>
+      <code id="sigB64" style="flex:1;min-width:0;word-break:break-all;font-size:12px;color:var(--text-2)">—</code>
+    </div>
+    <div class="row">
+      <label class="k">十六进制</label>
+      <code id="sigHex" style="flex:1;min-width:0;word-break:break-all;font-size:12px;color:var(--text-3)">—</code>
+    </div>
+
+    <div class="row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <label class="k" for="keyFmt">密钥</label>
+      <select id="keyFmt" style="flex:none">
+        <option value="plain">明文</option>
+        <option value="b64">Base64</option>
+        <option value="hex">Hex</option>
+      </select>
+      <input type="password" id="secret" placeholder="HMAC 密钥；或粘贴 PEM 公钥（RS/PS/ES）" style="flex:1" autocomplete="off" spellcheck="false" />
+      <button class="mini" id="btnEye">显示</button>
+      <button class="primary" id="btnVerify" disabled>验签</button>
+    </div>
+    <div class="tip" id="verifyTip" style="margin-top:8px">
+      密钥格式只对 HMAC 有意义；粘贴 PEM 公钥时自动按 RSA / ECDSA 处理。
+    </div>
+  </section>
+
+  <!-- ============ 5. 安全提示 ============ -->
+  <section class="card wide">
+    <h2>
+      要知道的几件事
+      <span class="hint">这些坑比解析本身更重要</span>
+    </h2>
+    <ul class="warn-list">
+      <li><b>JWT 的载荷是「编码」不是「加密」。</b>三段都只是 Base64URL，任何人拿到令牌都能读出全部声明 —— 所以<b>不要往载荷里放密码、身份证号、密钥</b>。要保密就得用 JWE（加密令牌），那是另一套东西。</li>
+      <li><b>验签通过 ≠ 令牌有效。</b>还得自己看 <code>exp</code>（过期）、<code>nbf</code>（未生效）、<code>aud</code>（受众是不是自己）、<code>iss</code>（签发者是否可信）。很多漏洞就是「只验签不验声明」。</li>
+      <li><b><code>alg</code> 必须由服务端白名单决定，不能信令牌里写的。</b>否则攻击者把 <code>alg</code> 改成 <code>none</code>（或把 RS256 改成 HS256 并用公钥当 HMAC 密钥）就能伪造令牌。这是历史上最经典的 JWT 漏洞。</li>
+      <li><b>HMAC 密钥泄露等于任何人都能签发。</b>HS256 的密钥是<b>双方共享</b>的；RS/ES 是私钥签名、公钥验签，公钥可以公开。</li>
+      <li><b>令牌里嵌了时间戳就会泄露签发时间</b>（<code>iat</code> / <code>exp</code> 本身就是时间）。这是协议设计使然，不是 bug。</li>
+    </ul>
+    <div class="tip" style="margin-top:10px">
+      本页只做本地解码与验签：令牌、密钥都不上传。验签走浏览器原生 <code>crypto.subtle</code>，
+      需要 HTTPS 或 localhost 之类的安全上下文 —— 不满足时解码仍可用，验签会提示不可用。
+    </div>
+  </section>
+
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const enc = new TextEncoder();
+
+  /* ============================================================
+     Base64URL
+     ============================================================ */
+  function b64uToBytes(s) {
+    let t = String(s).replace(/-/g, "+").replace(/_/g, "/").replace(/\s+/g, "");
+    const pad = t.length % 4;
+    if (pad === 1) throw new Error("Base64URL 长度非法");
+    if (pad) t += "====".slice(0, 4 - pad);
+    const bin = atob(t);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function b64uDecode(s) { return new TextDecoder().decode(b64uToBytes(s)); }
+  function bytesToB64u(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function bytesToHex(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
+    return s;
+  }
+
+  /* ============================================================
+     JSON 高亮 —— 先按 token 切分再逐段转义，绝不把原文直接塞进 innerHTML
+     ============================================================ */
+  const JSON_TOK = /("(?:\\.|[^"\\])*"\s*:)|("(?:\\.|[^"\\])*")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false)\b|\b(null)\b/g;
+  function hlJSON(s) {
+    let out = "", last = 0, m;
+    JSON_TOK.lastIndex = 0;
+    while ((m = JSON_TOK.exec(s)) !== null) {
+      out += eh(s.slice(last, m.index));
+      const cls = m[1] ? "j-key" : m[2] ? "j-str" : m[3] ? "j-num" : m[4] ? "j-bool" : "j-null";
+      out += '<span class="' + cls + '">' + eh(m[0]) + "</span>";
+      last = m.index + m[0].length;
+    }
+    return out + eh(s.slice(last));
+  }
+
+  /* ============================================================
+     声明词典
+     ============================================================ */
+  const CLAIMS = {
+    iss: ["签发者", "谁签发了这个令牌（通常是域名或服务名）"],
+    sub: ["主体", "这个令牌代表谁（用户 ID / 服务账号）"],
+    aud: ["受众", "令牌是发给谁的 —— 接收方必须核对是不是自己"],
+    exp: ["过期时间", "超过这个时刻令牌失效"],
+    nbf: ["生效时间", "早于这个时刻令牌还不能用"],
+    iat: ["签发时间", "什么时候签的"],
+    jti: ["唯一编号", "令牌 ID，用于防重放 / 吊销名单"],
+    scope: ["权限范围", "空格分隔的权限列表（OAuth 2）"],
+    scp: ["权限范围", "同 scope，部分实现用数组"],
+    azp: ["授权方", "发起授权的客户端 ID"],
+    sid: ["会话 ID", "一次登录会话的标识"],
+    nonce: ["随机数", "防重放，OIDC 里用于校验 ID Token 来源"],
+    auth_time: ["认证时间", "用户真正通过认证的时刻"],
+    amr: ["认证方式", "用了哪些手段认证，如 pwd / otp"],
+    acr: ["认证上下文", "认证强度等级"],
+    at_hash: ["access_token 摘要", "用于校验 access_token 未被替换"],
+    c_hash: ["code 摘要", "用于校验授权码未被替换"],
+    typ: ["类型", "令牌类型，如 JWT / at+jwt"],
+    kid: ["密钥 ID", "告诉验签方用哪把密钥（在头部）"],
+    alg: ["签名算法", "签名算法，服务端必须按白名单校验"],
+    name: ["姓名", "OIDC 里的用户显示名"],
+    email: ["邮箱", "OIDC 标准声明"],
+    preferred_username: ["用户名", "OIDC 标准声明"],
+    roles: ["角色", "自定义声明，常见于 RBAC"],
+    groups: ["用户组", "自定义声明"],
+    tenant: ["租户", "多租户系统里的租户标识"],
+    ver: ["版本", "自定义的令牌版本号"]
+  };
+  const TIME_CLAIMS = { exp: 1, nbf: 1, iat: 1, auth_time: 1 };
+
+  function fmtTime(sec) {
+    const d = new Date(sec * 1000);
+    const p = n => (n < 10 ? "0" : "") + n;
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " "
+      + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  function rel(sec) {
+    const d = sec - Math.floor(Date.now() / 1000);
+    /* d === 0 时不要说「0 秒前/后」—— 那是「刚刚」，不然文案里会读成「0 秒之前」 */
+    if (d === 0) return "刚刚";
+    const a = Math.abs(d), fut = d > 0;
+    const s = a < 60 ? a + " 秒" : a < 3600 ? Math.round(a / 60) + " 分钟"
+      : a < 86400 ? Math.round(a / 3600) + " 小时" : Math.round(a / 86400) + " 天";
+    return fut ? s + "后" : s + "前";
+  }
+
+  /* ============================================================
+     解析
+     ============================================================ */
+  let state = null;   /* { raw, parts, header, payload, sig, err } */
+
+  /* 从任意文本里挑出令牌：允许前面有 "Authorization: Bearer "、引号等 */
+  function extractToken(s) {
+    const m = String(s).match(/[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]*/);
+    return m ? m[0] : "";
+  }
+
+  function typeName(v) {
+    if (v === null) return "null";
+    if (Array.isArray(v)) return "数组";
+    return typeof v === "number" ? "数字" : typeof v === "string" ? "字符串"
+      : typeof v === "boolean" ? "布尔值" : "未知";
+  }
+  function isPlainObj(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+
+  function parse(raw) {
+    const tok = extractToken(raw);
+    if (!tok) return { err: "没找到形如 xxx.yyy.zzz 的令牌" };
+    const parts = tok.split(".");
+    if (parts.length !== 3) return { err: "令牌应当是 3 段，实际 " + parts.length + " 段" };
+    let header, payload;
+    try {
+      header = JSON.parse(b64uDecode(parts[0]));
+    } catch (e) {
+      return { err: "头部不是合法 JSON：" + (e && e.message || e) };
+    }
+    try {
+      payload = JSON.parse(b64uDecode(parts[1]));
+    } catch (e) {
+      return { err: "载荷不是合法 JSON：" + (e && e.message || e) };
+    }
+    /* ★ RFC 7519 要求头部与载荷都是 JSON **对象**。畸形令牌解码出 null / 数字 /
+       数组是常事（也常是攻击者故意构造的），这里要给出明确错误，
+       而不是让后面的渲染逻辑崩在 `Object.keys(null)` 上。 */
+    if (!isPlainObj(header)) return { err: "头部应当是 JSON 对象，实际是" + typeName(header) };
+    if (!isPlainObj(payload)) return { err: "载荷应当是 JSON 对象，实际是" + typeName(payload) };
+    let sig = null;
+    try { sig = parts[2] ? b64uToBytes(parts[2]) : null; } catch (e) { sig = null; }
+    return { raw: tok, parts: parts, header: header, payload: payload, sig: sig };
+  }
+
+  /* ============================================================
+     渲染
+     ============================================================ */
+  function renderEmpty() {
+    state = null;
+    $("stat").textContent = "等待输入";
+    $("segView").innerHTML = '<span class="dt">等待输入…</span>';
+    $("tokKv").textContent = "";
+    $("hdr").innerHTML = '<span class="ph">—</span>';
+    $("pld").innerHTML = '<span class="ph">—</span>';
+    $("claimsWrap").innerHTML = '<div class="ph">解析后在这里列出每个声明的含义。</div>';
+    $("tlWrap").style.display = "none";
+    $("sigB64").textContent = "—";
+    $("sigHex").textContent = "—";
+    $("sigBadge").innerHTML = "";
+    $("btnVerify").disabled = true;
+    $("btnCopyH").disabled = $("btnCopyP").disabled = true;
+    $("verifyTip").className = "tip";
+    $("verifyTip").textContent = "密钥格式只对 HMAC 有意义；粘贴 PEM 公钥时自动按 RSA / ECDSA 处理。";
+  }
+
+  function renderErr(msg) {
+    state = null;
+    $("stat").textContent = "解析失败";
+    $("segView").innerHTML = '<span class="err-tip">' + eh(msg) + "</span>";
+    $("tokKv").textContent = "";
+    $("hdr").innerHTML = '<span class="ph">—</span>';
+    $("pld").innerHTML = '<span class="ph">—</span>';
+    $("claimsWrap").innerHTML = '<div class="ph">' + eh(msg) + "</div>";
+    $("tlWrap").style.display = "none";
+    $("sigB64").textContent = "—";
+    $("sigHex").textContent = "—";
+    $("sigBadge").innerHTML = "";
+    $("btnVerify").disabled = true;
+    $("btnCopyH").disabled = $("btnCopyP").disabled = true;
+  }
+
+  function renderSegs(p) {
+    const cls = ["s1", "s2", "s3"];
+    $("segView").innerHTML = p.map((seg, i) =>
+      '<span class="' + cls[i] + '"><code>' + eh(seg || "(空)") + "</code></span>"
+    ).join('<span class="dt">.</span>');
+  }
+
+  function renderClaims(payload, header) {
+    /* 防御：payload / header 不是普通对象时直接给提示，不要往下走 ——
+       `Object.keys(null)` 会抛 TypeError，而头部里的 alg/kid 是**令牌可控**的。 */
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      $("claimsWrap").innerHTML = '<div class="ph">载荷不是一个对象，列不出声明。</div>';
+      return;
+    }
+    if (!header || typeof header !== "object" || Array.isArray(header)) header = {};
+    const rows = [];
+    /* 头部里两个最该看的放最前面。
+       ★ 值必须过 eh()：alg / kid 是令牌里写的内容，未经转义直接拼进 innerHTML
+       就是一个可执行的 XSS（`{"alg":"<img src=x onerror=…>"}`）。 */
+    ["alg", "kid"].forEach(k => {
+      if (header[k] === undefined) return;
+      const c = CLAIMS[k] || ["", ""];
+      rows.push([k, eh(JSON.stringify(header[k])), c[0], c[1]]);
+    });
+
+    const seen = {};
+    Object.keys(payload).forEach(k => {
+      if (seen[k]) return;
+      seen[k] = 1;
+      const c = CLAIMS[k];
+      const v = payload[k];
+      let vs, note = c ? c[1] : "";
+      if (TIME_CLAIMS[k] && typeof v === "number") {
+        vs = fmtTime(v) + "  <span class=\"sub\">（" + v + " · " + rel(v) + "）</span>";
+        note = (c ? c[1] : "") + " —— 即 " + rel(v).replace("后", "之后").replace("前", "之前");
+      } else if (Array.isArray(v)) {
+        vs = eh(JSON.stringify(v));
+      } else if (v !== null && typeof v === "object") {
+        vs = eh(JSON.stringify(v));
+      } else {
+        vs = eh(JSON.stringify(v));
+      }
+      rows.push([k, vs, c ? c[0] : "自定义", note || "非标准声明，含义由签发方定义"]);
+    });
+
+    if (!rows.length) {
+      $("claimsWrap").innerHTML = '<div class="ph">载荷是空的。</div>';
+      return;
+    }
+    $("claimsWrap").innerHTML = '<div class="tbl-wrap"><table class="tbl fit"><thead><tr>'
+      + "<th>声明</th><th>值</th><th>含义</th><th>说明</th></tr></thead><tbody>"
+      + rows.map(r => "<tr><td class=\"k\">" + eh(r[0]) + "</td><td class=\"v\">" + r[1]
+        + "</td><td>" + eh(r[2]) + "</td><td class=\"sub\">" + eh(r[3]) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+  }
+
+  function renderValidity(payload) {
+    const now = Math.floor(Date.now() / 1000);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      $("tlWrap").style.display = "none";
+      return;
+    }
+    const exp = typeof payload.exp === "number" ? payload.exp : null;
+    const iat = typeof payload.iat === "number" ? payload.iat : null;
+    const nbf = typeof payload.nbf === "number" ? payload.nbf : null;
+
+    if (exp === null && nbf === null && iat === null) {
+      $("tlWrap").style.display = "none";
+      return;
+    }
+    $("tlWrap").style.display = "";
+
+    let pct = 0, color = "var(--ok)";
+    const bits = [];
+    if (iat !== null) bits.push("签发于 <b>" + fmtTime(iat) + "</b>（" + rel(iat) + "）");
+    if (nbf !== null) bits.push("生效于 <b>" + fmtTime(nbf) + "</b>（" + rel(nbf) + "）");
+
+    if (exp !== null && iat !== null && exp > iat) {
+      pct = ((now - iat) / (exp - iat)) * 100;
+      if (pct < 0) pct = 0;
+      if (pct >= 100) color = "var(--err)";
+      else if (pct >= 80) color = "var(--num)";
+    } else if (exp !== null) {
+      pct = now >= exp ? 100 : 0;
+      color = now >= exp ? "var(--err)" : "var(--ok)";
+    }
+    if (exp !== null) bits.push("过期于 <b>" + fmtTime(exp) + "</b>（" + rel(exp) + "）");
+
+    $("tlBar").style.width = Math.max(2, Math.min(100, pct)) + "%";
+    $("tlBar").style.background = color;
+    $("tlTxt").innerHTML = bits.join(" · ");
+  }
+
+  function renderSig(header, sig) {
+    const alg = header.alg;
+    if (alg === "none" || !sig || !sig.length) {
+      $("sigB64").textContent = sig && sig.length ? bytesToB64u(sig) : "(无签名)";
+      $("sigHex").textContent = sig && sig.length ? bytesToHex(sig) : "—";
+      $("sigBadge").innerHTML = '<span class="badge bad">未签名</span>';
+      return;
+    }
+    $("sigB64").textContent = bytesToB64u(sig);
+    $("sigHex").textContent = bytesToHex(sig);
+    $("sigBadge").innerHTML = '<span class="badge mute">' + eh(String(alg || "未知算法")) + "</span>";
+  }
+
+  function render() {
+    const raw = $("tok").value;
+    if (!raw.trim()) { renderEmpty(); return; }
+    const r = parse(raw);
+    if (r.err) { renderErr(r.err); return; }
+    state = r;
+
+    const alg = r.header.alg || "";
+    const isNone = alg === "none";
+    $("stat").innerHTML = "算法 <b>" + eh(alg || "?") + "</b>"
+      + (isNone ? ' <span class="bad">（none，未签名）</span>' : "");
+    renderSegs(r.parts);
+    $("hdr").innerHTML = hlJSON(JSON.stringify(r.header, null, 2));
+    $("pld").innerHTML = hlJSON(JSON.stringify(r.payload, null, 2));
+    $("btnCopyH").disabled = $("btnCopyP").disabled = false;
+    renderClaims(r.payload, r.header);
+    renderValidity(r.payload);
+    renderSig(r.header, r.sig);
+
+    const p = r.payload;
+    const kv = [];
+    if (typeof p.exp === "number") {
+      const left = p.exp - Math.floor(Date.now() / 1000);
+      kv.push(left > 0 ? '剩余有效期 <b>' + rel(p.exp) + "</b>" : '<b>已过期 ' + rel(p.exp) + "</b>");
+    } else kv.push("无 <b>exp</b>（永不过期）");
+    if (typeof p.nbf === "number" && p.nbf > Math.floor(Date.now() / 1000)) kv.push("<b>尚未生效</b>");
+    kv.push("签名 <b>" + (r.sig ? r.sig.length + " 字节" : "无") + "</b>");
+    $("tokKv").innerHTML = kv.map(h => "<span>" + h + "</span>").join("");
+
+    /* 算法缺失 / none 时不给验签 */
+    const supported = !!ALG[alg];
+    $("btnVerify").disabled = !supported || !SUPPORT_SUBTLE;
+    $("verifyTip").className = "tip";
+    $("verifyTip").innerHTML = isNone
+      ? '<span class="err-tip">alg 是 <code>none</code>，这个令牌没有签名，验签无意义。服务端遇到它必须直接拒绝。</span>'
+      : !SUPPORT_SUBTLE ? '<span class="err-tip">当前不是安全上下文（需要 HTTPS 或 localhost），浏览器不提供 crypto.subtle，验签不可用；解码不受影响。</span>'
+      : !supported ? '<span class="err-tip">本页暂不支持 <code>' + eh(alg) + "</code> 的验签（支持 HS / RS / PS / ES 系列）。</span>"
+      : "密钥格式只对 HMAC 有意义；粘贴 PEM 公钥时自动按 RSA / ECDSA 处理。";
+  }
+
+  /* ============================================================
+     验签
+     ============================================================ */
+  const SUPPORT_SUBTLE = !!(window.crypto && crypto.subtle);
+  const ALG = {
+    HS256: { k: "hmac", hash: "SHA-256" },
+    HS384: { k: "hmac", hash: "SHA-384" },
+    HS512: { k: "hmac", hash: "SHA-512" },
+    RS256: { k: "rsa", hash: "SHA-256", alg: "RSASSA-PKCS1-v1_5" },
+    RS384: { k: "rsa", hash: "SHA-384", alg: "RSASSA-PKCS1-v1_5" },
+    RS512: { k: "rsa", hash: "SHA-512", alg: "RSASSA-PKCS1-v1_5" },
+    PS256: { k: "rsa", hash: "SHA-256", alg: "RSA-PSS", salt: 32 },
+    PS384: { k: "rsa", hash: "SHA-384", alg: "RSA-PSS", salt: 48 },
+    PS512: { k: "rsa", hash: "SHA-512", alg: "RSA-PSS", salt: 64 },
+    ES256: { k: "ec", hash: "SHA-256", curve: "P-256" },
+    ES384: { k: "ec", hash: "SHA-384", curve: "P-384" },
+    ES512: { k: "ec", hash: "SHA-512", curve: "P-521" }
+  };
+
+  function pemToBuf(pem) {
+    const body = String(pem)
+      .replace(/-----BEGIN [^-]+-----/g, "")
+      .replace(/-----END [^-]+-----/g, "")
+      .replace(/\s+/g, "");
+    if (!body) throw new Error("公钥是空的");
+    const bin = atob(body);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+  }
+
+  function secretBytes() {
+    const v = $("secret").value;
+    const f = $("keyFmt").value;
+    if (f === "b64") {
+      const bin = atob(v.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/"));
+      const b = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+      return b;
+    }
+    if (f === "hex") {
+      const h = v.replace(/[\s:]/g, "");
+      if (!/^[0-9a-fA-F]*$/.test(h) || h.length % 2) throw new Error("Hex 密钥格式不对（应为偶数个十六进制字符）");
+      const b = new Uint8Array(h.length / 2);
+      for (let i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16);
+      return b;
+    }
+    return enc.encode(v);
+  }
+
+  function isPem(s) { return /-----BEGIN [^-]+-----/.test(s); }
+
+  async function verify() {
+    if (!state) { toast("先解析一个令牌"); return; }
+    const alg = state.header.alg;
+    const c = ALG[alg];
+    if (!c) { toast("不支持的算法：" + alg); return; }
+    const keyText = $("secret").value;
+    if (!keyText.trim()) { toast("请先填密钥"); return; }
+
+    const tip = $("verifyTip");
+    $("btnVerify").disabled = true;
+    tip.className = "tip";
+    tip.textContent = "验签中…";
+
+    const signingInput = enc.encode(state.parts[0] + "." + state.parts[1]);
+    const sig = state.sig;
+    if (!sig || !sig.length) { tip.className = "tip err-tip"; tip.textContent = "这个令牌没有签名段，无法验签。"; $("btnVerify").disabled = false; return; }
+
+    try {
+      let ok;
+      if (c.k === "hmac") {
+        const key = await crypto.subtle.importKey("raw", secretBytes(),
+          { name: "HMAC", hash: c.hash }, false, ["verify"]);
+        ok = await crypto.subtle.verify("HMAC", key, sig, signingInput);
+      } else if (c.k === "rsa") {
+        if (!isPem(keyText)) throw new Error("RSA / PSS 验签需要 PEM 格式的公钥（-----BEGIN PUBLIC KEY-----）");
+        const key = await crypto.subtle.importKey("spki", pemToBuf(keyText),
+          { name: c.alg, hash: c.hash }, false, ["verify"]);
+        const p = c.alg === "RSA-PSS" ? { name: "RSA-PSS", saltLength: c.salt } : { name: "RSASSA-PKCS1-v1_5" };
+        ok = await crypto.subtle.verify(p, key, sig, signingInput);
+      } else {
+        if (!isPem(keyText)) throw new Error("ECDSA 验签需要 PEM 格式的公钥（-----BEGIN PUBLIC KEY-----）");
+        const key = await crypto.subtle.importKey("spki", pemToBuf(keyText),
+          { name: "ECDSA", namedCurve: c.curve }, false, ["verify"]);
+        ok = await crypto.subtle.verify({ name: "ECDSA", hash: c.hash }, key, sig, signingInput);
+      }
+      $("sigBadge").innerHTML = ok
+        ? '<span class="badge ok">签名有效</span>'
+        : '<span class="badge bad">签名不匹配</span>';
+      tip.className = ok ? "tip ok-tip" : "tip err-tip";
+      tip.textContent = ok
+        ? "签名验证通过 —— 令牌内容确实由持有该密钥的一方签发，且未被篡改。注意：这只证明签名，不代表令牌没过期或被吊销。"
+        : "签名不匹配 —— 密钥不对，或令牌被改过。请确认用的是同一把密钥、以及密钥格式（明文 / Base64 / Hex）选对了。";
+    } catch (e) {
+      $("sigBadge").innerHTML = '<span class="badge warn">验签失败</span>';
+      tip.className = "tip err-tip";
+      tip.textContent = "验签过程出错：" + (e && e.message || e);
+    } finally {
+      $("btnVerify").disabled = false;
+    }
+  }
+
+  /* ============================================================
+     示例令牌 —— 现场用 WebCrypto 签一个，时间永远新鲜
+     ============================================================ */
+  const SAMPLE_SECRET = "your-256-bit-secret";
+  async function sampleToken(expired) {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: "HS256", typ: "JWT" };
+    const payload = {
+      iss: "https://example.com",
+      sub: "1234567890",
+      aud: "my-app",
+      name: "MidAug",
+      scope: "read write",
+      iat: now,
+      exp: expired ? now - 600 : now + 3600,
+      jti: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    };
+    const si = bytesToB64u(enc.encode(JSON.stringify(header))) + "."
+      + bytesToB64u(enc.encode(JSON.stringify(payload)));
+    const key = await crypto.subtle.importKey("raw", enc.encode(SAMPLE_SECRET),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(si)));
+    return si + "." + bytesToB64u(sig);
+  }
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  let t = 0;
+  $("tok").addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(render, 90);
+  });
+  $("btnCopyH").addEventListener("click", () => {
+    if (!state) { toast("先解析一个令牌"); return; }
+    copyText(JSON.stringify(state.header, null, 2), "已复制头部");
+  });
+  $("btnCopyP").addEventListener("click", () => {
+    if (!state) { toast("先解析一个令牌"); return; }
+    copyText(JSON.stringify(state.payload, null, 2), "已复制载荷");
+  });
+  $("btnVerify").addEventListener("click", verify);
+  $("btnEye").addEventListener("click", () => {
+    const el = $("secret");
+    const show = el.type === "password";
+    el.type = show ? "text" : "password";
+    $("btnEye").textContent = show ? "隐藏" : "显示";
+  });
+  $("btnClear").addEventListener("click", () => {
+    $("tok").value = "";
+    $("secret").value = "";
+    renderEmpty();
+    toast("已清空");
+  });
+  async function fillSample() {
+    if (!SUPPORT_SUBTLE) { toast("示例令牌需要 crypto.subtle，当前环境不可用"); return; }
+    try {
+      $("tok").value = await sampleToken(false);
+      $("secret").value = SAMPLE_SECRET;
+      $("keyFmt").value = "plain";
+      render();
+      toast("已填入示例令牌（密钥也已填好，可直接点验签）");
+    } catch (e) {
+      toast("生成示例失败：" + (e && e.message || e));
+    }
+  }
+  $("btnSample").addEventListener("click", fillSample);
+  $("btnDemo").addEventListener("click", fillSample);
+
+  renderEmpty();
+})();
+</script>
+</body>
+</html>
