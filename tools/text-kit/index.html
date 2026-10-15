@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>文本工具箱</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 编码转换」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  /* 顶栏：左侧放信息，操作按钮推到最右 */
+  #btnClear { margin-left: auto; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄：顶栏与 .ops 都是 flex 容器，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根竖条。空间不够请让它换行，不要压扁。
+     注意不要加给 input —— 输入框要靠可收缩来占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"] { cursor: text; font-variant-numeric: tabular-nums; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color: var(--text-3); }
+  select { padding-right: 6px; }
+
+  /* ===== Tab 栏 =====
+     一类处理一个 tab，切过去只显示那一个面板。横滚而不是换行/隐藏 ——
+     以后还会加类型，横向滚动能容纳任意多个，也不用断点藏控件。 */
+  .tabs {
+    flex: none; display: flex; gap: 6px; align-items: center;
+    padding: 6px 10px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* ★ 每个 tab 是独立的圆角块。只靠间距分不开 —— 必须让「每一块」有自己的形状：
+     悬停浅底、选中靛蓝淡底 + 靛蓝字。 */
+  .tab {
+    flex: none;
+    background: none; border: 0; border-radius: 7px;
+    padding: 6px 11px; cursor: pointer;
+    font: inherit; font-size: 12.5px; color: var(--text-2);
+    white-space: nowrap;
+    transition: color .15s, background .15s;
+  }
+  .tab:hover { background: var(--hover); border-color: transparent; color: var(--accent); }
+  .tab[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* ===== 主体 =====
+     大文本工具（行处理/字数统计/换行符一粘就是几百行），照 text-diff 的思路：
+     main 自己不滚动，面板撑满可视高度，文本框靠 flex 伸长、在框内滚。
+     空间不够时（矮窗口）面板才整体出滚动条兜底。 */
+  main {
+    flex: 1; min-height: 0; overflow: hidden; padding: 14px;
+    display: flex;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.panel {
+    width: 100%; max-width: 1280px; margin: 0 auto;
+    display: flex; flex-direction: column; min-height: 0;
+    overflow: auto; scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  .card.panel::-webkit-scrollbar { width: 10px; height: 10px; }
+  .card.panel::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  .card.panel::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  .card.panel::-webkit-scrollbar-track { background: transparent; }
+  .card.panel[hidden] { display: none; }
+  /* 面板里除了文本框以外的部分都固定高：标题 / 操作行 / 表格 / note 不参与伸缩 */
+  .card > h2, .card > .ops, .card > .note, .card > .tbl-wrap { flex: none; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* ===== 输入 / 输出文本域 =====
+     输入用浅底、输出用白底虚线框，一眼能分清哪个能改。
+     ★ flex:1 1 auto：面板里的文本框会自动伸长吃掉剩余高度（min-height 保底），
+       大文本场景下框有多大取决于窗口，而不是写死的 132px。
+     刻意不给 textarea 设 flex-shrink:0 —— 它要靠收缩适配窄屏。 */
+  .io {
+    display: block; width: 100%; min-height: 110px; resize: vertical;
+    font: 12.5px/1.65 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    word-break: break-all; white-space: pre-wrap;
+    transition: background .15s, border-color .15s, box-shadow .15s;
+  }
+  .panel > .io { flex: 1 1 auto; }
+  .io:focus { background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .io.out { background: var(--panel); border-style: dashed; }
+  .io.out.filled { border-style: solid; border-color: var(--border-2); }
+  .io.tall { min-height: 150px; }
+
+  /* ===== 左右布局（输入 | 结果）=====
+     大文本一粘几百行，上下堆叠要滚很久 —— 左右各一栏长度直接砍半。
+     宽屏并排（列内文本框 flex 吃满列高、框内滚），900px 以下上下堆叠。 */
+  .duo { flex: 1 1 auto; min-height: 0; display: flex; gap: 10px; }
+  .duo .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .duo .lbl {
+    flex: none; margin: 0 0 5px 2px;
+    font-size: 11px; color: var(--text-3); letter-spacing: .3px;
+  }
+  .duo .io { flex: 1 1 auto; resize: none; }
+  .duo .tbl-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; margin-top: 0; }
+  @media (max-width: 900px) {
+    .duo { flex-direction: column; }
+    .duo .col { min-height: 170px; }
+  }
+
+  /* 操作按钮行 */
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  /* ===== 表格 ===== */
+  .tbl-wrap { overflow-x: auto; margin-top: 10px; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl td.n { color: var(--accent); font-weight: 600; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-all; white-space: pre-wrap; }
+  /* 首列按内容宽度收紧。不加这条时两列会按 max-content 比例均分整表宽度，
+     一个 130px 的标签列会被撑到 438px，标签和值被拉开一大截、中间全是空白。 */
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+  .tbl td.act { text-align: right; white-space: nowrap; width: 1%; }
+
+  /* ===== 提示 ===== */
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2);
+    word-break: break-word;
+  }
+  /* 空提示不占位：否则每张卡片底部都挂一个空灰框，看着像坏了 */
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .err-tip { color: var(--err); }
+  .empty-tip { color: var(--text-3); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    .tabs { padding: 5px 6px; gap: 4px; }
+    .tab { padding: 6px 9px; font-size: 12px; }
+    main { padding: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    .ops .sp { margin-left: 0; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    .io, select { font-size: 16px; }
+    .io { min-height: 90px; }
+    .io.tall { min-height: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Text<span>Kit</span></div>
+  <span class="sep"></span>
+  <span class="stat"><b id="tabCount">4</b> 类文本处理</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部在本地浏览器内计算，不上传任何内容</span>
+  <button class="mini" id="btnClear" title="清空所有类型下的输入与结果">清空全部</button>
+</header>
+
+<!-- tab 列表由 JS 从这里的 [role="tab"] 读出，不用另维护一份清单。
+     标签里中英之间不留空格（面板内的 <h2> 标题仍保留空格）。 -->
+<div class="tabs" role="tablist" aria-label="文本处理类型">
+  <button class="tab" type="button" role="tab" data-tab="case"  id="tab-case"  aria-controls="panel-case"  aria-selected="true">命名风格</button>
+  <button class="tab" type="button" role="tab" data-tab="lines" id="tab-lines" aria-controls="panel-lines" aria-selected="false" tabindex="-1">行处理</button>
+  <button class="tab" type="button" role="tab" data-tab="count" id="tab-count" aria-controls="panel-count" aria-selected="false" tabindex="-1">字数统计</button>
+  <button class="tab" type="button" role="tab" data-tab="nl"    id="tab-nl"    aria-controls="panel-nl"    aria-selected="false" tabindex="-1">换行符</button>
+</div>
+
+<main>
+
+  <!-- ============ 1. 命名风格 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-case" data-tab="case" aria-labelledby="tab-case">
+    <h2>
+      命名风格转换
+      <span class="hint">一行一个名字，六种写法同时给出</span>
+      <span class="right">
+        <button class="mini" data-act="case-ex">示例</button>
+      </span>
+    </h2>
+    <div class="duo">
+      <div class="col">
+        <span class="lbl">输入 · 一行一个名字</span>
+        <textarea class="io" id="caseIn" spellcheck="false" autocomplete="off"
+          placeholder="一行一个名字，支持 camelCase / PascalCase / snake_case / kebab-case / 常量写法互相转换…"></textarea>
+      </div>
+      <div class="col">
+        <span class="lbl">结果 · 每行可单独复制</span>
+        <div class="tbl-wrap"><table class="tbl" id="caseTbl"></table></div>
+      </div>
+    </div>
+    <div class="note" id="caseNote"></div>
+  </section>
+
+  <!-- ============ 2. 行处理 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-lines" data-tab="lines" aria-labelledby="tab-lines" hidden>
+    <h2>
+      行处理
+      <span class="hint">排序、去重、去空行、加行号，兼容 CRLF / LF / CR 混合</span>
+      <span class="right">
+        <button class="mini" data-act="lines-ex">示例</button>
+        <button class="mini" data-act="lines-copy">复制结果</button>
+      </span>
+    </h2>
+    <div class="ops">
+      <select id="linesSort" title="排序方式">
+        <option value="none">不排序</option>
+        <option value="asc">升序 A→Z</option>
+        <option value="desc">降序 Z→A</option>
+      </select>
+      <label class="chk" title="排序与去重同时生效"><input type="checkbox" id="linesCi">忽略大小写</label>
+      <label class="chk" title="行内的数字按数值比较：img2 排在 img10 前面"><input type="checkbox" id="linesNat">数字按数值排</label>
+      <label class="chk"><input type="checkbox" id="linesTrim">去除首尾空白</label>
+      <label class="chk"><input type="checkbox" id="linesNoBlank">去除空行</label>
+      <label class="chk"><input type="checkbox" id="linesDedup">去除重复行</label>
+      <label class="chk"><input type="checkbox" id="linesRev">反转行序</label>
+      <select class="sp" id="linesNum" title="加行号的样式">
+        <option value="none">不加行号</option>
+        <option value="dot">1. </option>
+        <option value="dun">1、</option>
+        <option value="paren">1) </option>
+        <option value="bracket">[1] </option>
+        <option value="colon">1: </option>
+      </select>
+    </div>
+    <div class="duo">
+      <div class="col">
+        <span class="lbl">输入</span>
+        <textarea class="io tall" id="linesIn" spellcheck="false" autocomplete="off"
+          placeholder="输入多行文本，勾选下面的处理项实时生效…"></textarea>
+      </div>
+      <div class="col">
+        <span class="lbl">结果</span>
+        <textarea class="io out tall" id="linesOut" readonly spellcheck="false" placeholder="结果"></textarea>
+      </div>
+    </div>
+    <div class="note" id="linesNote"></div>
+  </section>
+
+  <!-- ============ 3. 字数统计 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-count" data-tab="count" aria-labelledby="tab-count" hidden>
+    <h2>
+      字数统计
+      <span class="hint">中英文混排，emoji 按码点计 1 个</span>
+      <span class="right">
+        <button class="mini" data-act="count-ex">示例</button>
+        <button class="mini" data-act="count-copy">复制结果</button>
+      </span>
+    </h2>
+    <div class="duo">
+      <div class="col">
+        <span class="lbl">输入</span>
+        <textarea class="io tall" id="countIn" spellcheck="false" autocomplete="off"
+          placeholder="输入或粘贴文本，实时统计…"></textarea>
+      </div>
+      <div class="col">
+        <span class="lbl">统计结果</span>
+        <div class="tbl-wrap"><table class="tbl fit" id="countTbl"></table></div>
+      </div>
+    </div>
+    <div class="note" id="countNote"></div>
+  </section>
+
+  <!-- ============ 4. 换行符 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-nl" data-tab="nl" aria-labelledby="tab-nl" hidden>
+    <h2>
+      换行符处理
+      <span class="hint">转义串 ↔ 真实换行，CRLF / LF / CR 全兼容</span>
+      <span class="right">
+        <button class="mini" data-act="nl-swap">交换</button>
+        <button class="mini" data-act="nl-ex">示例</button>
+        <button class="mini" data-act="nl-copy">复制结果</button>
+      </span>
+    </h2>
+    <div class="ops">
+      <button data-act="nl-dec">转义串 → 换行</button>
+      <button data-act="nl-enc">换行 → 转义串</button>
+      <select class="sp" id="nlStyle" title="换行符类型">
+        <option value="auto">自动识别</option>
+        <option value="lf">LF（\n）</option>
+        <option value="crlf">CRLF（\r\n）</option>
+        <option value="cr">CR（\r）</option>
+      </select>
+    </div>
+    <div class="duo">
+      <div class="col">
+        <span class="lbl">输入</span>
+        <textarea class="io tall" id="nlIn" spellcheck="false" autocomplete="off"
+          placeholder="粘贴含 \n、\r\n、\r 转义串的文本，或含真实换行的多行文本…"></textarea>
+      </div>
+      <div class="col">
+        <span class="lbl">结果</span>
+        <textarea class="io out tall" id="nlOut" readonly spellcheck="false" placeholder="结果"></textarea>
+      </div>
+    </div>
+    <div class="note" id="nlNote"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ============================================================
+     1. 命名风格转换
+     ============================================================ */
+
+  /* 把一行名字拆成小写单词表。
+     - 任何非字母数字（_ - . 空格 / 等）都是分隔符；
+     - camel 边界拆两刀：小写/数字 → 大写（base64Url → base64 Url），
+       连续大写后接「大写+小写」再切一刀（parseHTTPResponse → parse HTTP Response）；
+     - 数字跟在字母后面不拆（base64 / sha256 / utf8 各算一个词）。 */
+  function splitWords(line) {
+    let s = line.replace(/[^A-Za-z0-9]+/g, " ").trim();
+    if (!s) return [];
+    s = s.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+         .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+    return s.split(/\s+/).map(w => w.toLowerCase());
+  }
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1);
+
+  function caseConvert(line) {
+    const words = splitWords(line);
+    if (!words.length) return null;
+    return {
+      words: words,
+      camel: words.map((w, i) => i ? cap(w) : w).join(""),
+      pascal: words.map(cap).join(""),
+      snake: words.join("_"),
+      kebab: words.join("-"),
+      constant: words.join("_").toUpperCase()
+    };
+  }
+
+  let caseRows = [];
+  const HAS_CJK = /[\u3400-\u9fff\uf900-\ufaff]/;
+
+  function runCase() {
+    const s = $("caseIn").value;
+    const tbl = $("caseTbl"), note = $("caseNote");
+    caseRows = [];
+    const lines = s.split(/\r\n|\n|\r/).filter(l => l.trim() !== "");
+    if (!s.trim() || !lines.length) {
+      tbl.innerHTML = "";
+      note.innerHTML = '<span class="empty-tip">输入名字后自动转换，一行一个</span>';
+      return;
+    }
+    const convs = lines.map(caseConvert);
+    if (convs.every(c => !c)) {
+      tbl.innerHTML = "";
+      note.innerHTML = '<span class="err-tip">没有可参与转换的英文字母或数字 —— 中文被当作分隔符忽略了</span>';
+      return;
+    }
+    const STYLES = [
+      ["camelCase 小驼峰",    c => c ? c.camel    : ""],
+      ["PascalCase 大驼峰",   c => c ? c.pascal   : ""],
+      ["snake_case 下划线",   c => c ? c.snake    : ""],
+      ["kebab-case 短横线",   c => c ? c.kebab    : ""],
+      ["CONSTANT_CASE 常量",  c => c ? c.constant : ""],
+      ["分词预览",            c => c ? c.words.join(" · ") : ""]
+    ];
+    caseRows = STYLES.map(([label, fn]) => ({ label: label, text: convs.map(fn).join("\n") }));
+    tbl.innerHTML = "<thead><tr><th>写法</th><th>结果</th><th></th></tr></thead><tbody>"
+      + caseRows.map((r, i) =>
+          '<tr><td class="u">' + eh(r.label) + '</td><td class="wrap n">' + eh(r.text) + '</td>'
+          + '<td class="act"><button class="mini" data-act="case-copy-' + i + '">复制</button></td></tr>').join("")
+      + "</tbody>";
+    const cjk = HAS_CJK.test(s);
+    note.innerHTML = "<b>" + lines.length + "</b> 行已转换"
+      + (lines.length > 1 ? "（每行各自转换，同一行号对应同一行）" : "")
+      + (cjk ? "。<span class=\"err-tip\">中文没有参与转换</span>，被当作分隔符；命名风格只对英文字母与数字有意义。"
+             : "。分词不理想时，多半是原文里缺分隔符 —— 加上下划线或空格再试。");
+  }
+
+  /* ============================================================
+     2. 行处理
+     ============================================================ */
+
+  let linesText = "";
+
+  function runLines() {
+    const s = $("linesIn").value;
+    const out = $("linesOut"), note = $("linesNote");
+    if (!s) {
+      out.value = ""; out.classList.remove("filled"); linesText = "";
+      note.innerHTML = '<span class="empty-tip">输入多行文本后自动处理</span>';
+      return;
+    }
+    /* 兼容三种换行：CRLF / LF / CR（老 Mac 与某些协议输出是裸 \r） */
+    let lines = s.split(/\r\n|\n|\r/);
+    const rawCount = lines.length;
+    const stat = { blank: 0, dup: 0 };
+
+    if ($("linesTrim").checked) lines = lines.map(l => l.trim());
+    if ($("linesNoBlank").checked) {
+      const before = lines.length;
+      lines = lines.filter(l => l.trim() !== "");
+      stat.blank = before - lines.length;
+    }
+    if ($("linesDedup").checked) {
+      const ci = $("linesCi").checked;
+      const seen = new Set();
+      const kept = [];
+      for (const l of lines) {
+        const k = ci ? l.toLowerCase() : l;
+        if (seen.has(k)) { stat.dup++; continue; }
+        seen.add(k); kept.push(l);
+      }
+      lines = kept;
+    }
+    const sort = $("linesSort").value;
+    if (sort !== "none") {
+      /* ★ 必须用 Intl.Collator，不要写 a.localeCompare(b, undefined, opts)：
+         后者每次比较都要重新解析 options 并查找 collator —— 15 万行升序实测
+         614 ms，而 Collator.compare 只要 14 ms（44× 快，结果完全一致；
+         带 numeric 时 327 ms → 24 ms）。
+         numeric 是自然排序（行内有数字时 img2 排在 img10 前面）、
+         sensitivity:"base" 是忽略大小写，都由 ICU 提供，不用自己写分段比较器。 */
+      const ci = $("linesCi").checked, nat = $("linesNat").checked;
+      const col = new Intl.Collator(undefined, { numeric: nat, sensitivity: ci ? "base" : "variant" });
+      const dir = sort === "asc" ? 1 : -1;
+      lines.sort((a, b) => dir * col.compare(a, b));
+    }
+    if ($("linesRev").checked) lines.reverse();
+
+    const num = $("linesNum").value;
+    if (num !== "none") {
+      const SUF = { dot: ". ", dun: "、", paren: ") ", colon: ": " };
+      lines = lines.map((l, i) =>
+        num === "bracket" ? "[" + (i + 1) + "] " + l : (i + 1) + SUF[num] + l);
+    }
+
+    linesText = lines.join("\n");
+    out.value = linesText;
+    out.classList.toggle("filled", !!linesText);
+    if (!lines.length) {
+      note.innerHTML = "<span class=\"err-tip\">所有行都被过滤掉了</span>";
+      return;
+    }
+    note.innerHTML = "<b>" + rawCount + "</b> 行 → <b>" + lines.length + "</b> 行"
+      + (stat.blank ? "，去掉空行 " + stat.blank : "")
+      + (stat.dup ? "，去掉重复 " + stat.dup : "")
+      + (num !== "none" ? "，行号从 1 开始" : "");
+  }
+
+  /* ============================================================
+     3. 字数统计
+     ============================================================ */
+
+  let countText = "";
+
+  /* ===== 文本统计：一次遍历算完 =====
+     旧实现对同一段文本要扫 10 遍（码点循环、TextEncoder、4 个 match、
+     2 个 split、段落 split+trim、再加 estimateTokens 一遍），还会分配几个
+     与字符数同量级的数组（match(/[0-9]/g)、match(/\s/g)、split 的行数组、
+     TextEncoder 的字节数组）。3 MB 文本实测 58 ms，大头就是这些一次性分配。
+     现在合成「一次 for...of + 两次正则 exec」，全程零大数组分配。
+     ★ 所有判定必须与旧实现逐字等价 —— 动这里必须重跑 /tmp/tk-equiv.js 随机对拍。
+
+     Token 估算（启发式，BPE 分词的统计规律）：
+     真实分词器要内置几十 KB～几 MB 的词表，静态页装不下也不该装 ——
+     这里按 BPE 的统计规律近似（用 tiktoken 的 cl100k / o200k 双词表实测校准过）：
+     - 汉字 / 假名 / 谚文：cl100k 约 1.2 字/token、o200k 约 0.7 字/token，取 1 字 1 个折中；
+     - 英文单词：BPE 把前导空格并进词里，常用词 1 个 token，长词每约 6 字符多切一个；
+     - 数字：BPE 按 1～3 位一切，每 3 位算 1 个；
+     - 标点（含全角）1 个 1 个；空白并进相邻词里，不单独计。 */
+
+  /* \s 的完整集合（WhiteSpace + LineTerminator）—— 空白字符数、trim 的「非空」判定都用它 */
+  function isWs(cp) {
+    return cp === 0x20 || (cp >= 0x09 && cp <= 0x0D) || cp === 0xA0 || cp === 0x1680
+      || (cp >= 0x2000 && cp <= 0x200A) || cp === 0x2028 || cp === 0x2029
+      || cp === 0x202F || cp === 0x205F || cp === 0x3000 || cp === 0xFEFF;
+  }
+  /* 「汉字」口径：比 Token 估算窄（不含假名、谚文） */
+  function isHan(cp) {
+    return (cp >= 0x4E00 && cp <= 0x9FFF) || (cp >= 0x3400 && cp <= 0x4DBF)
+      || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0x20000 && cp <= 0x2FA1F) || cp === 0x3007;
+  }
+  /* Token 估算里的「宽字符」：假名、谚文也算 1 字 1 个 token */
+  function isTokWide(cp) {
+    return (cp >= 0x3040 && cp <= 0x30FF) || (cp >= 0x3400 && cp <= 0x9FFF)
+      || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xAC00 && cp <= 0xD7AF)
+      || (cp >= 0x20000 && cp <= 0x2FA1F);
+  }
+  function isTokBlank(cp) {
+    return cp === 0x20 || (cp >= 0x09 && cp <= 0x0D) || (cp >= 0x2000 && cp <= 0x200A) || cp === 0x3000;
+  }
+  /* UTF-8 字节长度按码点算：等价于 new TextEncoder().encode(s).length
+     （孤立代理项两边都算 3 字节，已对拍） */
+  function utf8Len(cp) { return cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4; }
+
+  /* 字节数 → 人类可读体积：1024 进制（操作系统 / 文件管理器的惯例） */
+  function fmtSize(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(2) + " KB";
+    return (n / 1048576).toFixed(2) + " MB";
+  }
+
+  const WORD_RE = /[A-Za-z]+(?:'[A-Za-z]+)?/g;
+  const SENT_RE = /[。！？]|[.!?](?=\s|$|["'\)\]\}”’」』）])/g;
+
+  function analyze(s) {
+    let cps = 0, han = 0, supra = 0, bytes = 0, digits = 0, spaces = 0;
+    /* Token 估算的滚动状态：tok 已累计、tWord 当前字母串长度、tDig 当前数字串长度 */
+    let tok = 0, tWord = 0, tDig = 0;
+    /* 行 / 段：lines 从 1 起（非空文本至少一行）；lineHas 当前行有没有非空白；
+       nlRun 连续换行数（中间只夹空格/tab）；paraHas 当前段落块有没有非空白 */
+    let lines = 1, nonBlank = 0, lineHas = false;
+    let paras = 0, paraHas = false, nlRun = 0;
+    let prevCr = false;
+    for (const ch of s) {
+      const cp = ch.codePointAt(0);
+      cps++;
+      if (isHan(cp)) han++;
+      if (cp > 0xFFFF) supra++;
+      bytes += utf8Len(cp);
+      if (cp >= 0x30 && cp <= 0x39) digits++;
+      if (isWs(cp)) spaces++;
+
+      /* ---- Token 估算：分支顺序与旧 estimateTokens 逐字一致 ---- */
+      if (isTokWide(cp) || cp > 0xFFFF) {
+        if (tWord) { tok += Math.max(1, Math.round(tWord / 6)); tWord = 0; }
+        if (tDig) { tok += Math.ceil(tDig / 3); tDig = 0; }
+        tok++;
+      } else if (cp >= 0x30 && cp <= 0x39) {
+        if (tWord) { tok += Math.max(1, Math.round(tWord / 6)); tWord = 0; }
+        tDig++;
+      } else if ((cp >= 0x41 && cp <= 0x5A) || (cp >= 0x61 && cp <= 0x7A)) {
+        if (tDig) { tok += Math.ceil(tDig / 3); tDig = 0; }
+        tWord++;
+      } else if (isTokBlank(cp)) {
+        if (tWord) { tok += Math.max(1, Math.round(tWord / 6)); tWord = 0; }
+        if (tDig) { tok += Math.ceil(tDig / 3); tDig = 0; }
+      } else {
+        if (tWord) { tok += Math.max(1, Math.round(tWord / 6)); tWord = 0; }
+        if (tDig) { tok += Math.ceil(tDig / 3); tDig = 0; }
+        tok++;
+      }
+
+      /* ---- 行 / 段 ----
+         行数照 split(/\r\n|\n|\r/) 的语义：\r\n 算【一个】换行。
+         段落照 PARA_RE 的语义：它的 `+` 会让正则把 \r\n 回溯拆成 \r 与 \n 两个换行，
+         所以段落计数【不合并】CRLF —— 旧实现里 "a\r\nb" 就是两段（Node 侧 300 万次
+         随机对拍确认过，见 /tmp/tk-paras.js）。 */
+      const isCR = cp === 0x0D, isLF = cp === 0x0A;
+      const wasCr = prevCr;
+      prevCr = false;
+      if (isLF && wasCr) { nlRun++; continue; }  /* \r\n 的后半：行数已记过，段落仍 +1 */
+      if (isCR || isLF) {
+        if (isCR) prevCr = true;
+        lines++;
+        if (lineHas) { nonBlank++; lineHas = false; }
+        nlRun++;
+        continue;
+      }
+      if (cp === 0x20 || cp === 0x09) continue;  /* 空格 / tab：不设行内容，也不打断换行串 */
+      if (isWs(cp)) {                            /* 其它空白（全角空格、NBSP…）：打断换行串 ——
+                                                    但要先把已经凑够的换行结算成段落分隔 */
+        if (nlRun >= 2) { if (paraHas) paras++; paraHas = false; }
+        nlRun = 0;
+        continue;
+      }
+      if (nlRun >= 2) { if (paraHas) paras++; paraHas = false; }
+      nlRun = 0;
+      lineHas = true;
+      paraHas = true;
+    }
+    if (tWord) tok += Math.max(1, Math.round(tWord / 6));
+    if (tDig) tok += Math.ceil(tDig / 3);
+    if (lineHas) nonBlank++;
+    if (paraHas) paras++;
+
+    /* 英文单词与句子走 exec 循环：正则语义与旧的 match(g) 完全一致，但零数组分配
+       （3 MB 纯数字文本的 match(/[0-9]/g) 会造出 200 万元素数组） */
+    let words = 0;
+    WORD_RE.lastIndex = 0;
+    while (WORD_RE.exec(s) !== null) words++;
+    let sent = 0;
+    SENT_RE.lastIndex = 0;
+    while (SENT_RE.exec(s) !== null) sent++;
+
+    return { cps: cps, han: han, supra: supra, bytes: bytes, digits: digits, spaces: spaces,
+             words: words, sent: sent, tok: tok, lines: lines, nonBlank: nonBlank, paras: paras };
+  }
+
+  function runCount() {
+    const s = $("countIn").value;
+    const tbl = $("countTbl"), note = $("countNote");
+    if (!s) {
+      tbl.innerHTML = "";
+      note.innerHTML = '<span class="empty-tip">输入或粘贴文本后实时统计</span>';
+      countText = "";
+      return;
+    }
+    /* 一次遍历算完全部指标（含 Token 估算、行/段/句）—— 说明见 analyze() */
+    const A = analyze(s);
+    /* 阅读时长：中文 300 字/分钟、英文 250 词/分钟，按两部分各自的速度折算后相加 */
+    const readMin = A.han / 300 + A.words / 250;
+    const readStr = readMin <= 0 ? "—"
+      : readMin < 1 ? "不到 1 分钟"
+      : "约 " + Math.round(readMin) + " 分钟";
+
+    const rows = [
+      ["字符数（含空白）", s.length],
+      ["码点数", A.cps],
+      ["UTF-8 字节", A.bytes],
+      ["输入体积", fmtSize(A.bytes)],
+      ["汉字", A.han],
+      ["英文单词", A.words],
+      ["数字字符", A.digits],
+      ["空白字符", A.spaces],
+      ["行数 / 非空行", A.lines + " / " + A.nonBlank],
+      ["段落数", A.paras],
+      ["句子数", A.sent],
+      ["Token 估算", "≈ " + A.tok.toLocaleString("en-US")],
+      ["预计阅读时长", readStr]
+    ];
+    countText = rows.map(r => r[0] + "：" + r[1]).join("\n");
+    tbl.innerHTML = "<tbody>" + rows.map(r =>
+      '<tr><td class="u">' + eh(r[0]) + '</td><td class="n">' + eh(r[1]) + "</td></tr>").join("") + "</tbody>";
+
+    const notes = [];
+    if (A.supra) notes.push("含 <b>" + A.supra + "</b> 个超出 BMP 的字符（emoji 等）：「字符数」按 JS 的 length 把每个算 2 个，「码点数」按真实字符算 1 个 —— 发推、写库字段长度限制时留意用哪个口径。");
+    if (A.han && A.words) notes.push("中英混排：「汉字」按码点范围统计，「英文单词」按连续字母串统计（<code>don't</code> 算 1 个）。");
+    notes.push("字节数按 UTF-8 计：一个汉字 3 字节、一个 emoji 常见为 4 字节。「输入体积」按 1024 进制显示成 B / KB / MB。");
+    notes.push("<b>Token 估算</b>按 BPE 分词的统计规律近似（汉字 1 字 1 个、英文常用词 1 个、数字每 3 位 1 个），已用 tiktoken 双词表实测校准（多数场景误差 ±17% 内）；但各家分词器差异很大 —— GPT-4o（o200k）对中文更省（约 0.7 字/token），GPT-4 / Claude（cl100k 一类）约 1.2 字/token，做上下文预算请按本值再留 30% 余量。");
+    notes.push("「预计阅读时长」按中文 300 字/分钟、英文 250 词/分钟折算，仅供参考。");
+    note.innerHTML = notes.join("<br>");
+  }
+
+  /* ============================================================
+     4. 换行符处理
+     ============================================================ */
+
+  /* 转义串匹配顺序不能乱：\r\n 必须在 \r、\n 之前，\\ 必须在 \n/\r 之前 ——
+     否则 "\r\n" 会被拆成两个独立转义、"\\n"（字面反斜杠+n）会被误当换行。 */
+  const NL_ESC_RE = /\\r\\n|\\\\|\\n|\\r/g;
+  const NL_REAL_RE = /\r\n|\n|\r/g;
+  const NL_SEQ = { lf: "\n", crlf: "\r\n", cr: "\r" };
+  const NL_NAME = { lf: "LF（\\n）", crlf: "CRLF（\\r\\n）", cr: "CR（\\r）" };
+  const NL_ESC = { lf: "\\n", crlf: "\\r\\n", cr: "\\r" };
+
+  /* ★ 平台事实：浏览器对 <textarea> 的值做归一化（HTML 规范的 value sanitize）——
+     CRLF 与 CR 一律变成 LF，赋值、粘贴、读取都是。所以：
+     ① 文本框里永远读不到真实的 \r / \r\n，「还原成 CRLF/CR」只在复制那一刻有意义；
+     ② nlRaw 存本次计算的原始结果（含真正的控制字符），「复制结果」走它；
+     ③ 显示层统一是 LF，视觉上 LF 与 CRLF 本来就一样（都是换行），没有损失。 */
+  let nlDir = "dec";
+  let nlRaw = "";
+
+  /* 零分配数换行：s.match(/\n/g) 会造一个长度 = 换行数的数组 */
+  function countLF(s) {
+    let n = 0, i = -1;
+    while ((i = s.indexOf("\n", i + 1)) !== -1) n++;
+    return n;
+  }
+
+  /* 数各类换行转义串：indexOf 扫反斜杠，零分配，且与 NL_ESC_RE 的优先级完全一致
+     （先 \r\n 四字符、再 \\、再 \n、再 \r）。Node 微基准在 1.7 MB / 48 万个转义串上：
+     replace 回调 21.6 ms、exec 循环 8.4 ms、match() 10.0 ms、本写法 5.1 ms。 */
+  function countEsc(s) {
+    let nCrlf = 0, nLf = 0, nCr = 0, nBs = 0, i = -1;
+    while ((i = s.indexOf("\\", i + 1)) !== -1) {
+      const c1 = s.charCodeAt(i + 1), c2 = s.charCodeAt(i + 2), c3 = s.charCodeAt(i + 3);
+      if (c1 === 0x72) {                                        /* \r 或 \r\n */
+        if (c2 === 0x5C && c3 === 0x6E) { nCrlf++; i += 3; }    /* \r\n（4 字符） */
+        else { nCr++; i += 1; }                                 /* \r（2 字符） */
+      } else if (c1 === 0x5C) { nBs++; i += 1; }                /* \\ */
+      else if (c1 === 0x6E) { nLf++; i += 1; }                  /* \n */
+      /* 其它（\t 等）不是换行转义串，跳过 */
+    }
+    return { nCrlf: nCrlf, nLf: nLf, nCr: nCr, nBs: nBs };
+  }
+
+  function nlDecCard() {
+    const s = $("nlIn").value;
+    if (!s) return { text: "", note: '<span class="empty-tip">粘贴含 \\n、\\r\\n、\\r 转义串的文本后自动还原</span>' };
+    /* ★ 计数走 indexOf 扫描（零分配，见 countEsc 的说明）。
+       旧写法 s.replace(..., m => { 计数; return m }) 只为数数，却要为整段文本
+       分配一个新字符串（1.7 MB 文本实测多花约 70 ms）。 */
+    const cnt = countEsc(s);
+    const nCrlf = cnt.nCrlf, nLf = cnt.nLf, nCr = cnt.nCr, nBs = cnt.nBs;
+    if (!nCrlf && !nLf && !nCr) {
+      return { err: "没有找到换行转义串（\\n / \\r\\n / \\r）—— 如果文本里已经是真实换行，就不需要还原了" };
+    }
+    let mode = $("nlStyle").value;
+    if (mode === "auto") {
+      /* 取出现最多的一种；并列时按 CRLF > LF > CR */
+      mode = (nCrlf >= nLf && nCrlf >= nCr) ? "crlf" : (nLf >= nCr ? "lf" : "cr");
+    }
+    const EOL = NL_SEQ[mode];
+    const text = s.replace(NL_ESC_RE, m =>
+      m === "\\\\" ? "\\" : (m === "\\n" || m === "\\r" || m === "\\r\\n") ? EOL : m);
+    return {
+      text: text,
+      note: "还原了 <b>" + (nCrlf + nLf + nCr) + "</b> 处换行转义"
+        + "（\\r\\n ×" + nCrlf + "、\\n ×" + nLf + "、\\r ×" + nCr + "）"
+        + (nBs ? "，另有 " + nBs + " 处 <code>\\\\</code> 还原成单个反斜杠" : "")
+        + "，输出按 <b>" + NL_NAME[mode] + "</b>"
+        + ($("nlStyle").value === "auto" ? "（自动识别：并列时 CRLF 优先于 LF 优先于 CR）" : "")
+        + (mode === "lf" ? "。" : "<br>文本框按浏览器规则只显示 LF，点「复制结果」拿到的才是真正的 <code>"
+            + NL_ESC[mode] + "</code> 控制字符。")
+        + "<br>注意：Windows 路径里的 <code>\\n</code>（如 <code>C:\\new</code>）也会被当作换行转义还原；"
+        + "要保留字面量请写成 <code>\\\\n</code>，它会还原成 <code>\\n</code> 文本而不是换行。"
+    };
+  }
+
+  function nlEncCard() {
+    const s = $("nlIn").value;
+    if (!s) return { text: "", note: '<span class="empty-tip">输入含真实换行的文本后自动转义</span>' };
+    const n = countLF(s);
+    if (!n) {
+      return { err: "没有找到换行 —— 如果内容是 \\n 这类转义串，请用「转义串 → 换行」" };
+    }
+    let mode = $("nlStyle").value;
+    if (mode === "auto") mode = "lf";   /* 文本框里读到的只可能是 LF；转义方向默认写 \n（Unix / JSON 惯例） */
+    const text = s.replace(NL_REAL_RE, NL_ESC[mode]);
+    return {
+      text: text,
+      note: "把 <b>" + n + "</b> 个换行都写成 <code>" + NL_ESC[mode] + "</code>"
+        + (mode === "lf" ? "。" : "（复制出来才是真正的 " + NL_NAME[mode] + " 控制字符）。")
+        + "<br>文本框按浏览器规则会把 CRLF / CR 归一成 LF，所以读到的输入一律是 LF；"
+        + "其余字符原样保留，不转义制表符或引号。"
+    };
+  }
+
+  function runNl() {
+    const r = nlDir === "dec" ? nlDecCard() : nlEncCard();
+    const out = $("nlOut");
+    if (r.err) {
+      out.value = "";
+      out.classList.remove("filled");
+      nlRaw = "";
+      $("nlNote").innerHTML = '<span class="err-tip">' + eh(r.err) + "</span>";
+      return;
+    }
+    nlRaw = r.text;
+    out.value = r.text;   /* 赋值后浏览器会把 CRLF / CR 归一成 LF —— 复制必须走 nlRaw */
+    out.classList.toggle("filled", !!r.text);
+    $("nlNote").innerHTML = r.note || "";
+  }
+
+  /* ============================================================
+     调度：按钮 / 复制 / 示例
+     ============================================================ */
+
+  const EXAMPLES = {
+    case:  ["user_name\nparseHTTPResponse\nSHA256 digest\nBase64-URL", "dec"],
+    lines: ["banana\nApple\nbanana\n\ncherry\napricot\nimg10\nimg2\nimg1", "dec"],
+    count: ["Hello 世界！😀 混合文本 testing 123。\n\n第二段。", "dec"],
+    nl:    ["第一行\\n第二行\\r\\n第三行\\n结尾", "dec"]
+  };
+
+  function setExample(id) {
+    $(id + "In").value = EXAMPLES[id][0];
+    if (id === "case") runCase();
+    else if (id === "lines") runLines();
+    else if (id === "count") runCount();
+    else if (id === "nl") { nlDir = "dec"; runNl(); }
+  }
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const act = b.dataset.act;
+
+    /* 命名风格表格里每行的「复制」：case-copy-<行号> */
+    const cm = /^case-copy-(\d+)$/.exec(act);
+    if (cm) {
+      const r = caseRows[Number(cm[1])];
+      if (r && r.text) copyText(r.text, "已复制「" + r.label + "」");
+      return;
+    }
+
+    const m = /^(case|lines|count|nl)-(ex|copy|enc|dec|swap|norm)$/.exec(act);
+    if (!m) return;
+    const id = m[1], kind = m[2];
+
+    if (id === "case") {
+      if (kind === "ex") { setExample("case"); toast("已填入示例"); }
+      return;
+    }
+    if (id === "lines") {
+      if (kind === "ex") { setExample("lines"); toast("已填入示例"); }
+      else if (kind === "copy") {
+        if (!linesText) { toast("还没有可复制的结果"); return; }
+        copyText(linesText, "已复制结果");
+      }
+      return;
+    }
+    if (id === "count") {
+      if (kind === "ex") { setExample("count"); toast("已填入示例"); }
+      else if (kind === "copy") {
+        if (!countText) { toast("还没有可复制的结果"); return; }
+        copyText(countText, "已复制结果");
+      }
+      return;
+    }
+    if (id === "nl") {
+      if (kind === "dec") { nlDir = "dec"; runNl(); }
+      else if (kind === "enc") { nlDir = "enc"; runNl(); }
+      else if (kind === "ex") { setExample("nl"); toast("已填入示例"); }
+      else if (kind === "copy") {
+        if (!nlRaw) { toast("还没有可复制的结果"); return; }
+        copyText(nlRaw, "已复制结果");
+      } else if (kind === "swap") {
+        const iv = $("nlIn").value;
+        $("nlIn").value = $("nlOut").value;
+        $("nlOut").value = iv;
+        nlDir = nlDir === "enc" ? "dec" : "enc";   /* 拿结果当输入：方向翻过来 */
+        runNl();
+      }
+      return;
+    }
+  });
+
+  /* ============================================================
+     Tab 切换
+     ============================================================ */
+  /* tab 清单直接从 DOM 读 —— 以后加一类只需三步：
+       ① .tabs 里加一个 <button role="tab" data-tab="xxx">
+       ② <main> 里加一个 <section class="card panel" data-tab="xxx">
+       ③ 加一个 run<XXX>() 并在按钮调度与初始化里接上。
+     不再维护第二份清单。 */
+  const tabsEl = document.querySelector(".tabs");
+  const tabBtns = Array.prototype.slice.call(tabsEl.querySelectorAll('[role="tab"]'));
+  const tabIds = tabBtns.map(b => b.dataset.tab);
+  const panels = Array.prototype.slice.call(document.querySelectorAll("main .panel"));
+  $("tabCount").textContent = tabIds.length;
+
+  function showTab(id, doFocus, writeHash) {
+    if (tabIds.indexOf(id) < 0) id = tabIds[0];
+    tabBtns.forEach(b => {
+      const on = b.dataset.tab === id;
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;   /* roving tabindex：Tab 进栏，方向键在栏内走 */
+      if (on && doFocus) b.focus();
+    });
+    panels.forEach(p => { p.hidden = p.dataset.tab !== id; });
+    /* 换一类就从顶部看起：现在滚动发生在面板自己身上（main 不滚了） */
+    panels.forEach(p => { p.scrollTop = 0; });
+    /* 记进 hash（replaceState 不留历史、也不触发锚点滚动）。
+       首次按 hash 定位时传 false，免得在干净 URL 上凭空写出一段 hash。 */
+    if (writeHash !== false) {
+      try { history.replaceState(null, "", "#" + id); } catch (e) { location.hash = id; }
+    }
+  }
+
+  tabsEl.addEventListener("click", e => {
+    const b = e.target.closest('[role="tab"]');
+    if (b) showTab(b.dataset.tab, false);
+  });
+
+  /* ARIA tablist 的标准键盘行为：←/→ 循环，Home/End 跳首尾 */
+  tabsEl.addEventListener("keydown", e => {
+    const b = e.target.closest('[role="tab"]');
+    if (!b) return;
+    let d = 0;
+    if (e.key === "ArrowRight") d = 1;
+    else if (e.key === "ArrowLeft") d = -1;
+    else if (e.key === "Home") { e.preventDefault(); showTab(tabIds[0], true); return; }
+    else if (e.key === "End") { e.preventDefault(); showTab(tabIds[tabIds.length - 1], true); return; }
+    if (!d) return;
+    e.preventDefault();
+    const i = tabIds.indexOf(b.dataset.tab);
+    showTab(tabIds[(i + d + tabIds.length) % tabIds.length], true);
+  });
+
+  /* 地址栏里手改 hash 也跟着切 */
+  window.addEventListener("hashchange", () => {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (tabIds.indexOf(h) > -1) showTab(h);
+  });
+
+  /* ============================================================
+     事件接线与初始化
+     ============================================================ */
+
+  /* 输入防抖：小文本 120ms；超过 200 KB 拉到 400ms —— 大文本下每敲一下都跑一次
+     全量扫描会明显卡手，拉长防抖把「停手」和「开算」隔开（text-diff 对 5000 行
+     以上用 600ms，同一个思路）。 */
+  const timers = {};
+  function runSoon(fn, key, len) {
+    clearTimeout(timers[key]);
+    timers[key] = setTimeout(fn, len > 200000 ? 400 : 120);
+  }
+  $("caseIn").addEventListener("input", e => runSoon(runCase, "case", e.target.value.length));
+  $("linesIn").addEventListener("input", e => runSoon(runLines, "lines", e.target.value.length));
+  $("countIn").addEventListener("input", e => runSoon(runCount, "count", e.target.value.length));
+  $("nlIn").addEventListener("input", e => runSoon(runNl, "nl", e.target.value.length));
+
+  ["linesSort", "linesNat", "linesCi", "linesTrim", "linesNoBlank", "linesDedup", "linesRev", "linesNum"]
+    .forEach(id => $(id).addEventListener("change", runLines));
+  $("nlStyle").addEventListener("change", runNl);
+
+  $("btnClear").addEventListener("click", () => {
+    ["caseIn", "linesIn", "countIn", "nlIn"].forEach(id => { $(id).value = ""; });
+    ["linesOut", "nlOut"].forEach(id => { $(id).value = ""; $(id).classList.remove("filled"); });
+    ["caseNote", "linesNote", "countNote", "nlNote"].forEach(id => { $(id).innerHTML = ""; });
+    $("caseTbl").innerHTML = "";
+    $("countTbl").innerHTML = "";
+    caseRows = []; linesText = ""; countText = "";
+    toast("已清空全部 " + tabIds.length + " 类");
+  });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  /* file:// 下 clipboard API 拿不到权限，退回 textarea + execCommand */
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* 先按 hash 定 tab（带 #nl 打开就直接落在换行符那一类） */
+  const hashTab = (location.hash || "").replace(/^#/, "");
+  showTab(tabIds.indexOf(hashTab) > -1 ? hashTab : tabIds[0], false, false);
+
+  /* 隐藏面板也要先跑一遍空态提示，切过去立刻有内容 */
+  runCase(); runLines(); runCount(); runNl();
+})();
+</script>
+</body>
+</html>
