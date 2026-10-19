@@ -262,12 +262,6 @@ kbd{
   .bar{padding:12px 0 10px}
   .bar-top{margin-bottom:10px}
 }
-/* 触屏下搜索框字号提到 16px：低于 16px 时 iOS 聚焦会把整页放大，
-   而搜索框固定在顶栏、被放大会很显眼（全站约定，见 MEMORY.md 窄屏第 3 条）。
-   按 `pointer:coarse` 判而不只看宽度 —— 平板竖屏宽度够但同样是触屏。 */
-@media (pointer:coarse),(max-width:600px){
-  #q{font-size:16px}
-}
 </style>
 </head>
 <body>

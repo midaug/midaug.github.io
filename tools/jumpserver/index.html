@@ -216,7 +216,6 @@
     /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大。
        ⚠️ 必须把 .io 一起写进选择器 —— 单写 input/textarea/select 是元素选择器（0,0,1），
           权重低于 .io（0,1,0），媒体查询里的规则会被 .io{font-size:12.5px} 直接盖掉。 */
-    input, textarea, select, .io { font-size: 16px; }
     .io { min-height: 72px; }
     textarea.io.out { min-height: 96px; }
   }
