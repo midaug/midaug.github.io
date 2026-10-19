@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>表格数据互转</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高，
+     左右两栏失去「各占一屏」的高度来源，textarea 上的 flex:1 就撑不起来了。 */
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+
+  button, select, input[type="text"] {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（顶栏是 flex 容器，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根条）。空间不够请让它换行。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .45; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[type="text"] { cursor: text; }
+  input::placeholder { color: var(--text-3); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  /* ===== 选项条 ===== */
+  .toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 12px; background: var(--panel-2);
+    border-bottom: 1px solid var(--border); flex: none;
+    font-size: 12px; color: var(--text-2);
+  }
+  .toolbar .fld { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .toolbar .fld > label { color: var(--text-3); }
+  .toolbar .chk { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+  .toolbar .chk input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .toolbar select { padding: 3px 8px; font-size: 12px; }
+  .toolbar input[type="text"] { padding: 3px 8px; font-size: 12px; width: 116px; }
+  .toolbar .dim { opacity: .45; }
+  .toolbar .sp { flex: 1 1 auto; }
+  .toolbar .arrow { color: var(--accent); font-weight: 700; }
+  /* 自动识别出来的格式，跟在下拉后面做个小徽标 */
+  .det {
+    font-size: 11px; color: var(--accent); background: var(--accent-soft);
+    border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+  }
+  .det[hidden] { display: none; }
+
+  /* ===== 主体：左右双栏 ===== */
+  main { flex: 1; display: flex; min-height: 0; }
+  .pane { flex: 1 1 0%; min-width: 0; display: flex; flex-direction: column; }
+  .pane.left { border-right: 1px solid var(--border); }
+  .pane-head {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-2); flex: none; overflow: hidden;
+  }
+  .pane-head b { color: var(--text); font-weight: 600; flex: none; white-space: nowrap; }
+  .pane-head .ell { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane-head .ell b { color: var(--accent); font-weight: 600; }
+  .pane-head .sp { flex: 1 1 auto; }
+
+  textarea {
+    flex: 1; width: 100%; resize: none; border: 0; outline: 0; padding: 10px 12px; margin: 0;
+    background: var(--panel); color: var(--text); font: inherit; tab-size: 2;
+    white-space: pre; overflow: auto;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  textarea::placeholder { color: var(--text-3); }
+  textarea:focus { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+  textarea[readonly] { background: var(--panel); }
+  textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+  textarea::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  textarea::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  textarea::-webkit-scrollbar-track { background: transparent; }
+
+  /* ===== 底部状态条 ===== */
+  #status {
+    padding: 5px 12px; border-top: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text-2); font-size: 12px;
+    display: flex; align-items: center; gap: 10px; min-height: 30px; flex: none;
+  }
+  #sizes { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #sizes b { color: var(--accent); font-weight: 600; }
+  #statusText { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #statusText.warn { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 46px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== 手机适配（≤640px）=====
+     左右双栏在 390px 下每栏只剩 ~180px，占位文字逐字换行，整页不可用 ——
+     改成上下堆叠、各占一半高度。★ 不隐藏任何控件（约定：不许用断点藏控件）。 */
+  @media (max-width: 640px) {
+    header { padding: 8px 10px; gap: 6px 8px; }
+    header .brand { font-size: 14px; }
+    header .stat { display: none; }
+    .hide-sm { display: none; }        /* 与其它工具页同名同义，别只写类名不定义 */
+    .toolbar { padding: 6px 10px; gap: 6px 8px; }
+    .toolbar input[type="text"] { width: 92px; }
+    main { flex-direction: column; }
+    .pane.left { border-right: 0; border-bottom: 1px solid var(--border); }
+    .pane { flex: 1 1 50%; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    textarea, select, input[type="text"] { font-size: 16px; }
+    .toolbar select, .toolbar input[type="text"] { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="brand">CSV<span>Convert</span></div>
+  <span class="sep"></span>
+  <span class="stat">CSV · TSV · JSON · NDJSON · Markdown · SQL 六种格式任意互转</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部本地解析</span>
+  <span style="flex:1 1 auto"></span>
+  <button class="mini" id="btnSample">示例</button>
+  <button class="mini" id="btnClear">清空</button>
+</header>
+
+<div class="toolbar">
+  <span class="fld">
+    <label for="inFmt">输入</label>
+    <select id="inFmt">
+      <option value="auto" selected>自动识别</option>
+      <option value="csv">CSV</option>
+      <option value="tsv">TSV</option>
+      <option value="json">JSON</option>
+      <option value="ndjson">NDJSON</option>
+      <option value="md">Markdown 表格</option>
+      <option value="sql">SQL INSERT</option>
+    </select>
+  </span>
+  <span class="det" id="detected" hidden></span>
+  <span class="arrow">→</span>
+  <span class="fld">
+    <label for="outFmt">输出</label>
+    <select id="outFmt">
+      <option value="json" selected>JSON</option>
+      <option value="ndjson">NDJSON</option>
+      <option value="csv">CSV</option>
+      <option value="tsv">TSV</option>
+      <option value="md">Markdown 表格</option>
+      <option value="sql">SQL INSERT</option>
+    </select>
+  </span>
+  <span class="sp"></span>
+  <label class="chk" id="hdrWrap"><input type="checkbox" id="hasHeader" checked /> 首行是表头</label>
+  <label class="chk" id="infWrap"><input type="checkbox" id="infer" checked /> 类型推断</label>
+  <span class="fld" id="tblWrap">
+    <label for="tblName">表名</label>
+    <input type="text" id="tblName" value="t" spellcheck="false" autocomplete="off" />
+  </span>
+  <label class="chk" id="bomWrap"><input type="checkbox" id="bom" checked /> 加 BOM</label>
+</div>
+
+<main>
+  <section class="pane left">
+    <div class="pane-head">
+      <b>输入</b>
+      <span class="ell" id="inHint">六种格式都能粘，默认自动识别</span>
+      <span class="sp"></span>
+      <button class="mini" id="btnPaste">粘贴</button>
+      <button class="mini" id="btnUpload">导入文件</button>
+      <input type="file" id="file" hidden
+             accept=".csv,.tsv,.txt,.json,.ndjson,.md,.markdown,.sql,text/csv,text/tab-separated-values,text/plain,text/markdown,application/json,application/sql" />
+    </div>
+    <textarea id="in" spellcheck="false" placeholder="把 CSV / TSV / JSON / NDJSON / Markdown 表格 / SQL INSERT 粘贴到这里，格式会自动识别&#10;&#10;例：&#10;name,age,city&#10;&quot;张 三&quot;,28,杭州&#10;&quot;李四, Jr.&quot;,31,&quot;上海&quot;"></textarea>
+  </section>
+
+  <section class="pane right">
+    <div class="pane-head">
+      <b>输出</b>
+      <span class="ell" id="outHint">结果会写在这里</span>
+      <span class="sp"></span>
+      <button class="mini" id="btnUseAsInput">用作输入</button>
+      <button class="mini" id="btnCopy">复制</button>
+      <button class="mini" id="btnDownload">下载</button>
+    </div>
+    <textarea id="out" readonly spellcheck="false" placeholder="结果会写在这里"></textarea>
+  </section>
+</main>
+
+<div id="status">
+  <span id="sizes">—</span>
+  <span id="statusText">等待输入</span>
+</div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const BOM = "\uFEFF";
+
+  /* ============================================================
+     一、六种格式的定义（唯一真源）
+     -- 下拉框、扩展名、提示文案全部由这张表渲染，不要再维护第二份清单。
+     ============================================================ */
+  const FORMATS = [
+    { id: "csv",    name: "CSV",           ext: "csv",    kind: "text" },
+    { id: "tsv",    name: "TSV",           ext: "tsv",    kind: "text" },
+    { id: "json",   name: "JSON",          ext: "json",   kind: "json" },
+    { id: "ndjson", name: "NDJSON",        ext: "ndjson", kind: "json" },
+    { id: "md",     name: "Markdown 表格", ext: "md",     kind: "text" },
+    { id: "sql",    name: "SQL INSERT",    ext: "sql",    kind: "text" }
+  ];
+  const FMT = {};
+  FORMATS.forEach(f => { FMT[f.id] = f; });
+  const label = id => (FMT[id] ? FMT[id].name : "—");
+
+  /* ============================================================
+     二、CSV / TSV 解析（RFC 4180）
+     -- 必须自己扫，不能 split("\n") 之后再 split(",")：
+        引号里可以有逗号、换行、以及成对的 ""（转义引号）。
+     -- 逐字符拼接在几 MB 上会明显变慢，所以非引号字段用 slice 整段取。
+     ============================================================ */
+  function parseCSV(text, delim) {
+    const rows = [];
+    let row = [];
+    let i = 0;
+    const n = text.length;
+    const D = delim;
+    /* ★ 上一次吃掉的字符是不是分隔符。输入正好以分隔符结尾（"1,2,"）时，
+       最后一个空字段还没开始解析，循环就退出了 —— 不补回来会当成「缺列」（null），
+       而 RFC 4180 里 "1,2," 是三个字段、第三个是空串。 */
+    let pending = false;
+
+    while (i < n) {
+      let field = "";
+      pending = false;
+
+      /* --- 引号字段 --- */
+      if (text.charCodeAt(i) === 34) {
+        i++;
+        while (i < n) {
+          const q = text.indexOf('"', i);
+          if (q < 0) { field += text.slice(i); i = n; break; }
+          field += text.slice(i, q);
+          if (text.charCodeAt(q + 1) === 34) {      /* "" → 一个字面引号 */
+            field += '"';
+            i = q + 2;
+            continue;
+          }
+          i = q + 1;
+          break;
+        }
+        /* 引号闭合后若紧跟内容（畸形 CSV），并回本字段，不要吞掉一个字符 */
+        const s = i;
+        while (i < n) {
+          const ch = text[i];
+          if (ch === D || ch === "\n" || ch === "\r") break;
+          i++;
+        }
+        if (i > s) field += text.slice(s, i);
+      } else {
+        /* --- 非引号字段：整段 slice --- */
+        const start = i;
+        while (i < n) {
+          const c = text[i];
+          if (c === D || c === "\n" || c === "\r") break;
+          i++;
+        }
+        field = text.slice(start, i);
+      }
+
+      row.push(field);
+
+      if (i >= n) break;
+      const c = text[i];
+      if (c === D) { i++; pending = true; continue; }       /* 同一行下一个字段 */
+      if (c === "\r") { if (text[i + 1] === "\n") i += 2; else i++; }
+      else i++;                                             /* "\n" */
+      rows.push(row);
+      row = [];
+    }
+    if (pending) row.push("");
+    /* 末尾没有换行时，最后一个字段还没入行 */
+    if (row.length) rows.push(row);
+
+    /* 真正的空行（只有一个空字段，通常是文件末尾的空行）丢掉。
+       注意 "a,b" 下面的 "," 是两个空字段，不是空行 —— 不许当空行丢掉。 */
+    return rows.filter(r => !(r.length === 1 && r[0] === ""));
+  }
+
+  /* 分隔符嗅探：看前 8 个非空行，各候选符号「每行出现次数」是否稳定且 > 0。
+     稳定优先（同一份文件每行逗号数应该一样），其次看总数。 */
+  function sniffDelim(text) {
+    const cands = [",", "\t", ";", "|"];
+    const lines = [];
+    let i = 0;
+    const n = text.length;
+    while (i < n && lines.length < 8) {
+      let line = "";
+      let inQ = false;
+      while (i < n) {
+        const c = text[i];
+        if (c === '"') { inQ = !inQ; line += c; i++; continue; }
+        if (!inQ && (c === "\n" || c === "\r")) { i += (c === "\r" && text[i + 1] === "\n") ? 2 : 1; break; }
+        line += c; i++;
+      }
+      if (line.trim() !== "") lines.push(line);
+    }
+    if (!lines.length) return ",";
+
+    let best = ",", bestScore = -1;
+    for (const d of cands) {
+      const counts = lines.map(l => {
+        let k = 0, inQ = false;
+        for (let j = 0; j < l.length; j++) {
+          const c = l[j];
+          if (c === '"') { inQ = !inQ; continue; }
+          if (!inQ && c === d) k++;
+        }
+        return k;
+      });
+      if (counts[0] === 0) continue;
+      const stable = counts.every(c => c === counts[0]);
+      const score = (stable ? 1000 : 0) + counts.reduce((a, b) => a + b, 0);
+      if (score > bestScore) { bestScore = score; best = d; }
+    }
+    return best;
+  }
+
+  /* ============================================================
+     三、类型推断
+     -- 只认「明确是数字」的写法：007、1.2.3、+86 一律留字符串，
+        否则邮编 / 工号 / 手机号会被悄悄改写。
+     ============================================================ */
+  const NUM_RE = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
+  function inferCell(s) {
+    if (s === "") return "";
+    if (s === "true") return true;
+    if (s === "false") return false;
+    /* ★ 不推断 "null"：CSV 里没有 null 这个概念，字面的 null 是数据。
+       一旦推断成 null，再写回 CSV 就变成空串 —— 用户的 "null" 文本凭空消失。
+       （SQL 那边的 NULL 是关键字，由 sqlToken 单独处理，与这里无关。） */
+    if (NUM_RE.test(s)) {
+      const v = Number(s);
+      if (Number.isFinite(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER) return v;
+    }
+    return s;
+  }
+
+  /* ============================================================
+     四、统一表格模型
+     -- ★ 中间表示只有一种：{ keys: string[], rows: any[][] }
+        六个解析器都产出它，六个序列化器都吃它 —— 于是「任意 → 任意」
+        是天然成立的，不需要为 6×6 种组合各写一条路径。
+     -- rows 用「数组」而不是「以列名为键的对象」：列名可以叫 __proto__，
+        用对象存会静默丢列甚至污染原型。
+     ============================================================ */
+  const emptyTable = () => ({ keys: [], rows: [], asArrays: false, notes: [], table: "" });
+
+  function dedupeKeys(keys) {
+    const seen = Object.create(null);
+    return keys.map(k => {
+      const name = String(k).trim() || "col1";
+      const c = seen[name] || 0;
+      seen[name] = c + 1;
+      return c === 0 ? name : name + "_" + (c + 1);
+    });
+  }
+
+  /* 把行宽统一到 keys 长度；多出来的列补 key（宁可多给列，也不要静默丢数据） */
+  function normalize(keys, body, notes) {
+    let width = keys.length;
+    for (const r of body) if (r.length > width) width = r.length;
+
+    if (width > keys.length) {
+      for (let i = keys.length; i < width; i++) {
+        let k = "col" + (i + 1);
+        while (keys.indexOf(k) >= 0) k += "_";
+        keys.push(k);
+      }
+      notes.push("有行的字段数多于表头，已补列");
+    }
+    keys = dedupeKeys(keys);
+
+    const rows = body.map(r => {
+      const a = new Array(keys.length);
+      for (let i = 0; i < keys.length; i++) a[i] = i < r.length ? r[i] : null;
+      return a;
+    });
+    return { keys, rows };
+  }
+
+  /* ---------- 4.1 分隔符文本（CSV / TSV） ---------- */
+  function parseDelimited(text, delim, opts) {
+    const raw = parseCSV(text, delim);
+    const notes = [];
+    if (!raw.length) return emptyTable();
+
+    let keys, body;
+    if (opts.hasHeader) {
+      keys = raw[0].map((h, i) => String(h).trim() || "col" + (i + 1));
+      body = raw.slice(1);
+    } else {
+      const width = raw.reduce((m, r) => Math.max(m, r.length), 0);
+      keys = Array.from({ length: width }, (_, i) => "col" + (i + 1));
+      body = raw;
+    }
+
+    const conv = opts.infer
+      ? body.map(r => r.map(inferCell))
+      : body;
+    const n = normalize(keys, conv, notes);
+    return { keys: n.keys, rows: n.rows, asArrays: !opts.hasHeader, notes, table: "" };
+  }
+
+  /* ---------- 4.2 JSON / NDJSON ---------- */
+  function parseJsonTable(text) {
+    /* ★ 自动识别那一步已经 JSON.parse 过一次了，这里直接复用，别再来一遍。
+       大 JSON（2.6MB / 6 万行）实测二次 parse 要多花 ~360ms（37ms → 397ms）。 */
+    const key = String(text).replace(/^\uFEFF/, "").trim();
+    if (jsonCache && jsonCache.key === key) {
+      const data = jsonCache.data;
+      jsonCache = null;                    /* 用完即弃，别一直占着大对象 */
+      return jsonToTable(data);
+    }
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return { keys: [], rows: [], asArrays: false, notes: ["JSON 解析失败：" + e.message], table: "" };
+    }
+    return jsonToTable(data);
+  }
+
+  function parseNdjson(text) {
+    const lines = String(text).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const arr = [];
+    const notes = [];
+    for (let i = 0; i < lines.length; i++) {
+      try { arr.push(JSON.parse(lines[i])); }
+      catch (e) { notes.push("第 " + (i + 1) + " 行不是合法 JSON，已跳过"); }
+    }
+    if (!arr.length) return { keys: [], rows: [], asArrays: false, notes: notes.concat("没有可解析的行"), table: "" };
+    const t = jsonToTable(arr);
+    return { keys: t.keys, rows: t.rows, asArrays: t.asArrays, notes: notes.concat(t.notes), table: "" };
+  }
+
+  function jsonToTable(data) {
+    const notes = [];
+    const done = (keys, rows, asArrays) => {
+      const n = normalize(keys, rows, notes);
+      return { keys: n.keys, rows: n.rows, asArrays: !!asArrays, notes, table: "" };
+    };
+
+    if (data === null || data === undefined) return done(["value"], [[null]], false);
+
+    if (Array.isArray(data)) {
+      if (!data.length) return { keys: [], rows: [], asArrays: false, notes: ["空数组，没有数据"], table: "" };
+
+      /* 二维数组 */
+      if (data.every(x => Array.isArray(x))) {
+        const first = data[0];
+        const allStr = first.length > 0 && first.every(c => typeof c === "string");
+        if (allStr) {
+          /* 首行全是字符串 → 当表头，输出成对象更自然 */
+          return done(first.slice(), data.slice(1), false);
+        }
+        const w = data.reduce((m, r) => Math.max(m, r.length), 0);
+        return done(Array.from({ length: w }, (_, i) => "col" + (i + 1)), data, true);
+      }
+
+      /* 对象数组：键取并集 */
+      if (data.every(x => x && typeof x === "object")) {
+        const keys = [];
+        for (const o of data) {
+          for (const k of Object.keys(o)) if (keys.indexOf(k) < 0) keys.push(k);
+        }
+        const rows = data.map(o => keys.map(k => Object.prototype.hasOwnProperty.call(o, k) ? o[k] : null));
+        return done(keys, rows, false);
+      }
+
+      /* 基本类型数组 */
+      return done(["value"], data.map(v => [v]), false);
+    }
+
+    if (typeof data === "object") {
+      const keys = Object.keys(data);
+      return done(keys, [keys.map(k => data[k])], false);
+    }
+
+    return done(["value"], [[data]], false);
+  }
+
+  /* ---------- 4.3 Markdown 表格 ---------- */
+  function splitMdRow(line) {
+    let s = String(line).trim();
+    if (s.charAt(0) === "|") s = s.slice(1);
+    if (s.charAt(s.length - 1) === "|" && s.charAt(s.length - 2) !== "\\") s = s.slice(0, -1);
+
+    const out = [];
+    let cur = "";
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (c === "\\" && s[i + 1] === "|") { cur += "|"; i++; continue; }
+      if (c === "|") { out.push(cur.trim()); cur = ""; continue; }
+      cur += c;
+    }
+    out.push(cur.trim());
+    /* 序列化时把换行写成了 <br>，这里还原回去 */
+    return out.map(v => v.replace(/<br\s*\/?>/gi, "\n"));
+  }
+
+  const isMdSep = s => {
+    const t = String(s).trim();
+    if (t.indexOf("|") < 0 || t.indexOf("-") < 0) return false;
+    return /^\|?[\s:|-]+$/.test(t) && /-{2,}/.test(t);
+  };
+
+  function parseMarkdown(text, opts) {
+    const notes = [];
+    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/);
+
+    /* 取第一段连续的、含 | 的行 */
+    let s = -1, e = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const has = lines[i].indexOf("|") >= 0 && lines[i].trim() !== "";
+      if (has) { if (s < 0) s = i; e = i; }
+      else if (s >= 0) break;
+    }
+    if (s < 0) return { keys: [], rows: [], asArrays: false, notes: ["没找到 Markdown 表格（需要有 | 分隔的行）"], table: "" };
+
+    const block = lines.slice(s, e + 1).filter(l => l.indexOf("|") >= 0);
+    const cells = block.map(splitMdRow);
+
+    let keys, body;
+    if (cells.length >= 2 && isMdSep(block[1])) {
+      keys = cells[0];
+      body = cells.slice(2);
+    } else {
+      keys = cells[0];
+      body = cells.slice(1);
+      notes.push("没找到 |---| 分隔行，已把首行当表头");
+    }
+
+    const conv = opts.infer ? body.map(r => r.map(inferCell)) : body;
+    const n = normalize(keys, conv, notes);
+    return { keys: n.keys, rows: n.rows, asArrays: false, notes, table: "" };
+  }
+
+  /* ---------- 4.4 SQL INSERT ---------- */
+  function sqlToken(raw, wasStr) {
+    /* ★ 引号内的空白是数据，不能 trim；只有裸值才 trim 后判断类型 */
+    if (wasStr) return raw;
+    const t = raw.trim();
+    if (/^null$/i.test(t)) return null;
+    if (/^true$/i.test(t)) return true;
+    if (/^false$/i.test(t)) return false;
+    if (NUM_RE.test(t)) {
+      const v = Number(t);
+      if (Number.isFinite(v)) return v;
+    }
+    return t;      /* 未加引号的裸词 / 函数调用，原样留字符串 */
+  }
+
+  /* 从 VALUES 后面读出所有 (...) 元组。
+     要正确处理：'...' 里的逗号与括号、'' 转义、反斜杠转义、函数调用里的括号嵌套。 */
+  function readTuples(src, start) {
+    const tuples = [];
+    let i = start;
+    const n = src.length;
+
+    while (i < n) {
+      while (i < n && /\s/.test(src[i])) i++;
+      if (src[i] === ",") { i++; continue; }
+      if (src[i] !== "(") break;
+      i++;
+
+      const vals = [];
+      let cur = "", quoted = false, wasStr = false, depth = 0, closed = false;
+      let afterQuote = false;
+      /* ★ 引号是不是「值的一部分」：CONCAT('x','y') 里的引号要原样留着，
+         而纯字符串 'abc' 的引号要剥掉。判据是进引号前 cur 是否已经有内容。 */
+      let keepQ = false;
+
+      while (i < n) {
+        const c = src[i];
+
+        if (quoted) {
+          if (c === "'") {
+            if (src[i + 1] === "'") { cur += keepQ ? "''" : "'"; i += 2; continue; }
+            quoted = false; afterQuote = true;
+            if (keepQ) cur += "'";
+            i++; continue;
+          }
+          if (c === "\\" && i + 1 < n) {
+            const d = src[i + 1];
+            const map = { n: "\n", t: "\t", r: "\r", "0": "\0", "\\": "\\", "'": "'" };
+            cur += map[d] !== undefined ? map[d] : d;
+            i += 2; continue;
+          }
+          cur += c; i++; continue;
+        }
+
+        if (c === "'") {
+          /* ★ 引号前面只可能是空白（如 ", '张三'"），必须丢掉；
+             引号里面的空白才是数据。 */
+          cur = cur.replace(/\s+$/, "");
+          keepQ = cur !== "";
+          if (keepQ) cur += "'";
+          quoted = true; wasStr = true; afterQuote = false; i++; continue;
+        }
+        /* 引号后面紧跟的空白同样不属于值 */
+        if (afterQuote && /\s/.test(c)) { i++; continue; }
+        afterQuote = false;
+        /* 值开头的空白不属于值（函数调用里 CONCAT( 'x' 这种写法很常见） */
+        if (cur === "" && /\s/.test(c)) { i++; continue; }
+
+        if (c === "(") { depth++; cur += c; i++; continue; }
+        if (c === ")") {
+          if (depth > 0) { depth--; cur += c; i++; continue; }
+          vals.push(sqlToken(cur, wasStr));
+          cur = ""; wasStr = false; keepQ = false; i++; closed = true; break;
+        }
+        if (c === ",") {
+          /* ★ 括号里的逗号是值的一部分：CONCAT('x','y')、POINT(1,2)、COALESCE(a,b)
+             都很常见，不判 depth 会把一个值切成两列。 */
+          if (depth > 0) { cur += c; i++; continue; }
+          vals.push(sqlToken(cur, wasStr)); cur = ""; wasStr = false; keepQ = false; i++; continue;
+        }
+        cur += c; i++;
+      }
+
+      if (!closed) break;
+      tuples.push(vals);
+    }
+    return { tuples, next: i };
+  }
+
+  function parseSql(text) {
+    const notes = [];
+    const src = String(text).replace(/^\uFEFF/, "");
+    const re = /INSERT\s+INTO\s+([`"\[\]\w.]+)\s*(?:\(([^)]*)\))?\s*VALUES/gi;
+
+    let keys = null, table = "";
+    let colMismatch = false;
+    const all = [];
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      table = table || m[1].replace(/[`"\[\]]/g, "");
+      if (m[2]) {
+        const cols = m[2].split(",").map(s => s.trim().replace(/^[`"\[\]]+|[`"\[\]]+$/g, "")).filter(Boolean);
+        /* ★ 列名只认第一条语句。后面语句列名不同时必须提示，
+           否则 c,d 会被静默标成 a,b —— 数据没错、列名错，最难发现。 */
+        if (!keys) keys = cols;
+        else if (cols.join("\u0001") !== keys.join("\u0001")) colMismatch = true;
+      }
+      const r = readTuples(src, re.lastIndex);
+      for (const t of r.tuples) all.push(t);
+      if (r.next <= re.lastIndex) break;     /* 防止死循环 */
+      re.lastIndex = r.next;
+    }
+    if (colMismatch) notes.push("后面有 INSERT 的列名与第一条不同，已统一按第一条的列名对齐");
+
+    if (!all.length) {
+      return { keys: [], rows: [], asArrays: false, notes: ["没找到 INSERT INTO … VALUES 语句"], table: "" };
+    }
+
+    const width = all.reduce((w, r) => Math.max(w, r.length), 0);
+    if (!keys) keys = Array.from({ length: width }, (_, i) => "col" + (i + 1));
+
+    const n = normalize(keys, all, notes);
+    return { keys: n.keys, rows: n.rows, asArrays: false, notes, table };
+  }
+
+  /* ---------- 4.5 入口 ---------- */
+  function parseTable(text, fmt, opts) {
+    if (!String(text).trim()) return emptyTable();
+    switch (fmt) {
+      case "csv": {
+        const d = sniffDelim(text);
+        return parseDelimited(text, d, opts);
+      }
+      case "tsv": return parseDelimited(text, "\t", opts);
+      case "json": return parseJsonTable(text);
+      case "ndjson": return parseNdjson(text);
+      case "md": return parseMarkdown(text, opts);
+      case "sql": return parseSql(text);
+      default: return emptyTable();
+    }
+  }
+
+  /* ============================================================
+     五、序列化（表格模型 → 六种格式）
+     ============================================================ */
+  function cellToText(v) {
+    if (v === undefined || v === null) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    return JSON.stringify(v);
+  }
+
+  function csvEscape(s, delim) {
+    const t = String(s);
+    /* 空字段本身不需要引号；只有「整行只有一个空字段」时才必须写成 ""，
+       否则那一行会变成空行、被解析器当成噪声丢掉（在 matrixToDelim 里处理）。 */
+    const need = t.indexOf(delim) >= 0 || /["\r\n]/.test(t) || t !== t.trim();
+    return need ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+
+  function matrixToDelim(m, delim, withBom, withHeader) {
+    if (!m.keys.length && !m.rows.length) return "";
+    const lines = [];
+    /* ★ asArrays 为真 = 原始数据本来就没有表头（列名是 col1..colN 编出来的）。
+       这时再写一行表头，等于凭空给用户加了一行假数据。 */
+    if (withHeader !== false && m.keys.length) lines.push(m.keys.map(k => csvEscape(k, delim)).join(delim));
+    for (const r of m.rows) {
+      const cells = r.map(v => csvEscape(cellToText(v), delim));
+      /* 单列时，空值会变成空行 → 显式写成 "" 保住这一行 */
+      if (cells.length === 1 && cells[0] === "") lines.push('""');
+      else lines.push(cells.join(delim));
+    }
+    return (withBom ? BOM : "") + lines.join("\r\n");
+  }
+
+  function rowsAsObjects(m) {
+    return m.rows.map(r => {
+      const o = Object.create(null);          /* ★ 列名可以是 __proto__，用无原型对象最安全 */
+      m.keys.forEach((k, i) => { o[k] = i < r.length ? r[i] : null; });
+      return o;
+    });
+  }
+
+  function matrixToJson(m) {
+    if (!m.keys.length && !m.rows.length) return "";
+    return JSON.stringify(m.asArrays ? m.rows : rowsAsObjects(m), null, 2);
+  }
+
+  function matrixToNdjson(m) {
+    if (!m.keys.length && !m.rows.length) return "";
+    const list = m.asArrays ? m.rows : rowsAsObjects(m);
+    return list.map(o => JSON.stringify(o)).join("\n");
+  }
+
+  const mdCell = s => String(s).replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+
+  function matrixToMd(m) {
+    if (!m.keys.length) return "";
+    const head = "| " + m.keys.map(k => mdCell(k)).join(" | ") + " |";
+    const sep = "| " + m.keys.map(() => "---").join(" | ") + " |";
+    const body = m.rows.map(r => "| " + r.map(v => mdCell(cellToText(v))).join(" | ") + " |");
+    return [head, sep].concat(body).join("\n");
+  }
+
+  function sqlIdent(s) {
+    return /^[A-Za-z_][A-Za-z0-9_]*$/.test(s) ? s : "t";
+  }
+  function sqlValue(v) {
+    if (v === null || v === undefined) return "NULL";
+    if (typeof v === "number" && Number.isFinite(v)) return String(v);
+    if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
+    return "'" + String(v).replace(/'/g, "''") + "'";
+  }
+
+  function matrixToSql(m, table) {
+    if (!m.keys.length) return "";
+    const t = sqlIdent(table || m.table || "t");
+    const cols = m.keys.map(k => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(k) ? k : '"' + String(k).replace(/"/g, '""') + '"'));
+    const head = "INSERT INTO " + t + " (" + cols.join(", ") + ") VALUES";
+    return m.rows.map(r => head + " (" + r.map(sqlValue).join(", ") + ");").join("\n");
+  }
+
+  function serialize(m, fmt, opts) {
+    /* CSV / TSV 的列名可能只是 col1..colN 占位（输入本来无表头），那时不写表头行 */
+    const hdr = !m.asArrays;
+    switch (fmt) {
+      case "csv": return matrixToDelim(m, ",", opts.bom, hdr);
+      case "tsv": return matrixToDelim(m, "\t", opts.bom, hdr);
+      case "json": return matrixToJson(m);
+      case "ndjson": return matrixToNdjson(m);
+      case "md": return matrixToMd(m);
+      case "sql": return matrixToSql(m, opts.table);
+      default: return "";
+    }
+  }
+
+  /* ============================================================
+     六、输入格式自动识别
+     -- 顺序有讲究：SQL → JSON/NDJSON → Markdown → TSV → CSV。
+        前四者都有强特征，CSV 是「剩下的都算它」的兜底。
+     ============================================================ */
+  /* 自动识别时 parse 过的 JSON 结果，交给 parseJsonTable 复用（见那里的注释） */
+  let jsonCache = null;
+
+  function detectFormat(text) {
+    const t = String(text).replace(/^\uFEFF/, "").trim();
+    if (!t) return "";
+
+    if (/^INSERT\s+INTO\b/i.test(t)) return "sql";
+
+    if (t.charAt(0) === "[" || t.charAt(0) === "{") {
+      try {
+        jsonCache = { key: t, data: JSON.parse(t) };
+        return "json";
+      } catch (e) { /* 再看是不是 NDJSON */ }
+      const lines = t.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      if (lines.length > 1 && /^[\[{]/.test(lines[0])) {
+        /* ★ 只要第一行能独立成 JSON 就按 NDJSON 处理。后面某行坏掉时，
+           parseNdjson 会跳过它并报「第几行不是合法 JSON」，比整体报
+           「JSON 解析失败：Unexpected non-whitespace character…」有用得多。 */
+        let okFirst = true;
+        try { JSON.parse(lines[0]); } catch (e2) { okFirst = false; }
+        if (okFirst) return "ndjson";
+      }
+      return "json";      /* 交给 JSON 解析器去报错，比猜成 CSV 更有用 */
+    }
+
+    const lines = t.split(/\r?\n/);
+    /* Markdown：某行含 | 且下一行是 |---| 分隔行 */
+    for (let i = 0; i + 1 < lines.length; i++) {
+      if (lines[i].indexOf("|") >= 0 && isMdSep(lines[i + 1])) return "md";
+    }
+
+    /* TSV：首个非空行含制表符，且下一非空行制表符数量一致 */
+    const firstIdx = lines.findIndex(l => l.trim() !== "");
+    if (firstIdx >= 0 && lines[firstIdx].indexOf("\t") >= 0) {
+      const cnt = lines[firstIdx].split("\t").length;
+      let j = firstIdx + 1;
+      while (j < lines.length && lines[j].trim() === "") j++;
+      if (j >= lines.length || lines[j].split("\t").length === cnt) return "tsv";
+    }
+
+    return "csv";
+  }
+
+  /* ============================================================
+     七、状态与调度
+     ============================================================ */
+  let lastOut = "";
+  let lastExt = "json";
+  let timer = 0;
+  let detectedFmt = "";
+  /* ★ 表名输入框有没有被用户手动改过。没改过时，SQL 输入的表名要自动沿用，
+     否则「SQL 进 → SQL 出」会把 x 改成 t（数据没错，但表名被悄悄换掉）。 */
+  let tblTouched = false;
+
+  const fmtBytes = n => {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB";
+    return (n / 1048576).toFixed(1) + " MB";
+  };
+
+  function setStatus(text, warn) {
+    const el = $("statusText");
+    el.textContent = text;
+    el.classList.toggle("warn", !!warn);
+  }
+
+  function setEnabled(id, on) {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = !on;
+    const box = el.closest(".fld, .chk");
+    if (box) box.classList.toggle("dim", !on);
+  }
+
+  /* 选项只在「对它有意义」的时候可点，其余置灰但不隐藏（约定：不藏控件） */
+  function syncControls() {
+    const inSel = $("inFmt").value;
+    const outFmt = $("outFmt").value;
+    const effIn = inSel === "auto" ? (detectedFmt || "csv") : inSel;
+
+    const hasHeaderMatters = effIn === "csv" || effIn === "tsv";
+    /* 只有纯文本来源才谈得上「推断」：JSON / NDJSON 本来就带类型，SQL 值也已按字面量还原 */
+    const textSource = effIn === "csv" || effIn === "tsv" || effIn === "md";
+    const typeOutput = outFmt === "json" || outFmt === "ndjson" || outFmt === "sql";
+
+    setEnabled("hasHeader", hasHeaderMatters);
+    setEnabled("infer", textSource && typeOutput);
+    setEnabled("tblName", outFmt === "sql");
+    setEnabled("bom", outFmt === "csv" || outFmt === "tsv");
+  }
+
+  function run() {
+    const text = $("in").value;
+    const inSel = $("inFmt").value;
+    const outFmt = $("outFmt").value;
+    jsonCache = null;                 /* 每次重跑都作废，防止复用到上一份输入 */
+
+    if (!text.trim()) {
+      detectedFmt = "";
+      lastOut = "";
+      $("out").value = "";
+      $("inHint").textContent = "六种格式都能粘，默认自动识别";
+      $("outHint").textContent = "结果会写在这里";
+      $("sizes").textContent = "—";
+      $("detected").hidden = true;
+      setStatus("等待输入");
+      syncControls();
+      return;
+    }
+
+    detectedFmt = inSel === "auto" ? detectFormat(text) : inSel;    const inFmt = detectedFmt || "csv";
+
+    const det = $("detected");
+    if (inSel === "auto") {
+      det.hidden = false;
+      det.textContent = "识别为 " + label(inFmt);
+    } else {
+      det.hidden = true;
+    }
+
+    const opts = {
+      hasHeader: $("hasHeader").checked,
+      infer: $("infer").checked,
+      bom: $("bom").checked,
+      table: $("tblName").value.trim() || "t"
+    };
+    syncControls();
+
+    let m;
+    try {
+      m = parseTable(text, inFmt, opts);
+    } catch (e) {
+      $("out").value = "";
+      lastOut = "";
+      setStatus("解析失败：" + (e && e.message ? e.message : e), true);
+      $("sizes").textContent = "—";
+      return;
+    }
+
+    /* SQL 输入自带表名，且用户没手改过表名框 → 沿用输入里的表名 */
+    if (inFmt === "sql" && m.table && !tblTouched) {
+      opts.table = m.table;
+      $("tblName").value = m.table;
+    }
+
+    let out;
+    try {
+      out = serialize(m, outFmt, opts);
+    } catch (e) {
+      out = "";
+      m.notes.push("序列化失败：" + (e && e.message ? e.message : e));
+    }
+
+    lastOut = out;
+    lastExt = (FMT[outFmt] || {}).ext || "txt";
+    $("out").value = out;
+
+    const rows = m.rows.length;
+    const cols = m.keys.length;
+    $("inHint").textContent = label(inFmt) + " · " + fmtBytes(new Blob([text]).size);
+    $("outHint").textContent = label(outFmt) + " · " + fmtBytes(new Blob([out]).size);
+    $("sizes").innerHTML = "<b>" + cols + "</b> 列 × <b>" + rows + "</b> 行";
+
+    if (!cols && !rows) {
+      setStatus(m.notes.length ? m.notes[0] : "没解析出数据，检查输入内容", true);
+    } else if (m.notes.length) {
+      setStatus(m.notes.join("；"), false);
+    } else {
+      setStatus(label(inFmt) + " → " + label(outFmt) + " · " + cols + " 列 × " + rows + " 行");
+    }
+  }
+
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 180); }
+
+  /* ============================================================
+     八、交互
+     ============================================================ */
+  $("in").addEventListener("input", schedule);
+  $("inFmt").addEventListener("change", run);
+  $("outFmt").addEventListener("change", run);
+  $("hasHeader").addEventListener("change", run);
+  $("infer").addEventListener("change", run);
+  $("bom").addEventListener("change", run);
+  $("tblName").addEventListener("input", () => {
+    tblTouched = true;                    /* 手动改过就不再自动沿用输入里的表名 */
+    clearTimeout(timer);
+    timer = setTimeout(run, 220);
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("in").value = "";
+    tblTouched = false;                   /* 清空后重新回到「自动沿用」 */
+    $("tblName").value = "t";
+    run();
+    $("in").focus();
+    toast("已清空");
+  });
+
+  $("btnCopy").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    copyText(lastOut, "已复制 " + label($("outFmt").value));
+  });
+
+  $("btnUseAsInput").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    $("in").value = lastOut;
+    $("inFmt").value = $("outFmt").value;      /* 把输出当成同格式输入，避免再猜错 */
+    run();
+    toast("已把结果作为输入（" + label($("inFmt").value) + "）");
+  });
+
+  $("btnPaste").addEventListener("click", async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t) { toast("剪贴板是空的"); return; }
+      $("in").value = t;
+      run();
+    } catch (e) {
+      toast("读不到剪贴板，请手动粘贴");
+    }
+  });
+
+  $("btnUpload").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      $("in").value = String(reader.result || "").replace(/^\uFEFF/, "");
+      run();
+      toast("已导入 " + f.name);
+    };
+    reader.readAsText(f, "utf-8");
+    e.target.value = "";
+  });
+
+  $("btnDownload").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    const blob = new Blob([lastOut], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "data." + lastExt;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    toast("已下载 data." + lastExt);
+  });
+
+  /* 示例：故意塞进引号内逗号 / 引号内换行 / "" 转义 / 前导零 / 空值 / 布尔，
+     一眼能看出 RFC 4180 与类型推断都处理对了。 */
+  const SAMPLE = [
+    "id,name,city,score,active,code",
+    '1,"张 三",杭州,88,true,007',
+    '2,"李四, Jr.","上海",92.5,false,010',
+    '3,"王五","地址：西湖区\r\n文三路 1 号",75,true,001',
+    '4,"赵六 ""阿六""",广州,,false,'
+  ].join("\r\n");
+
+  $("btnSample").addEventListener("click", () => {
+    $("in").value = SAMPLE;
+    $("inFmt").value = "auto";
+    run();
+    toast("示例：引号内逗号 / 换行 / 转义引号 / 前导零");
+  });
+
+  let toastTimer = 0;
+  function toast(msg) {
+    let el = document.querySelector(".toast");
+    if (!el) { el = document.createElement("div"); el.className = "toast"; document.body.appendChild(el); }
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1600);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else fallbackCopy(s, done);
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* 初始化 */
+  run();
+})();
+</script>
+</body>
+</html>

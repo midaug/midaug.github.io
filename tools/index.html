@@ -356,6 +356,7 @@ var ICONS = {
   idcard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="2.2"/><path d="M7.2 9.2v5.6"/><path d="M10.4 9.2v5.6"/><path d="M13.6 9.2v5.6"/><path d="M16.8 9.2v5.6"/></svg>',
   minify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5H7.2A2.7 2.7 0 0 0 4.5 6.2v11.6a2.7 2.7 0 0 0 2.7 2.7H9"/><path d="M15 3.5h1.8a2.7 2.7 0 0 1 2.7 2.7v11.6a2.7 2.7 0 0 1-2.7 2.7H15"/><path d="M9.6 12h4.8"/></svg>',
   numfmt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18.6 5.4 5.4 18.6"/><circle cx="7.8" cy="7.8" r="2.5"/><circle cx="16.2" cy="16.2" r="2.5"/></svg>',
+  csv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.4" width="18" height="15.2" rx="2.2"/><path d="M3 9.4h18"/><path d="M9.2 9.4v10.2"/><path d="M15 9.4v10.2"/></svg>',
   favicon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><path d="M3 9.4h18"/><circle cx="6.4" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="9.4" cy="7" r="1" fill="currentColor" stroke="none"/><rect x="7.6" y="12.4" width="5.4" height="4.4" rx="1" fill="currentColor" stroke="none"/></svg>'
 };
 
@@ -372,6 +373,8 @@ var TOOLS = [
     desc:'JSON 一键生成 TypeScript / Go / Python / Rust / Java 的结构体与类型定义，自动推导嵌套形状。', tags:['JSON','代码生成','TypeScript','Go','Python'] },
   { group:'开发工具', name:'数据格式互转', path:'convert/', icon:'swap',
     desc:'JSON / YAML / XML / properties 四种格式互相转换，自动识别输入格式、错误按行列定位，往返转换结果保持一致。', tags:['JSON','YAML','XML','properties','格式转换'] },
+  { group:'开发工具', name:'表格数据互转', path:'csv/', icon:'csv',
+    desc:'CSV / TSV / JSON / NDJSON / Markdown 表格 / SQL INSERT 六种格式任意互转（6×6 全组合），输入格式自动识别、也可手动指定。CSV 严格遵循 RFC 4180（引号内逗号与换行、"" 转义），类型推断对前导零、版本号、电话一律留字符串，行宽不齐会补列并提示而不是丢数据。', tags:['CSV','TSV','JSON','NDJSON','Markdown','SQL','表格','格式转换'] },
   { group:'开发工具', name:'文本对比', path:'text-diff/', icon:'diff',
     desc:'两段文本逐行对比，并排 / 统一双视图、行内按词高亮、折叠相同行、导出统一 diff，全部本地运行。', tags:['文本对比','diff','差异'] },
   { group:'开发工具', name:'文本工具箱', path:'text-kit/', icon:'textkit',

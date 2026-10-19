@@ -250,6 +250,15 @@
   }
   .svgprev img { max-width: 100%; max-height: 200px; display: block; border-radius: 4px; }
 
+  .b64prev {
+    margin-top: 9px; display: flex; align-items: center; justify-content: center;
+    min-height: 120px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 9px; padding: 8px; overflow: hidden;
+  }
+  .b64prev img { max-width: 100%; max-height: 220px; display: block; border-radius: 4px; }
+  /* Base64 输出用等宽 + 可换行，长串不会把面板撑破 */
+  #b64Out { white-space: pre-wrap; word-break: break-all; }
+
   .spinner {
     width: 12px; height: 12px; border: 2px solid var(--border-2); border-top-color: var(--accent);
     border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: -1px;
@@ -292,7 +301,7 @@
 <header>
   <div class="brand">Image<span>Tool</span></div>
   <span class="sep"></span>
-  <span class="stat">压缩 · 转换 · 裁剪旋转 · 水印 · 主色 · SVG</span>
+  <span class="stat">压缩 · 转换 · 裁剪旋转 · 水印 · 主色 · SVG · Base64</span>
   <span class="sep hide-sm"></span>
   <span class="stat hide-sm">全部在本地浏览器内处理，图片不会上传</span>
   <button class="mini" id="btnClear" title="清空当前图片与结果">清空</button>
@@ -378,6 +387,7 @@
       <button class="mini" data-tab="wm">水印</button>
       <button class="mini" data-tab="pal">主色</button>
       <button class="mini" data-tab="svg">SVG</button>
+      <button class="mini" data-tab="b64">Base64</button>
     </div>
 
     <!-- 2.1 裁剪旋转 -->
@@ -532,6 +542,64 @@
         PNG 最长边封顶 4096 px，再大 canvas 会拖死浏览器。
       </div>
     </div>
+
+    <!-- 2.5 Base64 / Data URI -->
+    <div class="panel" id="panel-b64" hidden>
+      <div class="main-grid">
+        <div>
+          <div class="row">
+            <label class="k">来源</label>
+            <button class="mini on" data-b64src="orig">原图</button>
+            <button class="mini" data-b64src="out">当前结果</button>
+            <span style="flex:1"></span>
+            <button class="primary" id="btnB64Make">生成</button>
+          </div>
+          <div class="row">
+            <label class="k" for="b64Fmt">形态</label>
+            <select id="b64Fmt" style="flex:1">
+              <option value="datauri">Data URI（data:image/png;base64,…）</option>
+              <option value="raw">纯 Base64</option>
+              <option value="css">CSS background-image</option>
+              <option value="html">HTML img 标签</option>
+            </select>
+          </div>
+          <div class="row">
+            <label class="k">换行</label>
+            <label class="chk"><input type="checkbox" id="b64Wrap" /> 每 76 列换行（MIME 风格）</label>
+          </div>
+          <div class="row" style="margin-bottom:6px">
+            <span class="tip" id="b64Stat">—</span>
+          </div>
+          <textarea id="b64Out" rows="8" spellcheck="false"
+            placeholder="点「生成」后这里出现 Base64 / Data URI"></textarea>
+          <div class="row" style="margin-top:8px;margin-bottom:0">
+            <button class="mini" id="btnB64Copy">复制</button>
+            <button class="mini" id="btnB64Download">下载 .txt</button>
+          </div>
+        </div>
+        <div>
+          <div class="row">
+            <label class="k" for="b64In">反向</label>
+            <span class="tip">粘贴 Data URI 或裸 Base64，自动识别类型</span>
+          </div>
+          <textarea id="b64In" rows="6" spellcheck="false"
+            placeholder="data:image/png;base64,iVBORw0KGgo…"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="mini" id="btnB64Decode">解析</button>
+            <button class="mini" id="btnB64AsSource" disabled>载入为源图</button>
+            <button class="mini" id="btnB64Save" disabled>下载图片</button>
+          </div>
+          <div class="b64prev" id="b64Prev"><span class="tip">解析后这里显示预览</span></div>
+          <div class="sizes" id="b64Kv" style="margin-top:9px"></div>
+        </div>
+      </div>
+      <div class="tip" style="margin-top:8px">
+        · 生成的 Base64 与「原图 / 当前结果」的字节完全一致，不做二次编码；体积约为原图的 <b>1.33 倍</b>。<br>
+        · Data URI 适合小图（图标、占位图、邮件模板）。超过 <b>10 MB</b> 的图会拒绝生成 —— 那种体积内联进
+        CSS / HTML 只会拖慢首屏，应该用独立文件 + 缓存。<br>
+        · 反向解析在本地完成：不请求网络、不上传内容。识别不出类型时会按字节头猜测（PNG / JPEG / GIF / WebP / BMP / SVG）。
+      </div>
+    </div>
   </section>
 
 </main>
@@ -595,8 +663,9 @@
         所以「裁剪」页必须在切回来的那一刻重新量一次画面尺寸，否则
         fitStage() 会拿到 0 直接跳过，画面保持上一次的（甚至没设过）大小。
      ============================================================ */
-  const TABS = ["crop", "wm", "pal", "svg"];
+  /* ★ tab 清单从 DOM 现读，不再维护第二份数组 —— 加一个 Tab 只改 HTML 一处 */
   const tabBtns = [...document.querySelectorAll("#tabs button")];
+  const TABS = tabBtns.map(b => b.dataset.tab);
 
   function setTab(name) {
     if (TABS.indexOf(name) < 0) name = TABS[0];
@@ -865,6 +934,7 @@
       $("origMeta").textContent = w + " × " + h + " · " + fmtBytes(file.size);
       $("preHint").textContent = (file.name || "已选择图片");
       $("btnRun").disabled = false;
+      b64Reset();                      /* 换了图，旧的 Base64 不能留着 */
       $("btnDownload").disabled = true;
       $("btnCopyInfo").disabled = true;
       $("outBox").innerHTML = '<span class="tip">点「压缩 / 转换」生成</span>';
@@ -958,6 +1028,7 @@
       $("btnDownload").disabled = false;
       $("btnCopyInfo").disabled = false;
       $("preHint").textContent = outName;
+      b64Reset();                      /* 结果变了，之前生成的 Base64 已经过期 */
       toast("已生成 " + ext.toUpperCase() + " · " + fmtBytes(blob.size));
     }, type, type === "image/png" ? undefined : q);
   }
@@ -1300,6 +1371,204 @@
   }
 
   /* ============================================================
+     Base64 / Data URI
+     -- 正向：原图 / 当前结果的字节 → Base64（不做二次编码，与文件逐字节一致）
+     -- 反向：Data URI 或裸 Base64 → 字节 → 类型嗅探 → 预览 / 载入为源图
+     ============================================================ */
+  let b64Src = "orig";
+  let b64Text = "";
+  let b64Dec = null;          /* { blob, url, mime, name } */
+
+  function readDataURL(blob) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result || ""));
+      fr.onerror = () => rej(fr.error || new Error("读取失败"));
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  function wrap76(s) {
+    let out = "";
+    for (let i = 0; i < s.length; i += 76) out += (i ? "\n" : "") + s.slice(i, i + 76);
+    return out;
+  }
+
+  function b64Reset() {
+    b64Text = "";
+    $("b64Out").value = "";
+    $("b64Stat").textContent = "—";
+  }
+
+  /* ★ 类型/体积这些值来自用户粘贴的内容，必须走 textContent，不能拼 innerHTML */
+  function b64ShowKv(mime, size, dims) {
+    const kv = $("b64Kv");
+    kv.textContent = "";
+    if (dims) {
+      const b = document.createElement("b");
+      b.textContent = dims;
+      kv.appendChild(b);
+    }
+    const a = document.createElement("span");
+    a.textContent = mime;
+    kv.appendChild(a);
+    const c = document.createElement("span");
+    c.textContent = fmtBytes(size);
+    kv.appendChild(c);
+  }
+
+  async function b64Make() {
+    const src = b64Src === "out" ? outBlob : origFile;
+    if (!src) { toast(b64Src === "out" ? "还没有结果，先点「压缩 / 转换」" : "先选一张图片"); return; }
+    if (src.size > 10 * 1048576) { toast("超过 10 MB，Data URI 没有实用价值，先压缩再试"); return; }
+
+    const btn = $("btnB64Make");
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = "生成中…";
+    try {
+      const dataUrl = await readDataURL(src);
+      const comma = dataUrl.indexOf(",");
+      const head = dataUrl.slice(5, comma);
+      const mime = head.split(";")[0] || "application/octet-stream";
+      const b64 = dataUrl.slice(comma + 1);
+      const uri = "data:" + mime + ";base64," + b64;
+      const fmt = $("b64Fmt").value;
+      const canWrap = fmt === "datauri" || fmt === "raw";
+      const wrap = $("b64Wrap").checked && canWrap;
+
+      let text;
+      if (fmt === "raw") text = wrap ? wrap76(b64) : b64;
+      else if (fmt === "css") {
+        text = ".b64-image {\n  background-image: url(\"" + uri + "\");\n"
+             + "  background-size: cover;\n  background-position: center;\n}";
+      } else if (fmt === "html") {
+        const w = bitmap ? bitmap.width : 0;
+        const h = bitmap ? bitmap.height : 0;
+        text = '<img src="' + uri + '" alt=""' + (w ? ' width="' + w + '" height="' + h + '"' : "") + " />";
+      } else {
+        text = wrap ? "data:" + mime + ";base64,\n" + wrap76(b64) : uri;
+      }
+
+      b64Text = text;
+      $("b64Out").value = text;
+      const ratio = src.size ? (b64.length / src.size) : 0;
+      $("b64Stat").innerHTML = "原图 <b>" + fmtBytes(src.size) + "</b> → Base64 <b>" +
+        fmtBytes(b64.length) + "</b>（" + ratio.toFixed(2) + "×）· " + fmtBytes(b64.length - src.size) +
+        " 膨胀" + (canWrap ? "" : " · 该形态不换行");
+    } catch (e) {
+      toast("生成失败：" + (e && e.message ? e.message : "读取错误"));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
+  const IMG_SIGS = [
+    { mime: "image/png", sig: [0x89, 0x50, 0x4E, 0x47] },
+    { mime: "image/jpeg", sig: [0xFF, 0xD8, 0xFF] },
+    { mime: "image/gif", sig: [0x47, 0x49, 0x46, 0x38] },
+    { mime: "image/bmp", sig: [0x42, 0x4D] }
+  ];
+
+  function sniffMime(bytes) {
+    for (const s of IMG_SIGS) {
+      if (s.sig.every((b, i) => bytes[i] === b)) return s.mime;
+    }
+    /* RIFF....WEBP */
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+    /* SVG：跳过空白后第一个字节是 "<" */
+    let i = 0;
+    while (i < bytes.length && (bytes[i] === 9 || bytes[i] === 10 || bytes[i] === 13 || bytes[i] === 32)) i++;
+    if (bytes[i] === 0x3C) return "image/svg+xml";
+    return "";
+  }
+
+  function extFor(mime) {
+    return ({
+      "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp",
+      "image/bmp": "bmp", "image/svg+xml": "svg", "text/plain": "txt"
+    })[mime] || "bin";
+  }
+
+  async function applyDecoded(bytes, mime, name) {
+    if (b64Dec && b64Dec.url) URL.revokeObjectURL(b64Dec.url);
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    b64Dec = { blob, url, mime, name };
+
+    /* ★ 尺寸在渲染前就量好：靠 <img> 的 onload 去填 KV 会有竞态，
+       探针/用户都可能读到「还没填尺寸」的中间态。createImageBitmap 是同步可等的。 */
+    let dims = "";
+    if (/^image\//.test(mime)) {
+      try {
+        const bmp = await createImageBitmap(blob);
+        dims = bmp.width + " × " + bmp.height;
+        if (bmp.close) bmp.close();
+      } catch (e) { /* SVG 等不支持 createImageBitmap 的格式：只显示图，不显示尺寸 */ }
+    }
+
+    b64ShowKv(mime, blob.size, dims);
+
+    const box = $("b64Prev");
+    box.textContent = "";
+    if (/^image\//.test(mime)) {
+      const im = document.createElement("img");
+      im.src = url;
+      im.alt = "解析结果";
+      im.onerror = () => {
+        box.textContent = "";
+        const t = document.createElement("span");
+        t.className = "tip";
+        t.textContent = "图片无法显示（类型可能不对）";
+        box.appendChild(t);
+      };
+      box.appendChild(im);
+    } else {
+      const t = document.createElement("span");
+      t.className = "tip";
+      t.textContent = "不是图片（" + mime + "）";
+      box.appendChild(t);
+    }
+    $("btnB64AsSource").disabled = !/^image\//.test(mime);
+    $("btnB64Save").disabled = false;
+  }
+
+  async function b64Decode() {
+    const raw = $("b64In").value.trim();
+    if (!raw) { toast("先粘贴 Data URI 或 Base64"); return; }
+
+    let mime = "";
+    let payload = raw;
+    const m = raw.match(/^data:([^,]*),([\s\S]*)$/i);
+    if (m) {
+      const head = m[1];
+      payload = m[2];
+      mime = (head.split(";")[0] || "").trim();
+      if (!/;base64/i.test(head)) {
+        /* 非 base64 的 Data URI：内容是百分号编码的文本 */
+        try { payload = decodeURIComponent(payload); } catch (e) { /* 原样 */ }
+        await applyDecoded(new TextEncoder().encode(payload), mime || "text/plain", "decoded.txt");
+        return;
+      }
+    }
+
+    payload = payload.replace(/\s+/g, "");
+    if (!payload) { toast("Base64 是空的"); return; }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) { toast("不是合法的 Base64（含非法字符）"); return; }
+    while (payload.length % 4) payload += "=";
+
+    let bin;
+    try { bin = atob(payload); } catch (e) { toast("Base64 解码失败"); return; }
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+    const finalMime = mime || sniffMime(bytes) || "application/octet-stream";
+    await applyDecoded(bytes, finalMime, "decoded." + extFor(finalMime));
+  }
+
+  /* ============================================================
      事件绑定
      ============================================================ */
   $("drop").addEventListener("click", () => $("file").click());
@@ -1598,6 +1867,47 @@
 
   /* ===== Tab 分类 ===== */
   tabBtns.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+  /* ===== Base64 / Data URI ===== */
+  const srcBtns = [...document.querySelectorAll("[data-b64src]")];
+  srcBtns.forEach(b => b.addEventListener("click", () => {
+    b64Src = b.dataset.b64src;
+    srcBtns.forEach(x => x.classList.toggle("on", x === b));
+    b64Reset();
+  }));
+  $("btnB64Make").addEventListener("click", b64Make);
+  $("btnB64Copy").addEventListener("click", () => {
+    const v = $("b64Out").value;
+    if (!v) { toast("先生成"); return; }
+    copyText(v, "已复制");
+  });
+  $("btnB64Download").addEventListener("click", () => {
+    const v = $("b64Out").value;
+    if (!v) { toast("先生成"); return; }
+    const blob = new Blob([v], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "base64.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  });
+  $("btnB64Decode").addEventListener("click", b64Decode);
+  $("btnB64AsSource").addEventListener("click", () => {
+    if (!b64Dec) return;
+    pickFile(new File([b64Dec.blob], b64Dec.name, { type: b64Dec.mime }));
+    toast("已载入为源图");
+  });
+  $("btnB64Save").addEventListener("click", () => {
+    if (!b64Dec) return;
+    const a = document.createElement("a");
+    a.href = b64Dec.url;
+    a.download = b64Dec.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
   /* 容器尺寸一变就要重新适配画面（--stage-h 用的是 vh，窗口高度变化同样会触发） */
   if (window.ResizeObserver) new ResizeObserver(fitStage).observe($("cropWrap"));
   window.addEventListener("resize", fitStage);
