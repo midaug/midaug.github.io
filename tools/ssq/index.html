@@ -160,8 +160,27 @@
      横排会把「号码」和「奖金」拉得过开，观感反而更差）。
      整宽问题由「卡片收窄成居中窄列」解决，不靠拆列。 */
   .result-bets { display: block; }
-  .result-head { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
-  .result-head b { color: var(--accent); font-family: var(--mono); }
+  /* 开奖号码 + 一二等奖奖金的信息块（识别结果顶部 / 手工查期号结果共用，见 drawBlockHtml） */
+  .draw-info {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--accent-soft); padding: 10px 12px; margin-bottom: 10px;
+  }
+  .draw-info .draw-title { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+  .draw-info .draw-title b { color: var(--accent); font-family: var(--mono); }
+  .draw-info .draw-prize {
+    margin-top: 8px; font-size: 12px; color: var(--text-2);
+    display: flex; flex-wrap: wrap; gap: 4px 16px;
+  }
+  .draw-info .draw-prize b { color: var(--num); font-weight: 600; }
+
+  /* 手工查期号：输入框 + 查询按钮（放在「历史开奖信息」标题右侧） */
+  #searchCode {
+    width: 120px; min-height: 28px; padding: 4px 8px;
+    border: 1px solid var(--border-2); border-radius: 6px;
+    background: var(--panel); color: var(--text); font: inherit; font-size: 12px;
+  }
+  #searchCode:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  #searchResult:empty { display: none; }
   .bet {
     display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
     padding: 8px 0; border-top: 1px solid var(--border);
@@ -180,6 +199,14 @@
     display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; padding-top: 10px;
     border-top: 1px solid var(--border); font-size: 11px; color: var(--text-3);
   }
+
+  /* 隐私说明：图片识别全在本机完成。常驻在识别卡底部，任何状态都可见 */
+  .privacy {
+    display: flex; align-items: center; gap: 6px;
+    margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: 11px; line-height: 1.5; color: var(--text-3);
+  }
+  .privacy .lock { width: 13px; height: 13px; flex: none; color: var(--ok); }
 
   /* ===== 空态：铺满卡片的拖拽上传区 =====
      早期空态只是一行左对齐的短文案，宽屏下右侧会空出一大片、像没渲染完。
@@ -228,6 +255,8 @@
     .ssq-grid { gap: 8px; }
     .ssq-item { padding: 9px 10px; }
     .dropzone { min-height: 116px; padding: 14px; gap: 4px; }
+    /* 触屏下输入框字号提到 16px（低于 16px 时 iOS 聚焦会放大整页） */
+    #searchCode { font-size: 16px; min-height: 34px; }
   }
 </style>
 </head>
@@ -246,14 +275,30 @@
 
 <main>
   <section class="card">
-    <h2>识别结果 <span class="hint">上传投注票截图后，自动识别期号与号码并核对中奖情况</span></h2>
+    <h2>识别结果 <span class="hint">上传投注票截图后，自动识别期号与号码并核对中奖情况</span>
+      <span class="right"><button class="mini" id="btnClearResult" hidden>清除</button></span>
+    </h2>
     <div id="dataBody"></div>
+    <p class="privacy">
+      <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4.5" y="10.5" width="15" height="9.5" rx="2"></rect>
+        <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path>
+      </svg>
+      <span>图片识别全部在本机浏览器内完成，图片不会上传、保存或发送到任何服务器。</span>
+    </p>
   </section>
 
   <section class="card">
     <h2>历史开奖信息
       <span class="hint" id="ssq-total"></span>
+      <span class="right">
+        <input type="text" id="searchCode" inputmode="numeric" autocomplete="off"
+               maxlength="7" placeholder="查期号，如 2026119" aria-label="按期号查询开奖结果" />
+        <button class="mini" id="btnSearch">查询</button>
+      </span>
     </h2>
+    <div id="searchResult"></div>
     <div id="ssq-el" class="ssq-grid"></div>
     <div class="more"><button class="mini" id="btnMore">加载更多</button></div>
   </section>
@@ -466,7 +511,7 @@
            所以这里直接放开按钮即可，功能与错误提示都不丢。 */
         $('#up-btn').removeAttr('disabled');
         $('#up-btn').removeAttr('init');
-        dataContainer.html(idleHtml);
+        showIdle();
     }
 
     $(document).ready(function () {
@@ -490,6 +535,17 @@
 
         /* 显式「加载更多」按钮：比纯无限滚动更可预期，手机上也更好点 */
         $('#btnMore').click(function () { loadMore(pageSize); });
+
+        /* 识别结果「清除」：把 #dataBody 还原成空态投放区 */
+        $('#btnClearResult').click(function () { showIdle(); });
+
+        /* 手工查期号：点按钮或回车都触发；清空输入即清掉查询结果 */
+        $('#btnSearch').click(searchByPeriod);
+        $('#searchCode').on('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); searchByPeriod(); }
+        }).on('input', function () {
+            if (!this.value) { var box = document.getElementById('searchResult'); if (box) box.innerHTML = ''; }
+        });
     });
 
     function validateNumber(num, min, max) {
@@ -514,6 +570,57 @@
         return s.length < 2 ? ('0' + s) : s;
     }
 
+    // 奖金千分位（数据里是纯数字，单位「元」）。空值/0 原样返回。
+    function fmtMoney(v) {
+        if (v === undefined || v === null || v === '') return '—';
+        var n = Number(v);
+        if (!isFinite(n) || n === 0) return String(v);
+        return n.toLocaleString('zh-CN');
+    }
+
+    /* 开奖号码 + 一二等奖奖金的信息块。识别结果顶部与「手工查期号」结果共用，
+       保证「识别到期号就能看到开奖结果」这条一致。 */
+    function drawBlockHtml(item, cls) {
+        var h = '<div class="' + (cls || 'draw-info') + '">';
+        h += '<div class="draw-title">第 <b>' + esc(item.code) + '</b> 期 · ' + esc(item.drawDate) + ' 开奖</div>';
+        h += '<div class="balls">';
+        for (var j = 1; j <= 6; j++) h += '<span class="num red">' + esc(item['red' + j]) + '</span>';
+        h += '<span class="num blue">' + esc(item.blue1) + '</span>';
+        h += '</div>';
+        h += '<div class="draw-prize">'
+           + '<span>一等奖 <b>' + esc(fmtMoney(item.bonus)) + '</b> 元</span>'
+           + '<span>二等奖 <b>' + esc(fmtMoney(item.reward)) + '</b> 元</span>'
+           + '</div>';
+        return h + '</div>';
+    }
+
+    /* #dataBody 的两个状态：结果态（显示「清除」）与空态（隐藏「清除」） */
+    function showData(html) {
+        dataContainer.html(html);
+        $('#btnClearResult').removeAttr('hidden');
+    }
+    function showIdle() {
+        dataContainer.html(idleHtml);
+        $('#btnClearResult').attr('hidden', '');
+    }
+
+    /* 手工按期号查询：识别不一定能读出期号，这里让用户直接查任意一期。
+       只读已有开奖数据（dataMap 的键是 7 位「20 + 5 位期号」）。 */
+    function searchByPeriod() {
+        var box = document.getElementById('searchResult');
+        if (!box) return;
+        var digits = String($('#searchCode').val() || '').replace(/\D/g, '');
+        if (!digits) { box.innerHTML = ''; return; }
+        var code = digits.length === 5 ? '20' + digits : digits;
+        var item = dataMap[code];
+        if (item) {
+            box.innerHTML = drawBlockHtml(item, 'draw-info search-hit');
+        } else {
+            box.innerHTML = '<div class="alert warn">未找到期号 <b>' + esc(code) + '</b> 的开奖数据（仅收录已开奖的期号）。</div>';
+        }
+        box.scrollIntoView({ block: 'nearest' });
+    }
+
     // 计算组合数 C(n, k)
     function combCount(n, k) {
         if (k < 0 || k > n) return 0;
@@ -529,7 +636,11 @@
         /* 兜底：fileInfo 缺失时不让整个渲染抛错——否则下面的「解除按钮禁用」执行不到，
            按钮会永久灰死、用户无法重试 */
         fileInfo = fileInfo || {};
-        var html = '<div class="result-head"><b>' + esc(ssqData.code) + '</b> 期 · 开奖日期 ' + esc(ssqData.drawDate) + '</div>';
+        /* 识别到期号就把该期开奖结果（号码 + 一二等奖奖金）贴在顶部 —— 不用再去历史列表里翻 */
+        var draw = dataMap[ssqData.code];
+        var html = draw
+            ? drawBlockHtml(draw)
+            : '<div class="draw-info"><div class="draw-title">第 <b>' + esc(ssqData.code) + '</b> 期 · ' + esc(ssqData.drawDate) + '</div></div>';
         /* 每一注之间是「并列」关系，宽屏下横向多列铺排（见 .result-bets）。
            不要改成一条条整宽的行：单行内容只占约 300px，右侧会空出一大片。 */
         html += '<div class="result-bets">';
@@ -554,7 +665,7 @@
                     (bet.details[0].blue1f ? 'num blue bluef' : 'num blue') : 'num err';
                 html += '<span class="' + blueClass + '">' + esc(bet.details[0].blue1) + '</span>';
                 html += '<span class="prize">' + esc(bet.bonusText) + '</span>';
-                html += '<span class="reward">' + esc(bet.rewardValue) + '</span>';
+                html += '<span class="reward">' + esc(fmtMoney(bet.rewardValue)) + '</span>';
                 html += '</div>';
             } else if (bet.betType === 'compound' || bet.betType === 'drag') {
                 /* 复式与胆拖的展示逻辑逐字相同，只有标题与容器类名不同 —— 合并成一条分支 */
@@ -590,7 +701,7 @@
                         var blueClass = detail.blue1f ? 'num blue bluef' : 'num blue';
                         html += '<span class="' + blueClass + '">' + esc(detail.blueBall) + '</span>';
                         html += '<span class="prize">' + esc(detail.bonusText) + '</span>';
-                        html += '<span class="reward">' + esc(detail.rewardValue) + '</span>';
+                        html += '<span class="reward">' + esc(fmtMoney(detail.rewardValue)) + '</span>';
                         html += '</div>';
                     }
                 }
@@ -598,7 +709,7 @@
                 if (!hasPrize) {
                     html += '<div class="total">未中奖</div>';
                 } else {
-                    html += '<div class="total">总奖金 <b>' + esc(bet.rewardValue) + '</b></div>';
+                    html += '<div class="total">总奖金 <b>' + esc(fmtMoney(bet.rewardValue)) + '</b></div>';
                 }
 
                 html += '</div></div>';
@@ -621,7 +732,7 @@
         html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
         html += '</div>';
 
-        dataContainer.html(html);
+        showData(html);
         $('#up-btn').removeAttr('disabled');
     }
 
@@ -1456,7 +1567,7 @@
         var code = parseCode(text);
 
         if (!code) {
-            dataContainer.html('<div class="alert err">无法识别期号: ' + esc(text) + '</div>');
+            showData('<div class="alert err">无法识别期号: ' + esc(text) + '</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1464,7 +1575,7 @@
         var ssqData = dataMap[code];
 
         if (!ssqData) {
-            dataContainer.html('<div class="alert err">未找到期号 ' + esc(code) + ' 的开奖数据</div>');
+            showData('<div class="alert err">未找到期号 ' + esc(code) + ' 的开奖数据</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1769,7 +1880,7 @@
 
         /* Compressor 是 async 加载的，可能还没就绪或本地文件缺失；此前不在 try 内，抛错会让按钮永久灰死 */
         if (typeof Compressor === 'undefined') {
-            dataContainer.html('<div class="alert err">图片压缩库（Compressor.js）加载失败，请刷新页面重试。</div>');
+            showData('<div class="alert err">图片压缩库（Compressor.js）加载失败，请刷新页面重试。</div>');
             $('#up-btn').removeAttr('disabled');
             return;
         }
@@ -1798,14 +1909,14 @@
                     processOCRResult(result.data.text, fileInfo);
                 } catch (error) {
                     console.error('OCR识别失败:', error);
-                    dataContainer.html('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
+                    showData('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
                     $('#up-btn').removeAttr('disabled');
                 }
             },
             error(err) {
                 console.error(err);
                 /* 压缩失败也要清掉加载态，否则按钮永久灰死、转圈永远不停 */
-                dataContainer.html('<div class="alert err">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
+                showData('<div class="alert err">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
                 $('#up-btn').removeAttr('disabled');
             }
         });
