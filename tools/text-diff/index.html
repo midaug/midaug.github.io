@@ -82,7 +82,7 @@
     display: flex; align-items: center; gap: 10px; row-gap: 6px; flex-wrap: wrap;
     padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
   }
-  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; flex: none; }
+  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; flex: none; text-decoration: none }
   .brand span { color: var(--accent); }
   button, select {
     background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
@@ -388,7 +388,7 @@
 <body>
 <div id="app">
   <header>
-    <span class="brand">文本<span>对比</span></span>
+    <a class="brand" href=".." title="返回工具首页">文本<span>对比</span></a>
     <span class="sep"></span>
     <button id="btnSample" title="填入一段示例文本">示例</button>
     <button id="btnSwap" title="交换左右两侧">⇄ 交换</button>

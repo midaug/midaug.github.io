@@ -61,7 +61,7 @@
     padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
     overflow: hidden;
   }
-  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; }
+  .brand { font-weight: 700; letter-spacing: .5px; color: var(--text); margin-right: 4px; text-decoration: none }
   .brand span { color: var(--accent); }
   button, select {
     background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
@@ -331,7 +331,7 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand">JSON<span>Formatter</span></div>
+    <a class="brand" href=".." title="返回工具首页">JSON<span>Formatter</span></a>
     <button class="primary" id="btnFormat">格式化</button>
     <button id="btnSample">示例</button>
     <button id="btnClear">清空</button>

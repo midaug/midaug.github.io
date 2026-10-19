@@ -59,7 +59,7 @@
     padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
     overflow: hidden; flex: none;
   }
-  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; color: inherit; text-decoration: none }
   .brand span { color: var(--accent); }
 
   button, select {
@@ -194,7 +194,7 @@
 <body>
 <div id="app">
   <header>
-    <div class="brand">Code<span>Minify</span></div>
+    <a class="brand" href=".." title="返回工具首页">Code<span>Minify</span></a>
     <!-- ★ 压缩 / 美化 是两个动作按钮：点一下直接出结果，
          不再让用户先在下拉里选模式再点运行（那是两次交互） -->
     <button class="primary" id="btnMin">压缩</button>
