@@ -409,7 +409,7 @@
   const SEP_LANG = { py: 1, pydantic: 1, rs: 1, rb: 1 };
   function fields(t, lang, o, cfg) {
     cfg = cfg || {};
-    const used = {};
+    const used = Object.create(null);
     const out = [];
     for (const f of t.fields) {
       let name, quoted = false;
@@ -450,7 +450,7 @@
     const out = [];
     const objs = [];
     let num = null;
-    const seen = {};
+    const seen = Object.create(null);  // 无原型：字段名可能是 constructor/__proto__
     /* 按「首次出现」的顺序收集，联合类型的书写顺序才跟样例一致：
        [1, "x"] 应该是 number | string，而不是被固定顺序排成 string | number。 */
     for (const t of list) {
@@ -482,7 +482,7 @@
      命名阶段：给每个对象形状分配唯一类型名
      ============================================================ */
   function namer() {
-    const used = {};
+    const used = Object.create(null);
     return {
       list: [],
       take(hint, forced) {
@@ -653,7 +653,7 @@
   /* ---------- Java ---------- */
   function emitJava(types, o) {
     const all = [];
-    const used = {};
+    const used = Object.create(null);
     for (const t of types) {
       const base = safeIdent(t.name, "java", "Root");
       let c = base, i = 2;
@@ -860,7 +860,7 @@
          否则 TypeError: non-default argument follows default argument。
          所以可选字段统一挪到末尾。 */
       const ordered = t.fields.slice().sort((a, b) => (a.optional ? 1 : 0) - (b.optional ? 1 : 0));
-      const used = {};
+      const used = Object.create(null);
       const rows = ordered.map(f => {
         let name = fieldIdent(f.key, "py", o.naming);
         if (used[name]) { const b = name; let i = 2; while (used[name]) { name = b + "_" + i; i++; } }
@@ -889,7 +889,7 @@
   function emitPydantic(types, o) {
     const imports = new Set(["BaseModel"]);
     const blocks = types.map(t => {
-      const used = {};
+      const used = Object.create(null);
       const rows = t.fields.map(f => {
         let name = fieldIdent(f.key, "pydantic", o.naming);
         if (used[name]) { const b = name; let i = 2; while (used[name]) { name = b + "_" + i; i++; } }
@@ -987,7 +987,7 @@
       + tags.map(g => "typedef struct " + g + " " + g + ";").join("\n") + "\n\n";
     out += types.map(t => {
       const fs = [];
-      const seen = {};
+      const seen = Object.create(null);  // 无原型：字段名可能是 constructor/__proto__
       for (const f of t.fields) {
         const nm = fieldIdent(f.key, "c", o.naming);
         if (seen[nm]) continue;
@@ -1030,7 +1030,7 @@
      把归一化后的字段名映射回原键名。没有任何不一致时退回 defaultOptions。 */
   function emitHs(types, o) {
     const usesValue = types.some(t => t.fields.some(f => TY.hs(f.shape) === "Value"));
-    const seen = {};
+    const seen = Object.create(null);  // 无原型：字段名可能是 constructor/__proto__
     const pairs = [];
     const blocks = types.map(t => {
       const cn = safeIdent(t.name, "hs", "Root");
@@ -1134,7 +1134,9 @@
     }
   }
   function objSchema(t) {
-    const props = {};
+    /* ★ 无原型对象：字段名可能是 __proto__，普通对象会让它走 setter 而整个属性消失，
+       而 required 里还留着它 → JSON Schema 自相矛盾 */
+    const props = Object.create(null);
     const req = [];
     t.fields.forEach(f => {
       props[f.key] = schemaOf(f.shape);
@@ -1147,7 +1149,7 @@
   }
   function emitSchema(types, o) {
     const root = types[types.length - 1];
-    const defs = {};
+    const defs = Object.create(null);   // 类名派生自字段名，同样要防 __proto__
     types.slice(0, -1).forEach(t => { defs[t.name] = objSchema(t); });
     const out = { "$schema": "https://json-schema.org/draft/2020-12/schema" };
     if (Object.keys(defs).length) out.$defs = defs;

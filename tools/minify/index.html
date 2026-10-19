@@ -771,10 +771,27 @@
        选择器里的 `div :first-child` 是后代选择器，删掉空格就变成 `div:first-child`，语义不同。 */
   function normPrelude(s, pretty) {
     let t = s.replace(/\s+/g, " ").trim();
+    /* ★ calc()/min()/max()/clamp() 里的 `+`/`-` 两侧空格是 CSS 语法要求，先整块摘出来，
+       否则下面的组合符归一化会把 `+` 的空格删掉 —— @media (min-width: calc(100% + 2px))
+       会变成非法的 calc(100%+2px)。前奏串很短，逐次 indexOf 扫描足够。 */
+    const math = [];
+    let out = "", i = 0;
+    while (i < t.length) {
+      const m = /\b(?:calc|min|max|clamp)\(/i.exec(t.slice(i));
+      if (!m) { out += t.slice(i); break; }
+      out += t.slice(i, i + m.index);
+      let j = i + m.index + m[0].length, depth = 1;   // 配平括号，取整个函数调用
+      while (j < t.length && depth > 0) { const c = t[j++]; if (c === "(") depth++; else if (c === ")") depth--; }
+      math.push(t.slice(i + m.index, j));
+      out += "\u0002" + (math.length - 1) + "\u0002";
+      i = j;
+    }
+    t = out;
     t = t.replace(/\(([^()]*)\)/g, (m, inner) =>
       "(" + inner.replace(/\s*:\s*/g, pretty ? ": " : ":") + ")");
     t = t.replace(/\s*,\s*/g, pretty ? ", " : ",");
     t = t.replace(/\s*([>~+])\s*/g, pretty ? " $1 " : "$1");
+    t = t.replace(/\u0002(\d+)\u0002/g, (m, k) => math[+k]);
     return t;
   }
 
@@ -942,6 +959,14 @@
         inTag = false;
         continue;
       }
+      /* ★ CDATA 整块原样保护：里面是代码/标记，空白有语义，
+         XML/HTML 压缩与美化都绝不能改写（否则 `a >\n < b` 会被折掉或插换行）。 */
+      if (src.startsWith("<![CDATA[", i)) {
+        const j = src.indexOf("]]>", i + 9);
+        const end = j < 0 ? n : j + 3;
+        out += push(src.slice(i, end));
+        i = end; continue;
+      }
       if (src.startsWith("<!--", i)) {
         const j = src.indexOf("-->", i + 4);
         const end = j < 0 ? n : j + 3;
@@ -978,22 +1003,28 @@
     let s = protectMarkup(src, store, keepCmt, false);
     s = s.replace(/[ \t\r\n\f]+/g, " ");
     /* 标签之间的空白：两侧都是块级元素才删，否则留一个空格（inline 之间空格有语义）。
-       ★ after 必须从「整个匹配的末尾」切起 —— 用 off+1 会切到 `<` 上，
-         导致下一个标签名永远匹配不到，于是所有标签之间都留着空格。 */
-    s = s.replace(/\s+(<)/g, (m, lt, off) => {
-      const before = s.slice(0, off);
-      const after = s.slice(off + m.length);
-      /* ★ 关闭标签的匹配必须包含结尾的 `>`：旧写法 `<\/([a-z0-9:-]+)\s*$` 永远
-         匹配不上（`>` 卡在那里），于是「</div> <div> 之间的空白」从来没删过，
-         整段删除逻辑只在 before 以开标签结尾时才生效。2026-10-15 修。 */
-      const bm = before.match(/<\/([a-z0-9:-]+)\s*>\s*$/i) || before.match(/<([a-z0-9:-]+)[^>]*>\s*$/i);
-      const am = after.match(/^\/?([a-z0-9:-]+)/i);
-      const bName = bm ? bm[1].toLowerCase() : "";
+       ★ 绝不能对每个匹配做整串 slice（`s.slice(0, off)` / `s.slice(off+m.length)`）——
+         那会让这段变成 O(n²)（实测 ~870KB HTML 要 44 秒）。只切「上一个标签」这一小段，
+         后一标签名只看 `<` 之后 64 字符的窗口。
+       ★ after 必须从「匹配末尾的那个 `<`」之后切起 —— 用 off+1 会切到空白上，
+         导致下一个标签名永远匹配不到。 */
+    s = s.replace(/\s+(<)/g, (m, lt, off, str) => {
+      const ltPos = off + m.length - 1;              // 匹配末尾那个 `<` 的位置
+      const p = str.lastIndexOf("<", off - 1);       // 前一个 `<`（只回退到最近标签，不复制整串）
+      let bName = "";
+      if (p >= 0) {
+        const seg = str.slice(p, off);
+        /* ★ 关闭标签的匹配必须包含结尾的 `>`：旧写法 `<\/([a-z0-9:-]+)\s*$` 永远
+           匹配不上（`>` 卡在那里），于是「</div> <div> 之间的空白」从来没删过。 */
+        const bm = seg.match(/^<\/([a-z0-9:-]+)\s*>\s*$/) || seg.match(/^<([a-z0-9:-]+)[^>]*>\s*$/);
+        if (bm) bName = bm[1].toLowerCase();
+      }
+      const am = str.slice(ltPos + 1, ltPos + 64).match(/^\/?([a-z0-9:-]+)/i);
       const aName = am ? am[1].toLowerCase() : "";
       if (INLINE.has(bName) || INLINE.has(aName)) return " <";
       /* 占位符 = <pre>/<script>/<style> 这类原样保留的块，按块级处理 */
-      const bPH = before.charAt(before.length - 1) === PH;
-      const aPH = after.charAt(0) === PH;
+      const bPH = str.charAt(off - 1) === PH;
+      const aPH = str.charAt(ltPos + 1) === PH;
       if ((!bName && !bPH) || (!aName && !aPH)) return " <";
       return "<";
     });
@@ -1036,16 +1067,25 @@
      ★ 不做 HTML 那种「标签之间空白一律删掉」—— XML 的混排内容
        （<p>文字<b>x</b></p>）里空白有语义，删了就改内容。
        跨行空白（>\n  <）几乎必然是排版，删掉是安全的，也是通行做法。 */
+  /* ★ `>\s*\n\s*<` 折叠必须避开 CDATA —— 还原之后再过这一遍时会踩到里面的 `>\n<`，
+     把它压成 `><`（实测）。先整块保护 CDATA，替换完再放回。 */
+  function collapseTagNL(s) {
+    const cd = [];
+    s = s.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, m => { cd.push(m); return "\u0003" + (cd.length - 1) + "\u0003"; });
+    s = s.replace(/>\s*\n\s*</g, "><");
+    return cd.length ? s.replace(/\u0003(\d+)\u0003/g, (m, k) => cd[+k]) : s;
+  }
+
   function minifyXML(src, keepCmt) {
     const store = [];
     let s = protectMarkup(src, store, keepCmt, true);
-    s = s.replace(/>\s*\n\s*</g, "><");
+    s = collapseTagNL(s);
     s = s.replace(/^[ \t]+/gm, "").replace(/[ \t]+$/gm, "");
     s = s.replace(/\n{2,}/g, "\n");
     s = s.replace(/^\s+|\s+$/g, "");
     /* 注释被整块删掉后可能空出一行，还原之后再过一遍 */
-    return restore(s, store, false)
-      .replace(/>\s*\n\s*</g, "><").replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
+    return collapseTagNL(restore(s, store, false))
+      .replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
   }
 
   function prettyXML(src, unit) {
@@ -2178,7 +2218,11 @@
        TypeScript 不能这样验（类型标注不是合法 JS），所以只验 JS。 */
     if (lang === "js" && mode === "min") {
       try { new Function(res); }
-      catch (e) { note = "压缩结果无法通过语法解析（" + (e && e.message) + "），请检查输入是否本身就不完整。"; }
+      catch (e) {
+        /* ★ 含 import/export 的是 ES Module，new Function 只接受脚本，必然报错 —— 不算坏 */
+        if (!/(?:^|[;{}\n])\s*(?:import|export)\b/.test(res))
+          note = "压缩结果无法通过语法解析（" + (e && e.message) + "），请检查输入是否本身就不完整。";
+      }
     }
     const fam = (lang === "sql") ? "sql" : (C_CONF[lang] ? "c" : "");
     let msg;

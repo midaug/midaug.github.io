@@ -645,6 +645,7 @@
     return (n / 1048576).toFixed(2) + " MB";
   };
   const hex2 = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0").toUpperCase();
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function releaseBitmaps() {
     if (bitmap && bitmap.close) { try { bitmap.close(); } catch (e) {} }   // ImageBitmap 要显式释放
@@ -1023,7 +1024,7 @@
       if (edit.flipH) ed.push("水平翻转");
       if (edit.flipV) ed.push("垂直翻转");
       if (c.w !== src.width || c.h !== src.height) ed.push("裁剪 " + c.w + " × " + c.h);
-      if (wm.text.trim()) ed.push("水印「" + wm.text.trim() + "」");
+      if (wm.text.trim()) ed.push("水印「" + esc(wm.text.trim()) + "」");
       if (ed.length) add("编辑 <b>" + ed.join(" · ") + "</b>");
       $("btnDownload").disabled = false;
       $("btnCopyInfo").disabled = false;

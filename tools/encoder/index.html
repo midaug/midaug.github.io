@@ -780,19 +780,22 @@
     const neg = v < 0n;
     if (neg) v = -v;
     const B = BigInt(base);
-    let out = "";
-    while (v > 0n) { out = DIGITS[Number(v % B)] + out; v /= B; }
+    /* ★ 逐位 push 再 reverse.join —— 旧写法 `out = digit + out` 每次拼接都复制整串，
+       大整数下是 O(n²)（2 万位十进制切二进制实测 ~0.5s） */
+    const digits = [];
+    while (v > 0n) { digits.push(DIGITS[Number(v % B)]); v /= B; }
+    let out = digits.reverse().join("");
     if (upper) out = out.toUpperCase();
     return (neg ? "-" : "") + out;
   }
-  /* 二进制按 8 位一组（从右往左）便于肉眼数字节 */
+  /* 二进制按 8 位一组（从右往左）便于肉眼数字节。
+     ★ 按下标切 8 字符小段，不要 `s = s.slice(0, -8)`（每次复制剩余整串 → O(n²)） */
   function groupBits(bits) {
     const neg = bits[0] === "-";
-    let s = neg ? bits.slice(1) : bits;
+    const s = neg ? bits.slice(1) : bits;
     const parts = [];
-    while (s.length > 8) { parts.unshift(s.slice(-8)); s = s.slice(0, -8); }
-    parts.unshift(s);
-    return (neg ? "-" : "") + parts.join(" ");
+    for (let end = s.length; end > 0; end -= 8) parts.push(s.slice(Math.max(0, end - 8), end));
+    return (neg ? "-" : "") + parts.reverse().join(" ");
   }
 
   function runBase() {
@@ -993,7 +996,10 @@
   $("htmlNum").addEventListener("change", () => run("html"));
   $("hexSep").addEventListener("change", () => run("hex"));
   $("hexUpper").addEventListener("change", () => run("hex"));
-  $("baseVal").addEventListener("input", runBase);
+  /* 进制换算同样是「大整数下每次按键重算 7 个进制」，加防抖 */
+  let baseTimer = 0;
+  const baseSoon = () => { clearTimeout(baseTimer); baseTimer = setTimeout(runBase, 120); };
+  $("baseVal").addEventListener("input", baseSoon);
   $("baseFrom").addEventListener("change", runBase);
 
   $("btnClear").addEventListener("click", () => {

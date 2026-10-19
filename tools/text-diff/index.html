@@ -839,7 +839,10 @@
      两行差异过大时（相似度 < 25%）放弃细分、整行标色：
      把两个毫不相干的句子逐词拆开高亮，满屏红绿碎块，反而看不出改了什么。 */
   function inlinePair(l, r) {
-    if (gran === "line" || l === r) return { l: esc(l), r: esc(r), dc: 0, ic: 0 };
+    if (l === r) return { l: esc(l), r: esc(r), dc: 0, ic: 0 };
+    /* ★ 「不细分」时改动行整行计为变化，否则 dc/ic 恒 0 → 相似度恒 100%，
+       与同时显示的红绿行自相矛盾 */
+    if (gran === "line") return { l: esc(l), r: esc(r), dc: l.length, ic: r.length };
     if (l.length > MAX_INLINE_LEN || r.length > MAX_INLINE_LEN) {
       return { l: esc(l), r: esc(r), dc: l.length, ic: r.length };
     }

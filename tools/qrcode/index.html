@@ -386,8 +386,15 @@
   const byteLen = s => TE.encode(s).length;
   if (window.qrcode) window.qrcode.stringToBytes = utf8Bytes;
 
-  /* 版本 40、字节模式下的容量上限（字节） */
-  const CAP = { L: 2953, M: 2331, Q: 1663, H: 1273 };
+  /* 版本 40、各编码模式下的容量上限。
+     ★ 数字/字母数字模式一个字符只用 10/11 bit，能装的内容比字节模式多得多 ——
+       只按字节容量判断会把「2500 位数字」这种明明装得下的内容误报成超出容量。
+       Byte 单位是字节，Numeric/Alphanumeric 单位是字符。 */
+  const CAP = {
+    Byte:         { L: 2953, M: 2331, Q: 1663, H: 1273 },
+    Alphanumeric: { L: 4296, M: 3391, Q: 2420, H: 1852 },
+    Numeric:      { L: 7089, M: 5596, Q: 3993, H: 3057 }
+  };
   const ECL_INFO = [
     ["L", "约 7%", "最省空间，适合内容长、环境干净的场景"],
     ["M", "约 15%", "默认，容量与容错兼顾"],
@@ -412,6 +419,16 @@
     if (/^[0-9]+$/.test(s)) return "Numeric";
     if (/^[0-9A-Z $%*+\-./:]+$/.test(s)) return "Alphanumeric";
     return "Byte";
+  }
+
+  /* 按实际会用的编码模式算容量：Byte 按字节，Numeric/Alphanumeric 按字符 */
+  function capacityOf(s, o) {
+    const mode = pickMode(s, o.mode);
+    return {
+      mode: mode,
+      unit: mode === "Byte" ? byteLen(s) : [...s].length,
+      cap: CAP[mode][o.ecl]
+    };
   }
 
   function readOpt() {
@@ -518,12 +535,14 @@
       return;
     }
 
-    const bytes = byteLen(text);
-    if (bytes > CAP[o.ecl]) {
+    const cap = capacityOf(text, o);
+    if (cap.unit > cap.cap) {
       cur = null; curText = ""; curOpt = null;
+      const u = cap.mode === "Byte" ? "字节" : "字符";
       stageMsg("内容超出容量");
-      $("note1").innerHTML = '<span class="err-tip">内容有 <b>' + bytes + '</b> 字节，超过 ' + o.ecl
-        + ' 级的容量上限 ' + CAP[o.ecl] + ' 字节。请缩短内容，或把容错级别降到 L。</span>';
+      $("note1").innerHTML = '<span class="err-tip">内容有 <b>' + cap.unit + '</b> ' + u + '，超过 ' + o.ecl
+        + ' 级' + (cap.mode === "Byte" ? "" : "（" + cap.mode + "模式）") + '的容量上限 ' + cap.cap + ' ' + u
+        + '。请缩短内容，或把容错级别降到 L。</span>';
       $("note2").innerHTML = "";
       $("stat").textContent = "超出容量";
       $("btnPng").disabled = $("btnSvg").disabled = true;
@@ -554,7 +573,7 @@
     $("stat").innerHTML = "版本 <b>" + ver + "</b> · " + n + "×" + n;
     $("note1").innerHTML = "编码模式 <b>" + mode + "</b>"
       + (fellBack ? "（指定的「" + eh(o.mode) + "」跟内容不匹配，已自动退回字节模式）" : "")
-      + "，内容 <b>" + bytes + "</b> 字节，版本 <b>" + ver + "</b>（" + n + "×" + n + " 模块），每模块 " + info.cell + " px。"
+      + "，内容 <b>" + cap.unit + "</b> " + (mode === "Byte" ? "字节" : "字符") + "，版本 <b>" + ver + "</b>（" + n + "×" + n + " 模块），每模块 " + info.cell + " px。"
       + (o.trans ? "<br>已开启透明背景 —— 深色底上请先把前景色改成浅色，否则扫不出来。" : "");
     $("note2").innerHTML = "导出尺寸 <b>" + info.size + "×" + info.size + " px</b>"
       + (info.size !== o.target ? "（已按整模块对齐到 " + info.size + "，避免模块边缘发虚）" : "")
@@ -676,7 +695,7 @@
      ============================================================ */
   $("eclTbl").innerHTML = "<thead><tr><th>等级</th><th>可纠错</th><th class=\"hide-sm\">适用场景</th><th>容量上限</th></tr></thead><tbody>"
     + ECL_INFO.map(([k, p, d]) => '<tr><td class="n">' + k + '</td><td>' + p + '</td>'
-        + '<td class="u hide-sm">' + d + '</td><td>' + CAP[k] + " 字节</td></tr>").join("")
+        + '<td class="u hide-sm">' + d + '</td><td>' + CAP.Byte[k] + " 字节</td></tr>").join("")
     + "</tbody>";
 
   /* ============================================================

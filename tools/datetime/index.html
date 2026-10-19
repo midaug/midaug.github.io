@@ -391,6 +391,8 @@
     let ms = 0;
     if (msStr != null && msStr !== "") ms = +String(msStr).padEnd(3, "0").slice(0, 3);
     const d = new Date(Y, M - 1, D, h, mi, se, ms);
+    /* ★ new Date 把 0–99 年映射到 19xx，回填真实年份；非法日期（如 2-30）仍会被下面的校验拦住 */
+    d.setFullYear(Y);
     if (d.getFullYear() !== Y || d.getMonth() !== M - 1 || d.getDate() !== D) return null;
     return d;
   }

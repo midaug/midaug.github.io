@@ -540,7 +540,9 @@
       rows.push([k, eh(JSON.stringify(header[k])), c[0], c[1]]);
     });
 
-    const seen = {};
+    /* ★ 用无原型对象当去重集合：普通 `{}` 下 `seen["constructor"]`/`seen["__proto__"]`
+       等继承值恒为真，对应的声明会被整条吞掉（payload 的键完全由令牌控制） */
+    const seen = Object.create(null);
     Object.keys(payload).forEach(k => {
       if (seen[k]) return;
       seen[k] = 1;

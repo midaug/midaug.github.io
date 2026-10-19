@@ -602,6 +602,10 @@
                 }
 
                 html += '</div></div>';
+            } else {
+                /* 未能识别出投注号码（OCR 文本解析全失败）—— 不要静默留空、更不要伪造号码 */
+                html += '<div class="bet"><div class="bet-type">无法识别</div>'
+                      + '<div class="total">没能从这段文本里识别出投注号码，请手动核对票面。</div></div>';
             }
         }
 
@@ -758,7 +762,8 @@
             var tuoRed = redParts[1]; // 拖码红球
 
             // 格式不完整时直接返回空结果，避免 parseNumberString(undefined) 抛 TypeError
-            if (!danRed || !tuoRed) {
+            // ★ 蓝球（& 之后）也必须存在，否则 undefined 会被 push 进 blueBalls 并参与算奖
+            if (!danRed || !tuoRed || !blueBall) {
                 console.warn('胆拖投注格式不完整:', code);
                 return result;
             }
@@ -914,12 +919,17 @@
         }
 
         // 检查红球匹配数量
+        // ★ 按「不同号码」计数：输入若含重复红球（如 A01010101010107），
+        //   逐位计数会把一个号算六次 → 假一等奖。命中标记仍打在每一个匹配位上。
+        var matchedRed = {};
         for (let i = 1; i <= 6; i++) {
-            if (winRed[pad2(betResult['red' + i])]) {
+            var nr = pad2(betResult['red' + i]);
+            if (winRed[nr]) {
                 betResult['red' + i + 'f'] = true;
-                redMatchCount++;
+                matchedRed[nr] = true;
             }
         }
+        redMatchCount = Object.keys(matchedRed).length;
 
         // 检查蓝球是否匹配
         if (pad2(betResult.blue1) === pad2(winningBlue)) {
@@ -944,13 +954,16 @@
             winRed[pad2(redBalls[r])] = true;
         }
 
-        // 检查红球匹配数量
+        // 检查红球匹配数量（★ 按不同号码计数 —— 胆拖胆拖码重叠时同一号码会重复出现）
+        var matchedRed2 = {};
         for (let j = 0; j < comboResult.redBalls.length; j++) {
-            if (winRed[pad2(comboResult.redBalls[j])]) {
+            var nr2 = pad2(comboResult.redBalls[j]);
+            if (winRed[nr2]) {
                 comboResult['red' + (j + 1) + 'f'] = true;
-                redMatchCount++;
+                matchedRed2[nr2] = true;
             }
         }
+        redMatchCount = Object.keys(matchedRed2).length;
 
         // 检查蓝球是否匹配
         if (pad2(comboResult.blueBall) === pad2(winningBlue)) {
@@ -1128,9 +1141,10 @@
             if (enhancedResult && enhancedResult.details && enhancedResult.details.length > 0) {
                 return enhancedResult;
             }
-            // 如果都失败了，创建一个默认的单式投注
-            var defaultCode = "A01020304050607"; // 默认号码
-            return checkWinning(ssqData, defaultCode);
+            // ★ 解析全失败时不能伪造一个默认号码去算奖 —— 那会给用户一个假的中奖结果，
+            //   比直接报错更危险。如实标记为无法识别，交给 renderResult 提示。
+            result.bonusText = '无法识别';
+            return result;
         } else if (betType === 'single') {
             // 单式投注处理
             var zm = code.substring(0, 1);

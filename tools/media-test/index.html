@@ -1091,6 +1091,9 @@
 
   function recClear() {
     recGen++;   /* 作废进行中会话的异步回调（onstop/授权续体），防止复活录音 */
+    /* ★ recGen++ 与摘掉 onstop 会让 onRecStop（另一处 clearInterval）永不执行，
+       所以这里必须自己把计时器停掉，否则录音中点「重置」后 #recTime 会继续跑 */
+    clearInterval(recTimer); recTimer = null;
     if (recIsRecording() && mr) {
       try { mr.onstop = null; mr.ondataavailable = null; mr.stop(); } catch (e) {}
     }

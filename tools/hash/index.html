@@ -542,7 +542,7 @@
       + "</tbody>";
   }
 
-  let txtBusy = false;
+  let txtBusy = false, txtDirty = false;
   async function runText() {
     const txt = $("txtIn").value;
     const algos = checkedAlgos();
@@ -561,7 +561,8 @@
       refreshCompare();
       return;
     }
-    if (txtBusy) return;
+    /* ★ 计算中又改了输入时标记脏位，算完再补跑一轮 —— 直接 return 会永久停在旧结果上 */
+    if (txtBusy) { txtDirty = true; return; }
     txtBusy = true;
     const bytes = U8.encode(txt);
     const out = {};
@@ -582,6 +583,7 @@
       txtBusy = false;
     }
     refreshCompare();
+    if (txtDirty) { txtDirty = false; runText(); }
   }
 
   /* 结果作废：表格、暂存、比对卡片要一起清掉 —— 只清表格的话，

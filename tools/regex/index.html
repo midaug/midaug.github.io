@@ -672,11 +672,11 @@
         const idx = m.idx && m.idx[g];
         const val = m.g[g];
         if (val === undefined) gs.push("<code>$" + (g + 1) + "</code> 未参与匹配");
-        else gs.push("<code>$" + (g + 1) + "</code> = " + (val === "" ? "（空串）" : JSON.stringify(val))
+        else gs.push("<code>$" + (g + 1) + "</code> = " + (val === "" ? "（空串）" : eh(JSON.stringify(val)))
               + (idx ? " @ " + idx[0] + "-" + idx[1] : ""));
       }
       const named = m.named
-        ? Object.keys(m.named).map(k => "<code>$&lt;" + eh(k) + "&gt;</code> = " + JSON.stringify(m.named[k])).join(" · ")
+        ? Object.keys(m.named).map(k => "<code>$&lt;" + eh(k) + "&gt;</code> = " + eh(JSON.stringify(m.named[k]))).join(" · ")
         : "";
       const extra = gs.concat(named ? [named] : []).join("<br>");
       return '<tr><td class="u">' + (i + 1) + '</td>'

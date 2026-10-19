@@ -629,9 +629,12 @@
     const gen = buildGen;
     indentText = indentStr();              // 缩进设置可能刚被改过，重新取一次
 
-    anchor = (keepScroll && flat.length)
-      ? flat[Math.min(rowAt(viewport.scrollTop), flat.length - 1)]
-      : null;
+    /* ★ 构建进行中重入时不要按 viewport.scrollTop 重取锚点：此刻 render() 已把 sizer
+       高度收缩，浏览器把 scrollTop 夹到 0，重取会锚在根节点上 → 跳回顶部。
+       这种情况复用上一轮已取的 anchor（句柄跨重建稳定，restoreAnchor 时仍能定位）。 */
+    if (!keepScroll) anchor = null;
+    else if (flat.length && !building)
+      anchor = flat[Math.min(rowAt(viewport.scrollTop), flat.length - 1)];
 
     flat = []; role = [];
     maxRowWidth = 0;

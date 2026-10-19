@@ -357,7 +357,7 @@
             <div class="container">
                 <div class="bar">
                     <div>
-                        <input id="yearInput" type="number" value="2025">
+                        <input id="yearInput" type="number" value="2025" min="1" max="9999">
                     </div>
                     <div>
                         <select id="monthSelect">
@@ -619,7 +619,8 @@
             });
             $('#yearInput').on('change', function () {
                 const y = parseInt($(this).val(), 10);
-                if (isNaN(y)) { $(this).val(state.year); return; } // 清空输入时回弹，避免 NaN 传给渲染
+                /* 清空回弹，避免 NaN；★ 极端年份（如 999999）会让 lunar.js 内部抛 "wrong month" */
+                if (isNaN(y) || y < 1 || y > 9999) { $(this).val(state.year); return; }
                 state.year = y;
                 render();
             });

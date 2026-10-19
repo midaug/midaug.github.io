@@ -412,7 +412,9 @@
   }
 
   /* ObjectId：4 字节秒级时间戳 + 5 字节随机 + 3 字节计数器，24 个十六进制字符 */
-  let oidCounter = randInt(0x1000000);
+  /* ★ 惰性初值：不能在脚本加载期调用 randInt —— 无 crypto 的环境会整页抛错，
+     连下面那条「请更新浏览器」的提示都出不来。没有 RNG 时 objectId 也不会被调用。 */
+  let oidCounter = HAS_RNG ? randInt(0x1000000) : 0;
   function objectId() {
     const b = new Uint8Array(12);
     let ts = Math.floor(Date.now() / 1000);
@@ -666,9 +668,14 @@
     if (t.id === "custom") {
       const a = currentAlphabet();
       if (a.length < 2) { toast("自定义类型至少要勾选一类字符集"); return; }
-      if (+$("len").value < 4) { toast("长度至少 4"); return; }
     }
-    if (t.id === "nanoid" && (+$("len").value < 4 || +$("len").value > 128)) { toast("长度请填 4–128"); return; }
+    /* ★ 长度必须与输入框 max=128 一致地强制：不设上限时 randStr 会向 getRandomValues
+       要 >65536 字节，抛未捕获的 QuotaExceededError（UI 毫无反应）。nanoid 与自定义同规。 */
+    if (t.id === "nanoid" || t.id === "custom") {
+      const L = +$("len").value;
+      if (L < 4) { toast("长度至少 4"); return; }
+      if (L > 128) { toast("长度请填 4–128"); return; }
+    }
     const n = +$("count").value;
     raw = [];
     rawType = t;

@@ -387,7 +387,9 @@
   /* ============================================================
      强度检测
      ============================================================ */
-  const CLASS_SIZE = { lower: 26, upper: 26, digit: 10, symbol: 33 };
+  /* ★ 从 SETS 派生，别写字面量 —— 曾写死 symbol:33 而实际符号集只有 25 个，
+     熵被高估。派生后加/减符号会自动同步。 */
+  const CLASS_SIZE = { lower: SETS.lower.length, upper: SETS.upper.length, digit: SETS.digit.length, symbol: SETS.symbol.length };
   const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm", "1234567890"];
 
   function hasRun(pw, n) {         // 是否存在长度 ≥ n 的递增/递减连续序列（qwerty / 1234）

@@ -599,7 +599,8 @@
     const root = doc.documentElement;
     if (!root) throw new Error("XML 里没有根元素。");
     const out = {};
-    out[root.nodeName] = xmlNodeToJs(root);
+    /* ★ 用 setOwn：根元素名若是 __proto__，普通赋值会走原型 setter 把数据丢掉 */
+    setOwn(out, root.nodeName, xmlNodeToJs(root));
     return out;
   }
 

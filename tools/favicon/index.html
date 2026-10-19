@@ -294,6 +294,7 @@
   ].join("\n");
 
   let img = null;              /* 已解码的源图 */
+  let srcUrl = "";             /* 源图的 objectURL —— 每次换图/清空必须 revoke，否则泄漏 */
   let made = [];               /* [{size, name, blob, url, bytes}] */
 
   /* ============================================================
@@ -522,7 +523,9 @@
   function loadFile(file) {
     if (!file) return;
     if (!/^image\//.test(file.type)) { toast("不是图片文件"); return; }
+    if (srcUrl) { URL.revokeObjectURL(srcUrl); srcUrl = ""; }   /* 释放上一张源图 */
     const url = URL.createObjectURL(file);
+    srcUrl = url;
     const im = new Image();
     im.onload = () => {
       img = im;
@@ -627,6 +630,7 @@
   $("btnClear").addEventListener("click", () => {
     img = null;
     buildGen++;                    /* 让在飞的那次 build 作废 */
+    if (srcUrl) { URL.revokeObjectURL(srcUrl); srcUrl = ""; }
     made.forEach(m => URL.revokeObjectURL(m.url));
     made = [];
     $("grid").textContent = "";
