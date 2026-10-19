@@ -201,6 +201,7 @@
 
   /* ===== 窄屏 ===== */
   @media (max-width: 600px) {
+    .hide-sm { display: none; }
     header{padding:8px 10px;gap:6px 8px}
     .brand{font-size:14px}
     header .stat{font-size:11px}
@@ -213,6 +214,10 @@
     .stats{gap:6px}
     .stats .stat{min-width:76px}
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -221,6 +226,8 @@
   <div class="brand">儿童生长<span>发育评价</span></div>
   <span class="sep"></span>
   <span class="stat">依据 <b>WS/T 423—2022</b></span>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">记录仅保存在本机浏览器，不会上传</span>
 </header>
 
 <main>

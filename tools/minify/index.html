@@ -168,6 +168,7 @@
      左右双栏在 390px 下每栏只剩 ~180px，占位文字逐字换行，整页不可用 ——
      改成上下堆叠、各占一半高度。★ 不隐藏任何控件（分册约定：hide-* 断点藏控件已废弃）。 */
   @media (max-width: 640px) {
+    .hide-sm { display: none; }
     header { padding: 8px 10px; gap: 6px 8px; }
     header .brand { font-size: 14px; }
     button, select { padding: 5px 9px; font-size: 12px; }
@@ -185,6 +186,10 @@
     /* 触屏：输入控件字号提到 16px，否则 iOS 聚焦时会把整页放大 */
     textarea, #out, select { font-size: 16px; }
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -233,6 +238,8 @@
       <button data-layout="multi" class="on">多行缩进</button>
       <button data-layout="one">每规则一行</button>
     </span>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">压缩与美化全部在本地完成，代码不会上传</span>
   </header>
 
   <main>

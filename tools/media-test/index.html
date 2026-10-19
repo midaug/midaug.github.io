@@ -376,6 +376,10 @@
   @media (max-width: 640px) {
     input[type="text"], input[type="number"], textarea, select { font-size: 16px; }
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -385,7 +389,7 @@
   <span class="sep"></span>
   <span class="stat" id="envStat"><span class="dot"></span>检测环境…</span>
   <span class="sep hide-sm"></span>
-  <span class="stat hide-sm">麦克风 · 音响 · 摄像头</span>
+  <span class="stat privacy-stat">麦克风 · 音响 · 摄像头 · 全部在本机完成，不会上传</span>
   <span class="sep hide-sm"></span>
   <button class="mini" id="btnReset" title="停止所有设备并恢复初始状态">重置</button>
 </header>

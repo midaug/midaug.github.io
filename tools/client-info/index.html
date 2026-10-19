@@ -147,6 +147,7 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   @media (max-width: 640px) {
+    .hide-sm { display: none; }
     header { gap: 8px; }
     .stat { font-size: 11px; }
     main { padding: 10px; gap: 10px; }
@@ -155,6 +156,10 @@
        #time 有 id 级规则（15px），特异性高于裸 textarea，必须一并列出。 */
     #time, textarea { font-size: 16px; }
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -164,6 +169,8 @@
   <span class="sep"></span>
   <span class="stat" id="env">—</span>
   <button class="mini push" id="btnCopyAll" title="把时间戳 / UA / meta 三段一起复制">复制全部</button>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">信息仅在本机展示，不会上传</span>
 </header>
 
 <main>

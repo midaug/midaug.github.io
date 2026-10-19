@@ -152,6 +152,9 @@
     .fmt .name { width: 76px; }
     .big { font-size: 22px; }
   }
+
+  /* 隐私/本地性说明：任何宽度都可见，窄屏整体换到下一行、不裁切 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -161,7 +164,7 @@
   <span class="sep"></span>
   <span class="stat">千分位 · 货币 · 百分比 · 科学计数 · 进制 · 中文互转</span>
   <span class="sep hide-sm"></span>
-  <span class="stat hide-sm">全部本地计算</span>
+  <span class="stat privacy-stat">全部本地计算</span>
   <button class="mini" id="btnClear" title="清空输入">清空</button>
 </header>
 

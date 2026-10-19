@@ -215,6 +215,10 @@
     .stage, .drop { min-height: 208px; }
     .kv > :first-child { width: 64px; }
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -224,7 +228,7 @@
   <span class="sep"></span>
   <span class="stat" id="stat">—</span>
   <span class="sep hide-sm"></span>
-  <span class="stat hide-sm">生成与识别全部在本地完成，内容不会上传</span>
+  <span class="stat privacy-stat">生成与识别全部在本地完成，内容不会上传</span>
 </header>
 
 <main>

@@ -377,8 +377,13 @@
      ★ 正文 textarea 由 `.ed textarea`（0,1,1）定 13px，所以这里必须用同等
      特异性的选择器，只写裸 `textarea` 会被它盖掉。 */
   @media (max-width: 640px) {
+    .hide-sm { display: none; }
     .ed textarea, select, input[type="text"], input[type="search"] { font-size: 16px; }
   }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切（不用 hide-sm，那会在手机上把说明藏掉）。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body>
@@ -439,6 +444,8 @@
     </details>
 
     <span class="stat perf" id="perf"></span>
+      <span class="sep hide-sm"></span>
+    <span class="stat privacy-stat">对比全部在本地完成，文本不会上传</span>
   </header>
 
   <!-- 接缝栏连接带的渐变：每处差异的 path 都引用它。
