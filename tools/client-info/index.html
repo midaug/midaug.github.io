@@ -70,6 +70,8 @@
     transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
     min-width: 0;
   }
+  /* ★ 按钮绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一条） */
+  button { white-space: nowrap; flex-shrink: 0; }
   button:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
   button:active { transform: translateY(1px); }
   button.mini {
@@ -121,6 +123,20 @@
     letter-spacing: .5px; font-variant-numeric: tabular-nums;
   }
 
+  /* ===== UA 解析结果 ===== */
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .uasum { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .uasum .chip {
+    font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text-2); white-space: nowrap;
+  }
+  .uasum .chip b { color: var(--accent); font-weight: 600; }
+  .kv-list { display: grid; gap: 5px; }
+  .kv { display: flex; align-items: baseline; gap: 8px; }
+  .kv .k { width: 68px; flex: none; color: var(--text-3); font-size: 11.5px; }
+  .kv .v { flex: 1; min-width: 0; word-break: break-all; }
+  .kv .v.mono { font-family: var(--mono); color: var(--num); }
+
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
     background: var(--accent); border: 1px solid var(--accent); color: #fff;
@@ -164,10 +180,26 @@
   <section class="card">
     <h2>
       User-Agent
-      <span class="hint">浏览器标识</span>
-      <span class="right"><button class="mini" data-copy="ua">复制</button></span>
+      <span class="hint">可直接粘贴别的 UA 来解析</span>
+      <span class="right">
+        <button class="mini" id="btnUaLocal" title="重新读入本机浏览器的 UA">读本机</button>
+        <button class="mini" data-copy="ua">复制</button>
+      </span>
     </h2>
-    <textarea id="ua" rows="3" readonly spellcheck="false"></textarea>
+    <textarea id="ua" rows="3" spellcheck="false" placeholder="粘贴任意 User-Agent…"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>
+      UA 解析
+      <span class="hint">随上面的 UA 实时变化</span>
+    </h2>
+    <div class="uasum" id="uaSum"></div>
+    <div class="kv-list" id="uaKv"></div>
+    <div class="tip" style="margin-top:9px">
+      按常见特征串匹配（壳浏览器优先于 Chrome，脚本/爬虫最先判定）。
+      <b>UA 是可伪装的字符串</b>，平台与版本判断仅供参考，不能当安全依据。
+    </div>
   </section>
 
   <section class="card">
@@ -198,6 +230,123 @@
 
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
 
+  /* ============================================================
+     UA 解析
+     -- 纯特征串匹配，规则顺序即优先级：
+        ① 脚本/爬虫最先判（它们的 UA 常伪装成 Mozilla/Chrome）
+        ② 壳浏览器排在 Chrome 之前（微信/QQ/UC 的 UA 里都含 Chrome/…）
+     ============================================================ */
+  function parseUA(raw) {
+    var s = String(raw == null ? "" : raw).trim();
+    var out = { browser: "未知", ver: "", engine: "未知", os: "未知", device: "桌面", cpu: "", note: "" };
+    if (!s) { out.note = "（空）"; return out; }
+
+    var g = function (re) { var m = s.match(re); return m ? (m[1] || "") : ""; };
+
+    /* ① 脚本 / 爬虫 */
+    var BOT = /(Googlebot|bingbot|Baiduspider|YisouSpider|bytespider|Sogou web spider|360Spider|SemrushBot|AhrefsBot|facebookexternalhit|Twitterbot|curl|Wget|python-requests|python-urllib|Go-http-client|okhttp|libwww-perl|node-fetch|axios|HeadlessChrome|Java\/)/i;
+    var bot = s.match(BOT);
+    if (bot) { out.device = "爬虫 / 脚本"; out.note = bot[1]; }
+
+    /* ② 浏览器 */
+    var B = [
+      ["微信内置", /MicroMessenger\/([\d.]+)/i],
+      ["QQ 浏览器", /M?QQBrowser\/([\d.]+)/i],
+      ["UC 浏览器", /UCBrowser\/([\d.]+)/i],
+      ["夸克", /Quark\/([\d.]+)/i],
+      ["360 浏览器", /(?:QihooBrowser|360SE|360EE)[\/ ]?([\d.]*)/i],
+      ["搜狗浏览器", /(?:MetaSr|SogouMobileBrowser|SogouExplorer)[\/ ]?([\d.]*)/i],
+      ["百度浏览器", /(?:BIDUBrowser|baidubrowser)[\/ ]?([\d.]*)/i],
+      ["Edge", /Edg(?:e|A|iOS)?\/([\d.]+)/i],
+      ["Opera", /(?:OPR|Opera)[\/ ]([\d.]+)/i],
+      ["三星浏览器", /SamsungBrowser\/([\d.]+)/i],
+      ["Firefox", /Firefox\/([\d.]+)/i],
+      ["Chrome", /(?:Chrome|CriOS)\/([\d.]+)/i],
+      ["Safari", /Version\/([\d.]+)[^)]*Safari/i],
+      ["IE", /(?:MSIE\s([\d.]+)|rv:([\d.]+)\) like Gecko)/i]
+    ];
+    for (var i = 0; i < B.length; i++) {
+      var m = s.match(B[i][1]);
+      if (m) { out.browser = B[i][0]; out.ver = m[1] || m[2] || ""; break; }
+    }
+
+    /* ③ 渲染内核 */
+    if (/Trident/i.test(s)) out.engine = "Trident";
+    else if (/Presto/i.test(s)) out.engine = "Presto";
+    else if (/Gecko\/|Firefox\//i.test(s)) out.engine = "Gecko";
+    else if (/AppleWebKit/i.test(s)) out.engine = /Chrome\/|Chromium\/|Edg|OPR/i.test(s) ? "Blink" : "WebKit";
+
+    /* ④ 操作系统 */
+    var win = s.match(/Windows NT ([\d.]+)/);
+    if (win) {
+      var WV = { "10.0": "10 / 11", "6.3": "8.1", "6.2": "8", "6.1": "7", "6.0": "Vista", "5.1": "XP", "5.0": "2000" };
+      out.os = "Windows " + (WV[win[1]] || win[1]);
+    } else if (/HarmonyOS|OpenHarmony/i.test(s)) {
+      out.os = "HarmonyOS" + (g(/HarmonyOS[\/ ]([\d.]+)/i) ? " " + g(/HarmonyOS[\/ ]([\d.]+)/i) : "");
+    } else if (/Android/i.test(s)) {
+      out.os = "Android" + (g(/Android[\/ ]([\d.]+)/i) ? " " + g(/Android[\/ ]([\d.]+)/i) : "");
+    } else if (/iPhone|iPad|iPod/i.test(s)) {
+      out.os = (/iPad/i.test(s) ? "iPadOS " : "iOS ") + g(/OS (\d+[_\d]*)/i).replace(/_/g, ".");
+      out.os = out.os.trim();
+    } else if (/CrOS/i.test(s)) {
+      out.os = "ChromeOS";
+    } else if (/Mac OS X/i.test(s)) {
+      out.os = "macOS " + g(/Mac OS X (\d+[_.\d]*)/i).replace(/_/g, ".");
+    } else if (/Linux/i.test(s)) {
+      out.os = "Linux";
+    }
+
+    /* ⑤ 设备形态（爬虫已定，不再覆盖） */
+    if (!bot) {
+      if (/iPad|Tablet|PlayBook|Silk/i.test(s) || (/Android/i.test(s) && !/Mobile/i.test(s))) out.device = "平板";
+      else if (/Mobi|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(s)) out.device = "手机";
+      else out.device = "桌面";
+    }
+
+    /* ⑥ CPU 架构（只作参考：Apple Silicon 上的 Safari 仍报 Intel Mac OS X） */
+    if (/arm64|aarch64/i.test(s)) out.cpu = "arm64";
+    else if (/WOW64|Win64|x64|amd64|x86_64/i.test(s)) out.cpu = "x64";
+    else if (/i686|i386|i86/i.test(s)) out.cpu = "x86";
+    else if (/Intel Mac OS X/i.test(s)) out.cpu = "Intel（Mac 上不可靠）";
+
+    return out;
+  }
+
+  /* ★ 一律用 .text() 写入，不拼 HTML —— UA 是外部可控字符串。 */
+  function renderUA() {
+    var u = parseUA($("#ua").val());
+    var chips = [
+      ["浏览器", u.browser + (u.ver ? " " + u.ver : "")],
+      ["内核", u.engine],
+      ["系统", u.os],
+      ["形态", u.device]
+    ];
+    if (u.cpu) chips.push(["架构", u.cpu]);
+
+    var sum = $("#uaSum").empty();
+    chips.forEach(function (c) {
+      sum.append($("<span>").addClass("chip")
+        .append($("<b>").text(c[0] + " "))
+        .append(document.createTextNode(c[1])));
+    });
+
+    var rows = [
+      ["浏览器", u.browser, 0],
+      ["版本", u.ver || "—", 1],
+      ["渲染内核", u.engine, 0],
+      ["操作系统", u.os, 0],
+      ["设备形态", u.device, 0],
+      ["CPU 架构", u.cpu || "—", 0],
+      ["特征串", u.note || "—", 1]
+    ];
+    var kv = $("#uaKv").empty();
+    rows.forEach(function (r) {
+      kv.append($("<div>").addClass("kv")
+        .append($("<span>").addClass("k").text(r[0]))
+        .append($("<span>").addClass("v" + (r[2] ? " mono" : "")).text(r[1])));
+    });
+  }
+
   /* 顶栏那句环境信息：视口 / 像素比 / 时区 —— 调 UA 时最常一起看的三样 */
   function envText() {
     var o = -new Date().getTimezoneOffset();
@@ -218,6 +367,7 @@
       $("#meta").val($("#meta").val() + $(this).prop("outerHTML") + "\n");
     });
     $("#env").text(envText());
+    renderUA();
   }
 
   // 只有时间戳是变量，每秒单独刷新
@@ -266,6 +416,14 @@
       var id = $(this).data("copy");
       var label = { time: "时间戳", ua: "User-Agent", meta: "meta" }[id] || id;
       copyText($("#" + id).val(), label);
+    });
+
+    // UA 改动即时重解析（支持粘贴任意 UA）；「读本机」重新灌入当前浏览器 UA
+    $("#ua").on("input", renderUA);
+    $("#btnUaLocal").on("click", function () {
+      $("#ua").val(window.navigator.userAgent);
+      renderUA();
+      toast("已读入本机 UA");
     });
 
     // 一次性把三段都带走，格式对齐「标签: 值」

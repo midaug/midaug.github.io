@@ -157,6 +157,44 @@
   .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
   .err-tip { color: var(--err); }
 
+  /* 选中的迷你按钮（调色板规则切换） */
+  button.mini.on {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  button.mini.on:hover { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:hover { border-color: var(--border-2); background: var(--panel-2); color: var(--text-2); }
+
+  /* 调色板 */
+  .palrules { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pal { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+  .pal button {
+    height: 56px; border-radius: 7px; border: 1px solid var(--border-2);
+    padding: 0; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .pal button span {
+    position: absolute; left: 0; right: 0; bottom: 3px; text-align: center;
+    font-size: 9.5px; font-variant-numeric: tabular-nums; letter-spacing: .2px;
+  }
+
+  /* 渐变生成器 */
+  .gradprev {
+    height: 112px; border-radius: 8px; border: 1px solid var(--border-2); margin-bottom: 10px;
+  }
+  .stops { display: grid; gap: 6px; margin-bottom: 9px; }
+  .stop { display: flex; align-items: center; gap: 8px; }
+  .stop input[type="range"] { flex: 1; min-width: 0; }
+  .stop .pos {
+    width: 42px; text-align: right; color: var(--text-2);
+    font-size: 11.5px; font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] { cursor: pointer; accent-color: var(--accent); }
+  .codebox {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; display: flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .codebox code { flex: 1; min-width: 0; font: 12px/1.6 var(--mono); word-break: break-all; user-select: all; }
+
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
     background: var(--accent); border: 1px solid var(--accent); color: #fff;
@@ -177,9 +215,11 @@
     .card { padding: 12px; }
     button, select { padding: 5px 9px; font-size: 12px; }
     /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
-    input[type="text"] { font-size: 16px; }
+    input[type="text"], input[type="number"], select { font-size: 16px; }
     .fmt code { font-size: 12px; }
     .ramp { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .pal { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+    .gradprev { height: 88px; }
   }
 </style>
 </head>
@@ -188,7 +228,7 @@
 <header>
   <div class="brand">Color<span>Toolkit</span></div>
   <span class="sep"></span>
-  <span class="stat">HEX · RGB · HSL · HSV · CMYK · WCAG 对比度</span>
+  <span class="stat">HEX · RGB · HSL · HSV · CMYK · WCAG · 调色板 · 渐变</span>
   <span class="sep hide-sm"></span>
   <span class="stat hide-sm">全部本地计算</span>
   <button class="mini" id="btnClear" title="重置为默认颜色">重置</button>
@@ -264,6 +304,46 @@
       <span class="right"><button class="mini" id="btnCopyRamp">复制全部</button></span>
     </h2>
     <div class="ramp" id="ramp"></div>
+  </section>
+
+  <!-- ============ 4. 调色板生成器 ============ -->
+  <section class="card">
+    <h2>
+      调色板生成器
+      <span class="hint">以主色为基准 · 点色块复制</span>
+      <span class="right"><button class="mini" id="btnCopyPal">复制全部</button></span>
+    </h2>
+    <div class="palrules" id="palRules"></div>
+    <div class="pal" id="pal"></div>
+    <div class="tip" style="margin-top:8px">
+      按 HSL 色轮取角：类似色 ±20°/±40°，互补 180°，分裂互补 150°/210°，三角 120°/240°，四角 90°/180°/270°。
+      明度一律夹在 8%–94%，避免出全黑或全白。
+    </div>
+  </section>
+
+  <!-- ============ 5. 渐变生成器 ============ -->
+  <section class="card">
+    <h2>
+      渐变生成器
+      <span class="hint">linear / radial · 导出 CSS</span>
+      <span class="right">
+        <button class="mini" id="btnGradFromMain" title="用主色作为第一个色标">用主色</button>
+        <button class="mini" id="btnCopyGrad">复制 CSS</button>
+      </span>
+    </h2>
+    <div class="row">
+      <label class="k" for="gradType">类型</label>
+      <select id="gradType">
+        <option value="linear">linear</option>
+        <option value="radial">radial</option>
+      </select>
+      <label class="k" for="gradAngle" style="width:auto">角度</label>
+      <input type="range" id="gradAngle" min="0" max="360" step="1" value="135" style="flex:1;min-width:104px" />
+      <span class="pos" id="gradAngleVal">135°</span>
+    </div>
+    <div class="stops" id="stops"></div>
+    <div class="gradprev" id="gradPrev"></div>
+    <div class="codebox"><code id="gradCss"></code></div>
   </section>
 
 </main>
@@ -435,6 +515,7 @@
     if (!keepHex) $("hexIn").value = toHex(c);
     renderRamp();
     renderContrast();
+    renderPal();
   }
 
   function renderRamp() {
@@ -487,6 +568,191 @@
     $("bgPick").value = toHex({ r: bg.r, g: bg.g, b: bg.b, a: 1 }).slice(0, 7).toLowerCase();
     $("fgIn").value = toHex(fg);
     $("bgIn").value = toHex(bg);
+  }
+
+  /* ============================================================
+     调色板生成器
+     -- 以主色的 HSL 为基准取色轮角度。s/l 只做夹取，不做「感知均匀」处理
+        （那需要 LAB/LCH 全套转换，收益不值这份体积）。
+     ============================================================ */
+  const PAL_RULES = [
+    { id: "mono", name: "单色明暗" },
+    { id: "analog", name: "类似色" },
+    { id: "comp", name: "互补" },
+    { id: "split", name: "分裂互补" },
+    { id: "triad", name: "三角" },
+    { id: "tetrad", name: "四角" }
+  ];
+  let palRule = "mono";
+
+  /* HSL → sRGB。h 任意度数（内部取模），s/l 为 0–1。 */
+  function hsl2rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else { r = c; b = x; }
+    return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255), a: 1 };
+  }
+
+  /* ★ 明度夹在 8%–94%：纯黑/纯白在色板上没法互相区分，也不像「配色」。 */
+  const LMIN = 0.08, LMAX = 0.94;
+  function paletteColors() {
+    const hsl = toHsl(main);
+    const h = hsl.h, s = hsl.s, l = hsl.l;
+    const out = [];
+    const push = (nh, ns, nl) => out.push(hsl2rgb(nh, clamp(ns, 0, 1), clamp(nl, LMIN, LMAX)));
+    switch (palRule) {
+      case "mono":
+        /* 同色相拉一条明度梯：从亮到暗共 6 档 */
+        for (let i = 0; i < 6; i++) push(h, s, 0.92 - i * 0.152);
+        break;
+      case "analog":
+        for (const d of [-40, -20, 0, 20, 40]) push(h + d, s, l);
+        break;
+      case "comp":
+        for (const d of [0, 180]) {
+          push(h + d, s, clamp(l + 0.18, LMIN, LMAX));
+          push(h + d, s, l);
+          push(h + d, s, clamp(l - 0.18, LMIN, LMAX));
+        }
+        break;
+      case "split":
+      case "triad": {
+        const base = palRule === "split" ? [0, 150, 210] : [0, 120, 240];
+        for (const d of base) {
+          push(h + d, s, clamp(l + 0.14, LMIN, LMAX));
+          push(h + d, s, l);
+        }
+        break;
+      }
+      case "tetrad":
+        for (const d of [0, 90, 180, 270]) push(h + d, s, l);
+        break;
+    }
+    return out;
+  }
+
+  function renderPalRules() {
+    const box = $("palRules");
+    box.textContent = "";
+    for (const r of PAL_RULES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mini" + (r.id === palRule ? " on" : "");
+      b.textContent = r.name;
+      b.setAttribute("aria-pressed", r.id === palRule ? "true" : "false");
+      b.addEventListener("click", () => { palRule = r.id; renderPalRules(); renderPal(); });
+      box.appendChild(b);
+    }
+  }
+
+  function renderPal() {
+    const box = $("pal");
+    box.textContent = "";
+    for (const c of paletteColors()) {
+      const hex = toHex(c);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.style.background = hex;
+      b.title = hex + "（点击复制）";
+      const lab = document.createElement("span");
+      lab.textContent = hex;
+      lab.style.color = luminance(c) > 0.45 ? "rgba(15,23,42,.62)" : "rgba(255,255,255,.82)";
+      b.appendChild(lab);
+      b.addEventListener("click", () => copyText(hex, hex + " 已复制"));
+      box.appendChild(b);
+    }
+  }
+
+  /* ============================================================
+     渐变生成器
+     ============================================================ */
+  let gradStops = [
+    { color: "#4f6bed", pos: 0 },
+    { color: "#7c8aff", pos: 100 }
+  ];
+
+  /* radial 不接受角度；角度输入禁用但不隐藏（窄屏更不该藏控件） */
+  function gradCssText() {
+    const type = $("gradType").value;
+    const stops = gradStops.slice().sort((a, b) => a.pos - b.pos)
+      .map(s => s.color.toUpperCase() + " " + s.pos + "%").join(", ");
+    return type === "radial"
+      ? "radial-gradient(circle, " + stops + ")"
+      : "linear-gradient(" + $("gradAngle").value + "deg, " + stops + ")";
+  }
+
+  function renderGrad() {
+    const css = gradCssText();
+    $("gradPrev").style.background = css;
+    $("gradCss").textContent = "background: " + css + ";";
+    $("gradAngle").disabled = $("gradType").value === "radial";
+  }
+
+  function renderStops() {
+    const box = $("stops");
+    box.textContent = "";
+    gradStops.forEach((s, i) => {
+      const row = document.createElement("div");
+      row.className = "stop";
+
+      const pick = document.createElement("input");
+      pick.type = "color";
+      pick.value = s.color;
+      pick.title = "色标颜色";
+      pick.addEventListener("input", () => { s.color = pick.value; renderGrad(); });
+
+      const range = document.createElement("input");
+      range.type = "range"; range.min = "0"; range.max = "100"; range.step = "1";
+      range.value = String(s.pos);
+      range.title = "色标位置";
+
+      const pos = document.createElement("span");
+      pos.className = "pos";
+      pos.textContent = s.pos + "%";
+
+      range.addEventListener("input", () => {
+        s.pos = +range.value;
+        pos.textContent = s.pos + "%";
+        renderGrad();
+      });
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "mini";
+      del.textContent = "×";
+      del.title = gradStops.length <= 2 ? "至少保留 2 个色标" : "删除该色标";
+      del.disabled = gradStops.length <= 2;
+      del.addEventListener("click", () => {
+        if (gradStops.length <= 2) return;
+        gradStops.splice(i, 1);
+        renderStops();
+        renderGrad();
+      });
+
+      row.append(pick, range, pos, del);
+      box.appendChild(row);
+    });
+
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "mini";
+    add.textContent = "+ 加色标";
+    add.addEventListener("click", () => {
+      if (gradStops.length >= 6) { toast("最多 6 个色标"); return; }
+      const last = gradStops[gradStops.length - 1];
+      gradStops.push({ color: toHex(main), pos: Math.min(100, last.pos + 8) });
+      renderStops();
+      renderGrad();
+    });
+    box.appendChild(add);
   }
 
   /* ============================================================
@@ -602,12 +868,43 @@
     main = { r: 79, g: 107, b: 237, a: 1 };
     fg = { r: 15, g: 23, b: 42, a: 1 };
     bg = { r: 255, g: 255, b: 255, a: 1 };
+    palRule = "mono";
+    gradStops = [{ color: "#4f6bed", pos: 0 }, { color: "#7c8aff", pos: 100 }];
+    $("gradType").value = "linear";
+    $("gradAngle").value = "135";
+    $("gradAngleVal").textContent = "135°";
+    renderPalRules();
+    renderStops();
+    renderGrad();
     renderMain();
     toast("已重置");
   });
 
+  /* ---- 调色板 / 渐变 ---- */
+  $("btnCopyPal").addEventListener("click", () => {
+    const out = paletteColors().map(toHex);
+    copyText(out.join("\n"), "已复制 " + out.length + " 个色值");
+  });
+  $("gradType").addEventListener("change", renderGrad);
+  $("gradAngle").addEventListener("input", () => {
+    $("gradAngleVal").textContent = $("gradAngle").value + "°";
+    renderGrad();
+  });
+  $("btnGradFromMain").addEventListener("click", () => {
+    gradStops[0].color = toHex(main).slice(0, 7).toLowerCase();
+    renderStops();
+    renderGrad();
+    toast("第一个色标已设为主色");
+  });
+  $("btnCopyGrad").addEventListener("click", () => {
+    copyText("background: " + gradCssText() + ";", "CSS 已复制");
+  });
+
   /* 初始化：URL 带 ?c=RRGGBB 时直接载入，方便从别处跳转过来 */
   (function init() {
+    renderPalRules();
+    renderStops();
+    renderGrad();
     const q = new URLSearchParams(location.search).get("c");
     if (q && applyMainHex(q, true)) return;
     renderMain();

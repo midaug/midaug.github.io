@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>数字格式化</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一条）。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type="text"] { cursor: text; }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder { color: var(--text-3); }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; align-content: start;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card.wide { grid-column: 1 / -1; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row > label.k { width: 62px; color: var(--text-2); flex: none; }
+  .row:last-child { margin-bottom: 0; }
+
+  .big {
+    font: 700 26px/1.3 var(--mono); color: var(--accent);
+    font-variant-numeric: tabular-nums; word-break: break-all; margin: 2px 0 10px;
+  }
+
+  .fmt {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 10px; margin-bottom: 6px;
+  }
+  .fmt .name { width: 88px; color: var(--text-3); font-size: 11.5px; flex: none; }
+  .fmt code { flex: 1; min-width: 0; font: 12.5px/1.5 var(--mono); word-break: break-all; user-select: all; }
+  .fmt code.cn { color: var(--num); }
+
+  .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
+  .err-tip { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; gap: 10px; }
+    .card { padding: 12px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    /* 触屏下输入控件字号提到 16px，低于 16px 时 iOS 聚焦会把整页放大 */
+    input[type="text"], input[type="number"], select { font-size: 16px; }
+    .fmt code { font-size: 12px; }
+    .fmt .name { width: 76px; }
+    .big { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Num<span>Format</span></div>
+  <span class="sep"></span>
+  <span class="stat">千分位 · 货币 · 百分比 · 科学计数 · 进制 · 中文互转</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat hide-sm">全部本地计算</span>
+  <button class="mini" id="btnClear" title="清空输入">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 输入 ============ -->
+  <section class="card wide">
+    <h2>
+      输入
+      <span class="hint">数字、中文、万 / 亿、货币、进制、百分比都能直接粘</span>
+      <span class="right"><button class="mini" id="btnSample">示例</button></span>
+    </h2>
+    <div class="row">
+      <label class="k" for="num">数字</label>
+      <input type="text" id="num" value="1234567.89" spellcheck="false" autocomplete="off"
+             inputmode="decimal" style="flex:1;min-width:160px" />
+    </div>
+    <div class="row">
+      <label class="k">试试</label>
+      <button class="mini" data-fill="1234567.89">1234567.89</button>
+      <button class="mini" data-fill="123.3万">123.3万</button>
+      <button class="mini" data-fill="1.3亿">1.3亿</button>
+      <button class="mini" data-fill="一百二十三万四千五百六十七点八九">中文小写</button>
+      <button class="mini" data-fill="壹佰贰拾叁元肆角伍分">人民币大写</button>
+      <button class="mini" data-fill="0x1F">0x1F</button>
+      <button class="mini" data-fill="12.5%">12.5%</button>
+    </div>
+    <div class="row">
+      <label class="k" for="dec">小数位</label>
+      <select id="dec">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="6">6</option>
+      </select>
+      <span class="tip">仅影响「数字格式」区；中文转换按解析出的十进制串逐位处理，不做舍入。</span>
+    </div>
+    <div class="big" id="hero">—</div>
+    <div class="tip" id="parseTip">支持整数、小数、负号，以及逗号 / 空格 / 下划线分隔与 ¥ $ € £ 前缀。</div>
+    <div class="tip" style="margin-top:5px">
+      输入能反向吃下本页输出的每一种形态 —— 阿拉伯数字（可带千分位与货币前缀）、
+      科学计数（<code>1.2e5</code>）、中文小写与大写（<code>一百二十三万</code> / <code>壹佰贰拾叁点肆伍</code>）、
+      人民币大写（<code>壹佰贰拾叁元肆角伍分</code>）、万 / 亿 / k / M 单位（<code>123.3万</code>、<code>1.3亿</code>、<code>3.5k</code>）、
+      进制字面量（<code>0x1F</code>、<code>0o17</code>、<code>0b1010</code>，必须带前缀，否则与十进制无法区分）、百分比（<code>12.5%</code>）。
+      全角数字与字母会自动转成半角。
+    </div>
+  </section>
+
+  <!-- ============ 2. 数字格式 ============ -->
+  <section class="card">
+    <h2>
+      数字格式
+      <span class="hint">点任意一行复制</span>
+      <span class="right"><button class="mini" id="btnCopyFmt">复制全部</button></span>
+    </h2>
+    <div id="fmts"></div>
+  </section>
+
+  <!-- ============ 3. 中文转换 ============ -->
+  <section class="card">
+    <h2>
+      中文转换
+      <span class="hint">逐位转换，不受「小数位」影响</span>
+      <span class="right"><button class="mini" id="btnCopyCn">复制全部</button></span>
+    </h2>
+    <div id="cns"></div>
+    <div class="tip" style="margin-top:8px">
+      大写金额只取到「分」（两位小数，超出部分截断），整数为零时省略「零元」，如 <code>0.56</code> → 伍角陆分。
+      节间单位依次为 万 / 亿 / 万亿 / 亿亿（10<sup>16</sup>）；更大的整数会继续用「万亿亿」递推，读起来偏口语。
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  /* ============================================================
+     解析
+     -- 输入要能吃下本页输出的每一种形态（中文小写 / 中文大写 / 人民币大写 /
+        万·亿紧凑 / 进制 / 百分比 / 科学计数），否则「转成什么」就只是一条单行道。
+        全程用「十进制字符串 + BigInt」运算：只要中途经过 Number，
+        21 位大整数就会掉精度，中文转换立刻出错。
+     ============================================================ */
+
+  /* 全角 → 半角，并把几种「减号」统一成 ASCII 的 - */
+  function normalize(raw) {
+    return String(raw)
+      .replace(/[\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5A]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[\u3000\u00A0]/g, " ")
+      .replace(/[＋﹢]/g, "+").replace(/[－﹣]/g, "-")
+      .trim();
+  }
+
+  const CN_DIG = {
+    "零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "兩": 2, "三": 3, "四": 4, "五": 5,
+    "六": 6, "七": 7, "八": 8, "九": 9,
+    "壹": 1, "贰": 2, "貳": 2, "叁": 3, "參": 3, "肆": 4, "伍": 5, "陆": 6, "陸": 6, "柒": 7, "捌": 8, "玖": 9
+  };
+  const CN_SMALL = { "十": 10n, "拾": 10n, "百": 100n, "佰": 100n, "千": 1000n, "仟": 1000n };
+  const CN_BIG = { "万": 10000n, "萬": 10000n, "亿": 100000000n, "億": 100000000n };
+  const CN_CHAR = new Set([...Object.keys(CN_DIG), ...Object.keys(CN_SMALL), ...Object.keys(CN_BIG)]);
+  /* 单位后缀：中文与英文写法都能直接接在阿拉伯数字后面（123.3万 / 3.5k / 1.3亿） */
+  const UNITS = [["万亿", 12], ["萬億", 12], ["万", 4], ["萬", 4], ["亿", 8], ["億", 8],
+    ["千", 3], ["仟", 3], ["百", 2], ["佰", 2], ["十", 1], ["拾", 1],
+    ["k", 3], ["K", 3], ["m", 6], ["M", 6], ["b", 9], ["B", 9]];
+  const CN_RE = /[零〇一二三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟两萬億]/;
+  const RMB_RE = /[元圆角分整正]/;
+  const CURRENCY_RE = /^[¥$€£￥]/;
+  const SEP_RE = /[,\s_]/g;           /* 千分位逗号 / 空格 / 下划线分隔 */
+
+  /* 小数点右移 k 位（k 为负则左移）。纯字符串运算，多少位都不丢精度。 */
+  function shiftDec(ip, fp, k) {
+    let digits = ip + fp;
+    let point = ip.length + k;                 /* 新小数点落在 digits 里的位置 */
+    if (point <= 0) { digits = "0".repeat(-point) + digits; point = 0; }
+    if (point >= digits.length) { digits = digits + "0".repeat(point - digits.length); point = digits.length; }
+    const nip = (digits.slice(0, point) || "0").replace(/^0+(?=\d)/, "") || "0";
+    const nfp = digits.slice(point).replace(/0+$/, "");
+    return { ip: nip, fp: nfp };
+  }
+
+  /* 两个十进制串相加：按较长的小数位对齐后交给 BigInt */
+  function addDec(a, b) {
+    const L = Math.max(a.fp.length, b.fp.length);
+    const sum = (BigInt(a.ip + a.fp.padEnd(L, "0")) + BigInt(b.ip + b.fp.padEnd(L, "0"))).toString().padStart(L + 1, "0");
+    const ip = (sum.slice(0, sum.length - L) || "0").replace(/^0+(?=\d)/, "") || "0";
+    const fp = L ? sum.slice(sum.length - L).replace(/0+$/, "") : "";
+    return { ip: ip, fp: fp };
+  }
+
+  /* 纯中文整数串 → BigInt。「万」是节内进位、「亿」是节间进位，
+     所以两者必须分开处理：一万二千亿 这种写法才不会算错。 */
+  function cnInt(s) {
+    let total = 0n, section = 0n, num = 0n, any = false;
+    for (const ch of s) {
+      if (CN_DIG[ch] !== undefined) { num = BigInt(CN_DIG[ch]); any = true; }
+      else if (CN_SMALL[ch] !== undefined) { section += (num === 0n ? 1n : num) * CN_SMALL[ch]; num = 0n; any = true; }
+      else if (CN_BIG[ch] !== undefined) {
+        /* ★ 「万 / 亿」前面必须已经有东西，否则「万万分」这种重复单位写法
+           会被静默算成 0，比报错更糟。注意「一亿亿」是合法的（前面已有 1 亿）。 */
+        if (section === 0n && num === 0n && total === 0n) return null;
+        if (ch === "万" || ch === "萬") { total += (section + num) * 10000n; }
+        else { total = (total + section + num) * 100000000n; }
+        section = 0n; num = 0n; any = true;
+      } else return null;
+    }
+    return any ? total + section + num : null;
+  }
+
+  function unitAt(s, i) {
+    for (const [k, len] of UNITS) if (s.startsWith(k, i)) return { len: len, w: k.length };
+    return null;
+  }
+
+  /* 中文数字 / 阿拉伯数字 / 单位 混排：一百二十三万、123.3万、1万2千、三点一四… */
+  function parseCnUnit(src) {
+    const s = String(src);
+    let acc = { ip: "0", fp: "" }, cur = null, got = false, i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+
+      /* 1. 阿拉伯数字串（可带小数点） */
+      if (ch >= "0" && ch <= "9") {
+        let j = i; while (j < s.length && ((s[j] >= "0" && s[j] <= "9") || s[j] === ".")) j++;
+        const lit = s.slice(i, j);
+        if ((lit.match(/\./g) || []).length > 1) return null;
+        const dot = lit.indexOf(".");
+        const a = ((dot < 0 ? lit : lit.slice(0, dot)).replace(/^0+(?=\d)/, "")) || "0";
+        const b = dot < 0 ? "" : lit.slice(dot + 1).replace(/0+$/, "");
+        cur = { ip: a, fp: b };
+        got = true; i = j; continue;
+      }
+
+      /* 2. 小数点（中文写法「点」，以及 .5 这种省掉整数位的小数） */
+      if (ch === "点" || ch === "·" || ch === ".") {
+        let j = i + 1, digits = "";
+        while (j < s.length) {
+          const c2 = s[j];
+          if (c2 >= "0" && c2 <= "9") { digits += c2; j++; }
+          else if (CN_DIG[c2] !== undefined) { digits += String(CN_DIG[c2]); j++; }
+          else break;
+        }
+        if (!digits) return null;
+        const base = cur || { ip: "0", fp: "" };
+        cur = { ip: base.ip, fp: base.fp + digits };
+        got = true; i = j; continue;
+      }
+
+      /* 3. ★ 单位必须排在「中文数字」分支前面：否则「123.3万」里的「万」
+            会被 cnInt 当成中文数字「万」算成 0，整个数就没了。
+            只有「前面刚解析出一个数」时才把 万/亿/千 当单位 ——
+            「十亿」「一万二千」这种纯中文写法要整段交给 cnInt 才对。 */
+      if (cur) {
+        const u = unitAt(s, i);
+        if (u) {
+          acc = addDec(acc, shiftDec(cur.ip, cur.fp, u.len));
+          cur = null; got = true; i += u.w; continue;
+        }
+      }
+
+      /* 4. 连续的中文数字串（含 十百千万亿 的单位语义） */
+      if (CN_CHAR.has(ch)) {
+        let j = i; while (j < s.length && CN_CHAR.has(s[j])) j++;
+        const v = cnInt(s.slice(i, j));
+        if (v === null) return null;
+        cur = { ip: v.toString(), fp: "" };
+        got = true; i = j; continue;
+      }
+
+      /* 5. 前面没有数字的英文单位（k / M / B）：按 1 处理 */
+      const u2 = unitAt(s, i);
+      if (u2) {
+        acc = addDec(acc, shiftDec("1", "", u2.len));
+        got = true; i += u2.w; continue;
+      }
+      return null;
+    }
+    if (!got) return null;
+    return cur ? addDec(acc, cur) : acc;
+  }
+
+  /* 纯阿拉伯数字：支持小数、正负号与科学计数（1.2e5） */
+  function parsePlain(src) {
+    const m = String(src).match(/^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/);
+    if (!m || (!m[2] && !m[3])) return null;
+    const ip = (m[2] || "0").replace(/^0+(?=\d)/, "") || "0";
+    const fp = m[3] || "";
+    if (m[4] === undefined) return { ip: ip, fp: fp.replace(/0+$/, "") };
+    const k = parseInt(m[4], 10);
+    if (!isFinite(k) || Math.abs(k) > 400) return null;
+    return shiftDec(ip, fp, k);
+  }
+
+  /* 一段「数字」文本（中文或阿拉伯）→ 十进制串 */
+  function decOf(str) {
+    const t = String(str).trim();
+    if (!t) return null;
+    return parseCnUnit(t) || parsePlain(t);
+  }
+
+  /* 进制字面量：必须带 0x / 0o / 0b 前缀，否则和十进制没法区分 */
+  function parseRadix(src) {
+    const m = String(src).match(/^0([xXoObB])([0-9a-fA-F]+)$/);
+    if (!m) return null;
+    const b = m[1].toLowerCase();
+    try {
+      const v = BigInt((b === "x" ? "0x" : b === "o" ? "0o" : "0b") + m[2]);
+      return { ip: v.toString(), fp: "" };
+    } catch (e) { return null; }
+  }
+
+  /* 人民币大写 / 中文金额：元 角 分 各段分别解析，最后统一折成「分」再折回「元」，
+     这样 壹仟元零伍分 = 1000.05 这种「零」填充也不会算错。 */
+  function parseRMB(src) {
+    /* ★ yuan 默认必须是空串（= 零元），不能默认成整串 ——
+       否则「伍角陆分」会把「伍角陆分」整个当成元的部分去解析，直接失败。 */
+    let yuan = "", rest = String(src);
+    const m = String(src).match(/^(.*?)[元圆](.*)$/);
+    if (m) { yuan = m[1]; rest = m[2]; }
+    rest = rest.replace(/[整正]/g, "");
+
+    let jiao = null, fen = null;
+    const jm = rest.match(/^(.*?)[角]/);
+    if (jm) { jiao = jm[1]; rest = rest.slice(jm[0].length); }
+    const fm = rest.match(/^(.*?)[分]/);
+    if (fm) { fen = fm[1]; rest = rest.slice(fm[0].length); }
+    /* 元 / 角 / 分 都取完还有剩余 → 说明是「元元元」这类重复写法，判为非法 */
+    if (rest.replace(/\s/g, "")) return null;
+
+    const yv = yuan.trim() ? decOf(yuan) : { ip: "0", fp: "" };
+    if (!yv) return null;
+    let cents = shiftDec(yv.ip, yv.fp, 2);
+    if (jiao !== null && jiao.trim()) {
+      const jv = decOf(jiao);
+      if (!jv) return null;
+      cents = addDec(cents, shiftDec(jv.ip, jv.fp, 1));
+    }
+    if (fen !== null && fen.trim()) {
+      const fv = decOf(fen);
+      if (!fv) return null;
+      cents = addDec(cents, fv);
+    }
+    return shiftDec(cents.ip, cents.fp, -2);
+  }
+
+  function parseInput(raw) {
+    let s = normalize(raw);
+    if (!s) return { ok: false, why: "空输入" };
+
+    /* 百分比：12.5% 就是 0.125，于是「百分比」那一行正好显示回 12.5%，形成闭环 */
+    let pct = false;
+    if (/%$/.test(s)) { pct = true; s = s.slice(0, -1).trim(); }
+
+    let neg = false;
+    if (/^[+-]/.test(s)) { neg = s[0] === "-"; s = s.slice(1).trim(); }
+    if (s[0] === "负" || s[0] === "負") { neg = true; s = s.slice(1).trim(); }
+    s = s.replace(CURRENCY_RE, "").trim();
+    if (/^[+-]/.test(s)) { if (s[0] === "-") neg = true; s = s.slice(1).trim(); }
+    if (!s) return { ok: false, why: "只有符号，没有数字：" + raw };
+
+    s = s.replace(SEP_RE, "");        /* 千分位 / 空格 / 下划线分隔 */
+    if (!s) return { ok: false, why: "只有分隔符，没有数字：" + raw };
+
+    const rmb = RMB_RE.test(s);
+    let res = rmb ? parseRMB(s) : null;
+    if (!res) res = parseRadix(s);
+    if (!res) res = decOf(s);
+    if (!res) return { ok: false, why: "看不懂这个输入：" + raw };
+
+    if (pct) res = shiftDec(res.ip, res.fp, -2);
+
+    const sign = neg ? "-" : "";
+    const n = Number(sign + res.ip + (res.fp ? "." + res.fp : ""));
+    if (!isFinite(n)) return { ok: false, why: "数值超出可表示范围：" + raw };
+
+    let how;
+    if (pct) how = "百分比（已 ÷100）";
+    else if (rmb) how = "人民币大写金额";
+    else if (/^0[xXoObB]/.test(s)) how = "进制字面量";
+    /* 纯中文（不含阿拉伯数字）才算「中文数字」；
+       「123.3万」这种阿拉伯 + 单位的写法归到「带单位」更好懂 */
+    else if (CN_RE.test(s) && !/[0-9]/.test(s)) how = "中文数字";
+    else if (/[万亿萬億kKmMbB]/.test(s)) how = "带单位（万 / 亿 / k / M）";
+    else if (CN_RE.test(s)) how = "中文数字";
+    else if (/[eE]/.test(s)) how = "科学计数";
+    else how = "十进制数字";
+
+    return { ok: true, sign: sign, ip: res.ip, fp: res.fp, n: n, how: how };
+  }
+
+  /* ============================================================
+     中文数字
+     -- 四位一节，节内用 千百十；节间用 万亿。
+        零的处理：节内跳过并只补一个「零」；整节为零且后面还有非零节时补一个「零」。
+     ============================================================ */
+  const DIG_LO = "零一二三四五六七八九";
+  const UNIT_LO = ["", "十", "百", "千"];
+  const DIG_UP = "零壹贰叁肆伍陆柒捌玖";
+  const UNIT_UP = ["", "拾", "佰", "仟"];
+  const BIG = ["", "万", "亿", "万亿", "亿亿", "万亿亿"];
+
+  function sec4(n, dig, unit) {
+    let s = "", zero = false;
+    const d = [n % 10, Math.floor(n / 10) % 10, Math.floor(n / 100) % 10, Math.floor(n / 1000) % 10];
+    for (let i = 3; i >= 0; i--) {
+      if (d[i] === 0) { zero = true; continue; }
+      if (zero && s) s += dig[0];
+      zero = false;
+      s += dig[d[i]] + unit[i];
+    }
+    return s;
+  }
+
+  /* 整数串 → 中文（dig/unit 决定小写还是大写） */
+  function intToCn(ip, dig, unit) {
+    if (!ip || /^0*$/.test(ip)) return dig[0];
+    const secs = [];
+    for (let i = ip.length; i > 0; i -= 4) secs.unshift(ip.slice(Math.max(0, i - 4), i));
+    let out = "";
+    for (let i = 0; i < secs.length; i++) {
+      const sec = secs[i];
+      const big = BIG[secs.length - 1 - i] || "";
+      const n = parseInt(sec, 10);
+      if (n === 0) {
+        const restNonZero = secs.slice(i + 1).some(s => parseInt(s, 10) > 0);
+        if (out && restNonZero && !out.endsWith(dig[0])) out += dig[0];
+        continue;
+      }
+      if (out && sec[0] === "0" && !out.endsWith(dig[0])) out += dig[0];
+      out += sec4(n, dig, unit) + big;
+    }
+    return out;
+  }
+
+  /* 小写中文：10 → 十（而不是一十） */
+  function cnLower(ip, fp) {
+    let s = intToCn(ip, DIG_LO, UNIT_LO);
+    s = s.replace(/^一十/, "十");
+    if (fp) s += "点" + [...fp].map(d => DIG_LO[+d]).join("");
+    return s;
+  }
+
+  /* 人民币大写金额：只到分 */
+  function cnAmount(ip, fp) {
+    const p = (fp + "00").slice(0, 2);
+    const jiao = +p[0], fen = +p[1];
+    const hasInt = !/^0*$/.test(ip);
+    let out = hasInt ? intToCn(ip, DIG_UP, UNIT_UP) + "元" : "";
+    if (jiao === 0 && fen === 0) return (out || "零元") + "整";
+    if (jiao === 0) return (out ? out + "零" : "") + DIG_UP[fen] + "分";
+    out += DIG_UP[jiao] + "角";
+    if (fen) out += DIG_UP[fen] + "分";
+    return out;
+  }
+
+  /* ============================================================
+     渲染
+     ============================================================ */
+  function fmtRow(label, value, cls) {
+    const row = document.createElement("div");
+    row.className = "fmt";
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = label;
+    const code = document.createElement("code");
+    if (cls) code.className = cls;
+    code.textContent = value;
+    row.append(n, code);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "mini";
+    b.textContent = "复制";
+    b.addEventListener("click", () => copyText(value, label + " 已复制"));
+    row.appendChild(b);
+    return row;
+  }
+
+  let lastFmts = [], lastCns = [];
+
+  function render() {
+    const r = parseInput($("num").value);
+    const boxF = $("fmts"), boxC = $("cns");
+    boxF.textContent = "";
+    boxC.textContent = "";
+    lastFmts = []; lastCns = [];
+
+    if (!r.ok) {
+      $("hero").textContent = "—";
+      $("parseTip").innerHTML = '<span class="err-tip">' + esc(r.why) + "</span>";
+      boxF.appendChild(fmtRow("—", "—"));
+      boxC.appendChild(fmtRow("—", "—"));
+      return;
+    }
+    $("parseTip").innerHTML = "识别为 <b>" + esc(r.how) + "</b> → <b>"
+      + esc(r.sign + r.ip + (r.fp ? "." + r.fp : "")) + "</b>";
+
+    const dec = +$("dec").value;
+    const n = r.n;
+    const neg = r.sign === "-";
+    const absN = Math.abs(n);
+
+    $("hero").textContent = r.sign + r.ip + (r.fp ? "." + r.fp : "");
+
+    const grp = (v, min, max, grouping) => {
+      try {
+        return new Intl.NumberFormat("zh-CN", {
+          useGrouping: grouping,
+          minimumFractionDigits: min,
+          maximumFractionDigits: max
+        }).format(v);
+      } catch (e) { return String(v); }
+    };
+
+    const rows = [
+      ["千分位", grp(n, 0, dec, true)],
+      ["无分隔", grp(n, 0, dec, false)],
+      ["货币 ¥", (() => {
+        try {
+          return new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
+        } catch (e) { return "¥" + grp(n, 0, dec, true); }
+      })()],
+      ["百分比", grp(n * 100, 0, dec, true) + "%"],
+      ["科学计数", n.toExponential(Math.min(dec, 10))],
+      ["紧凑", (() => {
+        try { return new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 2 }).format(n); }
+        catch (e) { return String(n); }
+      })()],
+      ["定点（无指数）", (() => {
+        /* 大数会退化成 1.23457e+21，用 toFixed 只在安全范围内有意义 */
+        return Number.isSafeInteger(Math.trunc(n)) || Math.abs(n) < 1e21 ? absN.toFixed(dec) : "超出精确范围";
+      })()]
+    ];
+
+    /* 进制只对整数有意义 */
+    if (Number.isInteger(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER) {
+      const u = Math.abs(n).toString(2);
+      rows.push(["二进制", (neg ? "-" : "") + u]);
+      rows.push(["八进制", (neg ? "-" : "") + Math.abs(n).toString(8)]);
+      rows.push(["十六进制", (neg ? "-" : "") + Math.abs(n).toString(16).toUpperCase()]);
+    } else {
+      rows.push(["进制", "仅整数可转换"]);
+    }
+
+    rows.forEach(([k, v]) => { lastFmts.push(k + ": " + v); boxF.appendChild(fmtRow(k, v)); });
+
+    const cnRows = [
+      ["中文小写", (neg ? "负" : "") + cnLower(r.ip, r.fp)],
+      ["中文大写", (neg ? "负" : "") + intToCn(r.ip, DIG_UP, UNIT_UP) + (r.fp ? "点" + [...r.fp].map(d => DIG_UP[+d]).join("") : "")],
+      ["人民币大写", (neg ? "负" : "") + cnAmount(r.ip, r.fp)]
+    ];
+    cnRows.forEach(([k, v]) => { lastCns.push(k + ": " + v); boxC.appendChild(fmtRow(k, v, "cn")); });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  $("num").addEventListener("input", render);
+  $("dec").addEventListener("change", render);
+  $("btnCopyFmt").addEventListener("click", () => copyText(lastFmts.join("\n"), "数字格式已复制"));
+  $("btnCopyCn").addEventListener("click", () => copyText(lastCns.join("\n"), "中文转换已复制"));
+  $("btnSample").addEventListener("click", () => {
+    $("num").value = "1234567.89";
+    render();
+    toast("已填入示例");
+  });
+  /* 一键填入各种形态的样例，顺便把「输入能吃什么」摆到明面上 */
+  document.querySelectorAll("[data-fill]").forEach(b => {
+    b.addEventListener("click", () => {
+      $("num").value = b.dataset.fill;
+      render();
+      $("num").focus();
+      toast("已填入「" + b.dataset.fill + "」");
+    });
+  });
+  $("btnClear").addEventListener("click", () => {
+    $("num").value = "";
+    render();
+    $("num").focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

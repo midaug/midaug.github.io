@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>代码压缩美化</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+    /* 语法高亮（输出区）token 配色：改色只动这五行 */
+    --tk-k: #8250df;   /* 关键字 / 标签 / 指令 / at-rule */
+    --tk-s: #0a7a3e;   /* 字符串 / 字符 / 属性值 */
+    --tk-n: #b25e09;   /* 数字 / 单位 / 颜色 */
+    --tk-c: #8a97a8;   /* 注释 */
+    --tk-a: #0550ae;   /* 属性名 / 声明属性 / 字面量 */
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     左右两栏失去「各占一屏」的高度来源，textarea 上的 flex:1 就撑不起来了。 */
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+
+  button, select {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（顶栏是 flex 容器，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根条）。空间不够请让它换行。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .45; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; display: flex; align-items: center; gap: 5px; }
+  .stat input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+  /* 分段控件（模式 / CSS 布局都用它，替代下拉选择，少一次点开） */
+  .seg {
+    display: inline-flex; border: 1px solid var(--border-2); border-radius: 6px;
+    overflow: hidden; flex: none;
+  }
+  /* ★ .seg 是 inline-flex，UA 的 [hidden]{display:none} 权重不够，必须自己补一条 */
+  .seg[hidden] { display: none; }
+  .seg button {
+    border: 0; border-radius: 0; padding: 5px 10px; font-size: 12px;
+    background: var(--panel-2); color: var(--text-2);
+  }
+  .seg button + button { border-left: 1px solid var(--border-2); }
+  .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+
+  /* ===== 主体：左右双栏（左输入 / 右输出），各占一屏高度 ===== */
+  main { flex: 1; display: flex; min-height: 0; }
+  .pane { flex: 1 1 0%; min-width: 0; display: flex; flex-direction: column; }
+  .pane.left { border-right: 1px solid var(--border); }
+  .pane-head {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-2); flex: none; overflow: hidden;
+  }
+  .pane-head b { color: var(--text); font-weight: 600; flex: none; white-space: nowrap; }
+  /* 会被裁掉的信息统一用省略号，绝不把标题栏撑破（窄屏 390px 实测过） */
+  .pane-head .ell { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane-head .ell b { color: var(--accent); font-weight: 600; }
+
+  /* 输入框与输出区共用同一套排版；#out 是 pre（只读高亮视图），其余行为一致 */
+  textarea, #out {
+    flex: 1; width: 100%; resize: none; border: 0; outline: 0; padding: 10px 12px; margin: 0;
+    background: var(--panel); color: var(--text); font: inherit; tab-size: 2;
+    white-space: pre; overflow: auto;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  textarea::placeholder { color: var(--text-3); }
+  textarea:focus { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+  #out:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+  /* 输出为空时用占位提示（pre 没有 placeholder 属性） */
+  #out:empty::before { content: attr(data-ph); color: var(--text-3); }
+  /* 语法高亮 token */
+  #out .t-k { color: var(--tk-k); }
+  #out .t-s { color: var(--tk-s); }
+  #out .t-n { color: var(--tk-n); }
+  #out .t-c { color: var(--tk-c); }
+  #out .t-a, #out .t-l { color: var(--tk-a); }
+  textarea::-webkit-scrollbar, #out::-webkit-scrollbar { width: 10px; height: 10px; }
+  textarea::-webkit-scrollbar-thumb, #out::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel); }
+  textarea::-webkit-scrollbar-thumb:hover, #out::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  textarea::-webkit-scrollbar-track, #out::-webkit-scrollbar-track { background: transparent; }
+
+  /* ===== 底部状态条：体积对比 + 提示 + 结果操作 ===== */
+  #status {
+    padding: 5px 12px; border-top: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text-2); font-size: 12px;
+    display: flex; align-items: center; gap: 10px; min-height: 30px; flex: none;
+  }
+  #sizes { flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #sizes b { color: var(--accent); font-weight: 600; }
+  #sizes .cut { color: var(--ok); font-weight: 600; }
+  #sizes .grow { color: var(--num); font-weight: 600; }
+  #statusText { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #statusText.warn { color: var(--err); }
+
+  .toast {
+    position: fixed; bottom: 46px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== 手机适配（≤640px）=====
+     左右双栏在 390px 下每栏只剩 ~180px，占位文字逐字换行，整页不可用 ——
+     改成上下堆叠、各占一半高度。★ 不隐藏任何控件（分册约定：hide-* 断点藏控件已废弃）。 */
+  @media (max-width: 640px) {
+    header { padding: 8px 10px; gap: 6px 8px; }
+    header .brand { font-size: 14px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    .seg button { font-size: 12px; }
+
+    main { flex-direction: column; }
+    .pane { flex: 1 1 0%; }
+    .pane.left { border-right: 0; border-bottom: 1px solid var(--border); }
+    textarea, #out { min-height: 0; }
+
+    /* 状态条换行：提示独占一行，按钮落到第二行，390px 下也读得全 */
+    #status { flex-wrap: wrap; gap: 6px 8px; padding: 6px 10px; }
+    #statusText { flex: 1 1 100%; white-space: normal; }
+
+    /* 触屏：输入控件字号提到 16px，否则 iOS 聚焦时会把整页放大 */
+    textarea, #out, select { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">Code<span>Minify</span></div>
+    <!-- ★ 压缩 / 美化 是两个动作按钮：点一下直接出结果，
+         不再让用户先在下拉里选模式再点运行（那是两次交互） -->
+    <button class="primary" id="btnMin">压缩</button>
+    <button id="btnPretty">美化</button>
+    <span class="sep"></span>
+    <button id="btnSample">示例</button>
+    <button id="btnUpload">导入文件</button>
+    <input type="file" id="file" hidden />
+    <button id="btnClear">清空</button>
+    <span class="sep"></span>
+    <label class="stat">语言
+      <select id="lang">
+        <option value="auto" selected>自动识别</option>
+        <option value="js">JavaScript</option>
+        <option value="ts">TypeScript</option>
+        <option value="json">JSON</option>
+        <option value="html">HTML</option>
+        <option value="xml">XML (SVG)</option>
+        <option value="css">CSS</option>
+        <option value="scss">SCSS (Sass)</option>
+        <option value="less">LESS</option>
+        <option value="sql">SQL</option>
+        <option value="java">Java</option>
+        <option value="c">C / C++</option>
+        <option value="cs">C#</option>
+        <option value="go">Go</option>
+        <option value="rust">Rust</option>
+      </select>
+    </label>
+    <label class="stat">缩进
+      <select id="indent">
+        <option value="2" selected>2 空格</option>
+        <option value="4">4 空格</option>
+        <option value="tab">Tab</option>
+      </select>
+    </label>
+    <label class="stat"><input type="checkbox" id="keepCmt" /> 保留注释</label>
+    <!-- CSS 布局只在样式表语言下出现：这是「格式」选项，不是「操作」，所以仍用分段按钮 -->
+    <span class="seg" id="cssLayoutWrap" hidden>
+      <button data-layout="multi" class="on">多行缩进</button>
+      <button data-layout="one">每规则一行</button>
+    </span>
+  </header>
+
+  <main>
+    <section class="pane left">
+      <div class="pane-head">
+        <b>输入</b>
+        <span class="ell" id="inInfo">粘贴代码，或导入文件</span>
+      </div>
+      <textarea id="in" spellcheck="false"
+        placeholder="在此粘贴 HTML / CSS / JS / TS / JSON / XML / SQL / Java / C / C++ / C# / Go / Rust…&#10;点顶部「压缩」或「美化」即可，语言可以留在「自动识别」"></textarea>
+    </section>
+
+    <section class="pane right">
+      <div class="pane-head">
+        <b>输出</b>
+        <span class="ell" id="outHint">点顶部「压缩」或「美化」生成结果</span>
+      </div>
+      <pre id="out" tabindex="0" spellcheck="false" data-ph="结果会写在这里"></pre>
+    </section>
+  </main>
+
+  <div id="status">
+    <span id="sizes"></span>
+    <span id="statusText">等待输入…</span>
+    <button class="mini" id="btnCopy">复制</button>
+    <button class="mini" id="btnDownload">下载</button>
+    <button class="mini" id="btnUseAsInput" title="把结果放回输入框，方便再处理一次">回填</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  const LANGS = {
+    js:   { name: "JavaScript", ext: "js" },
+    ts:   { name: "TypeScript", ext: "ts" },
+    json: { name: "JSON", ext: "json" },
+    html: { name: "HTML", ext: "html" },
+    xml:  { name: "XML", ext: "xml" },
+    css:  { name: "CSS", ext: "css" },
+    scss: { name: "SCSS", ext: "scss" },
+    less: { name: "LESS", ext: "less" },
+    sql:  { name: "SQL", ext: "sql" },
+    java: { name: "Java", ext: "java" },
+    c:    { name: "C / C++", ext: "c" },
+    cs:   { name: "C#", ext: "cs" },
+    go:   { name: "Go", ext: "go" },
+    rust: { name: "Rust", ext: "rs" }
+  };
+
+  /* ==== PURE-CORE-START：以下到 PURE-CORE-END 之间为纯函数（不碰 DOM），
+         /tmp 脚本会整段抽取做 node 对拍 ==== */
+
+  /* ============================================================
+     JavaScript / TypeScript
+     -- 先扫描成 token，再按模式重组。只有扫描阶段需要「懂」语法
+        （识别字符串 / 模板 / 正则 / 注释），重组阶段只做空白决策，
+        这样绝不会把字面量内容改坏。TypeScript 走同一套词法 ——
+        它的类型标注、装饰器、泛型在 token 层面与 JS 无异。
+     ============================================================ */
+  const KW_REGEX = /^(return|typeof|instanceof|in|of|new|delete|void|do|else|case|yield|await|throw)$/;
+  const PUNCTS = ["===", "!==", "**=", ">>>", "<<=", ">>=", "&&=", "||=", "??=", "...",
+                  "==", "!=", "<=", ">=", "&&", "||", "??", "?.", "++", "--", "+=", "-=",
+                  "*=", "/=", "%=", "&=", "|=", "^=", "**", "<<", ">>", "=>"];
+
+  const isWordChar = ch => /[A-Za-z0-9_$\u00a0-\uffff]/.test(ch);
+  const isSpaceChar = ch => ch === " " || ch === "\t" || ch === "\n" || ch === "\r" ||
+                            ch === "\f" || ch === "\v" || ch === "\u00a0" || ch === "\ufeff";
+
+  /* ---- 模板字面量整块扫描（必须配平 ${...}）----
+     ★ 旧实现「扫到下一个反引号就收」：一旦 ${} 里再嵌一个模板字面量
+     （`<ul>${list.map(i => `<li> ${i.name} </li>`)}` 这类真实代码极常见），
+     就会在内层模板的「开引号」处提前结束 —— 内层模板内容被当成普通代码折空白，
+     实测 `- ${x}` 变 `-${x}`、`<li> ${i.name} </li>` 里的空格被删，直接改内容。
+     现在改为：${...} 内的表达式按 JS 词法配平（字符串 / 注释 / 正则 / 嵌套模板
+     都跳过），整个模板字面量扫描成一个 token、原样保留。 */
+  const EXPR_DIV_AFTER = /[)\]\w$"']/;    /* 这些字符之后的 / 是除号，其余按正则字面量扫 */
+  function skipJSStr(src, i) {            /* i 在引号上 → 返回闭合引号之后 */
+    const q = src[i];
+    let j = i + 1;
+    while (j < src.length && src[j] !== q) { if (src[j] === "\\") j++; j++; }
+    return Math.min(j + 1, src.length);
+  }
+  function skipTpl(src, i) {              /* i 在反引号上 → 返回闭合反引号之后 */
+    const n = src.length;
+    let j = i + 1;
+    while (j < n) {
+      const c = src[j];
+      if (c === "\\") { j += 2; continue; }
+      if (c === "`") return j + 1;
+      if (c === "$" && src[j + 1] === "{") { j = skipTplExpr(src, j + 2); continue; }
+      j++;
+    }
+    return n;
+  }
+  function skipTplExpr(src, j) {          /* j 在 ${ 之后 → 返回配平的 } 之后 */
+    const n = src.length;
+    let depth = 1, last = "";
+    while (j < n) {
+      const c = src[j];
+      if (c === '"' || c === "'") { j = skipJSStr(src, j); last = '"'; continue; }
+      if (c === "`") { j = skipTpl(src, j); last = '"'; continue; }
+      if (c === "/" && src[j + 1] === "/") { while (j < n && src[j] !== "\n") j++; continue; }
+      if (c === "/" && src[j + 1] === "*") { const k = src.indexOf("*/", j + 2); j = k < 0 ? n : k + 2; continue; }
+      if (c === "/" && !EXPR_DIV_AFTER.test(last)) {
+        let k = j + 1, inClass = false, closed = false;
+        while (k < n) {
+          const d = src[k];
+          if (d === "\\") { k += 2; continue; }
+          if (d === "\n") break;
+          if (d === "[") inClass = true;
+          else if (d === "]") inClass = false;
+          else if (d === "/" && !inClass) { closed = true; k++; break; }
+          k++;
+        }
+        if (closed) { while (k < n && /[a-z]/i.test(src[k])) k++; j = k; last = '"'; continue; }
+        /* 没闭合 → 当除号，落到下面的通用处理 */
+      }
+      if (c === "{") depth++;
+      else if (c === "}") { depth--; if (!depth) return j + 1; }
+      if (!/\s/.test(c)) last = c;
+      j++;
+    }
+    return n;
+  }
+
+  function scanJS(src) {
+    const T = [];
+    const n = src.length;
+    let i = 0;
+
+    const prevSig = () => {
+      for (let k = T.length - 1; k >= 0; k--) {
+        if (T[k].t !== "ws" && T[k].t !== "cmt") return T[k];
+      }
+      return null;
+    };
+    /* 此处能否出现正则字面量：由上一个有意义 token 决定 */
+    const regexOk = () => {
+      const p = prevSig();
+      if (!p) return true;
+      if (p.t === "word") return KW_REGEX.test(p.v);
+      if (p.t === "punct") return !(p.v === ")" || p.v === "]" || p.v === "++" || p.v === "--");
+      return false;
+    };
+
+    while (i < n) {
+      const c = src[i];
+
+      if (isSpaceChar(c)) {
+        let j = i; while (j < n && isSpaceChar(src[j])) j++;
+        T.push({ t: "ws", v: src.slice(i, j) }); i = j; continue;
+      }
+      if (c === "/" && src[i + 1] === "/") {
+        let j = i; while (j < n && src[j] !== "\n") j++;
+        T.push({ t: "cmt", v: src.slice(i, j), line: true }); i = j; continue;
+      }
+      if (c === "/" && src[i + 1] === "*") {
+        let j = src.indexOf("*/", i + 2); j = j < 0 ? n : j + 2;
+        T.push({ t: "cmt", v: src.slice(i, j), line: false }); i = j; continue;
+      }
+      if (c === '"' || c === "'") {
+        let j = i + 1;
+        while (j < n && src[j] !== c) { if (src[j] === "\\") j++; j++; }
+        j = Math.min(j + 1, n);
+        T.push({ t: "str", v: src.slice(i, j) }); i = j; continue;
+      }
+      if (c === "`") {
+        const j = skipTpl(src, i);          /* 配平 ${...}，见上面的 skipTpl 注释 */
+        T.push({ t: "tpl", v: src.slice(i, j) }); i = j; continue;
+      }
+      if (c === "/" && regexOk()) {
+        let j = i + 1, inClass = false, closed = false;
+        while (j < n) {
+          const ch = src[j];
+          if (ch === "\\") { j += 2; continue; }
+          if (ch === "\n") break;
+          if (ch === "[") inClass = true;
+          else if (ch === "]") inClass = false;
+          else if (ch === "/" && !inClass) { closed = true; j++; break; }
+          j++;
+        }
+        if (closed) {
+          while (j < n && /[a-z]/i.test(src[j])) j++;   /* flags */
+          T.push({ t: "re", v: src.slice(i, j) }); i = j; continue;
+        }
+        /* 没闭合 → 当除号，落到下面的 punct */
+      }
+      if (isWordChar(c)) {
+        let j = i; while (j < n && isWordChar(src[j])) j++;
+        T.push({ t: "word", v: src.slice(i, j) }); i = j; continue;
+      }
+      let p = null;
+      for (const x of PUNCTS) { if (src.startsWith(x, i)) { p = x; break; } }
+      if (!p) p = c;
+      T.push({ t: "punct", v: p }); i += p.length;
+    }
+    return T;
+  }
+
+  /* 两个 token 直接贴在一起会不会粘连成别的词 / 变成别的语义。
+     c = b 之后的下一个有效 token（可选）—— 判断「数字后点号」要用到它。 */
+  function needSpace(a, b, c) {
+    if (!a) return false;
+    if (a.t === "word" && b.t === "word") return true;
+    /* 词语/字符串相邻必须留空：`return"s"` 只有少数关键字后面才合法，标识符后跟字符串本来就非法；
+       实测踩过：SQL 片段落进 JS 管线时输出 `select"@timestamp"` `order by"x"desc`，非常难看。
+       压缩侧也只多 1 字节，安全模式不抠这个。 */
+    if (a.t === "word" && b.t === "str") return true;
+    if (a.t === "str" && (b.t === "word" || b.t === "str")) return true;
+    const ae = a.v.slice(-1), bs = b.v[0];
+    if (ae === "+" && bs === "+") return true;
+    if (ae === "-" && bs === "-") return true;
+    if (ae === "/" && (bs === "/" || bs === "*")) return true;
+    if (ae === "<" && bs === "!") return true;   /* `a<!--b`：经典脚本里 <!-- 会变成行注释 */
+    if (a.t === "word" && b.t === "re") return true;
+    if (a.t === "re" && b.t === "word") return true;
+    /* 数字后面的 `.`：`1 .toString()` 删掉空格会变成 `1.toString()`（语法错误）。
+       但 `1.5`（点后是数字）与 `1..toString()`（点后还是点）本来就合法，不能补空格。 */
+    if (a.t === "word" && /^\d+$/.test(a.v) && bs === "." && c && !/^[.\d]/.test(c.v)) return true;
+    return false;
+  }
+
+  /* ---- 换行策略：只在「语句必然结束」的位置合并行，其余换行一律保留 ----
+     token 级的压缩器没有语法树，没法真正判断 ASI（自动分号插入）。经验规则：
+     上一 token 是 ; { } 且下一 token 不以 ( [ ` + - / 开头 → 合并安全；
+     其余换行（`return\n1`、`a\n++b`、`const a=1\nconst b=2`）必须保留，否则语义会变。 */
+  const MERGE_AFTER = new Set([";", "{", "}"]);
+  const ASI_START = /^[([`+\-\/]/;
+
+  function minifyJS(src, keepCmt) {
+    /* 先丢掉空白 token，把「前面有没有换行」记到每个 token 上。
+       用数组 + 下标遍历（不是 for..of）—— needSpace 需要看下一个有效 token。 */
+    const S = [];
+    let sawNL = false;
+    for (const tk of scanJS(src)) {
+      if (tk.t === "ws") { if (tk.v.indexOf("\n") >= 0) sawNL = true; continue; }
+      tk.nlBefore = sawNL; sawNL = false;
+      S.push(tk);
+    }
+    let out = "", prev = null;
+    const emitNL = () => {
+      out = out.replace(/[ \t]+$/, "");
+      if (out) out += "\n";
+      prev = null;
+    };
+    for (let k = 0; k < S.length; k++) {
+      const tk = S[k];
+      const next = S[k + 1] || null;
+      if (tk.t === "cmt") {
+        if (keepCmt) {
+          if (tk.nlBefore) emitNL();
+          else if (out && !/\s$/.test(out)) out += " ";
+          out += tk.v;
+          prev = tk.line ? null : tk;
+        } else if (!tk.line && !tk.nlBefore && out && !/\s$/.test(out)) {
+          out += " ";                             /* 行内块注释删掉后留一个空格，避免两侧的 token 粘到一起 */
+        }
+        continue;
+      }
+      if (tk.nlBefore) {
+        const safe = prev && prev.t === "punct" && MERGE_AFTER.has(prev.v) && !ASI_START.test(tk.v);
+        if (!safe) emitNL();
+      }
+      if (prev && needSpace(prev, tk, next)) out += " ";
+      out += tk.v;
+      prev = tk;
+    }
+    return out.replace(/[ \t]+$/gm, "").replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
+  }
+
+  /* 美化：只在 { } ; 处断行，括号内保持同行（长参数列表不做换行，避免行数爆炸） */
+  const ASI_TAIL = new Set([";", ",", ")", "]", ".", "("]);
+  const GLUE_NEXT = new Set(["else", "catch", "finally", "while"]);
+  /* 这些运算符两侧补空格（一元 + / - 会被多补一个空格，仍是合法 JS，可接受） */
+  const SPACED = new Set(["=", "+", "-", "*", "/", "%", "==", "===", "!=", "!==", "<", ">",
+    "<=", ">=", "&&", "||", "??", "=>", "+=", "-=", "*=", "/=", "%=", "&", "|", "^", "&=",
+    "|=", "^=", "**"]);
+  /* ★ : 只在「后面」补空格，前面绝不补 —— {a:1} 要写成 { a: 1 }，
+     TS 的可选参数 qty?: string 更不能被拆成 qty ? : string。 */
+  const TIGHT_BEFORE = /^[;,)\].:]$/;         /* 这些符号前面不留空格 */
+  /* TS 可选标记：? 后面紧跟 : , ) ; } = 时是「可选」，不是三元运算符 */
+  const OPT_NEXT = new Set([":", ",", ")", ";", "}", "="]);
+  const isOptMark = (tk, next) => tk.t === "punct" && tk.v === "?" && !!next && OPT_NEXT.has(next.v);
+  /* 逗号后面也补空格（`f(a, b)` 比 `f(a,b)` 好读）；紧跟收尾符时不补（`f(a, )` 很丑） */
+  const CLOSER = new Set([")", "]", "}", ";"]);
+  function spaceAfter(tk, next) {
+    if (tk.t !== "punct") return false;
+    if (tk.v === ":") return true;
+    if (tk.v === "?") return !isOptMark(tk, next);
+    if (tk.v === ",") return !(next && CLOSER.has(next.v));
+    return false;
+  }
+
+  /* ---- 源码里本来就有换行、且换行处是「语句边界」时必须保留 ----
+     否则 `return\n1` 会被拼成 `return 1`、`foo()\nbar()` 会被拼成 `foo()bar()`，语义全变。 */
+  const VALUE_END = /^(word|str|tpl|re)$/;
+  const END_PUNCT = /^(\)|\]|\}|\+\+|--)$/;
+  const CONTINUE_START = /^[.?:,)\]}]/;       /* 以这些开头的行是上一行的延续，可以拼回一行 */
+  const CONTINUE_WORD = new Set(["of", "in", "instanceof"]);
+  function isStmtBreak(a, b) {
+    if (!a || !b) return false;
+    if (b.t === "word" && GLUE_NEXT.has(b.v)) return a.v !== "}";   /* `} else` 是同一句，其余要断 */
+    if (b.t === "word" && CONTINUE_WORD.has(b.v)) return false;
+    if (CONTINUE_START.test(b.v)) return false;
+    return VALUE_END.test(a.t) || (a.t === "punct" && END_PUNCT.test(a.v));
+  }
+
+  /* 这些关键字后面跟 ( 时要留一个空格（`for (` 而不是 `for(`），
+     普通标识符后面不留（函数调用 `f(`）。 */
+  const KW_PAREN = new Set(["if", "for", "while", "switch", "catch", "with", "return", "typeof",
+    "delete", "void", "do", "else", "yield", "await", "in", "of", "new", "instanceof", "case"]);
+
+  function prettyJS(src, unit) {
+    const T = scanJS(src);
+    /* 记下「源码里这个 token 前面有没有换行」—— 断行决策要用 */
+    const sig = [];
+    let sawNL = false;
+    for (const t of T) {
+      if (t.t === "ws") { if (t.v.indexOf("\n") >= 0) sawNL = true; continue; }
+      t.nl = sawNL; sawNL = false;
+      sig.push(t);
+    }
+    let out = "", depth = 0, paren = 0, prevOpt = false;
+    /* 三元运算符计数，按花括号层级分开 —— 否则 `a ? {x:1} : 2` 里的对象冒号会被当三元冒号 */
+    const ternStack = [0];
+    /* 幂等：out 已经以换行结尾时只补缩进，不再叠加换行（否则会多出空行） */
+    const nl = () => {
+      out = out.replace(/[ \t]+$/, "");
+      if (!out) return;
+      if (/\n$/.test(out)) { out += unit.repeat(Math.max(0, depth)); return; }
+      out += "\n" + unit.repeat(Math.max(0, depth));
+    };
+    let prev = null;
+
+    for (let k = 0; k < sig.length; k++) {
+      const tk = sig[k];
+      const next = sig[k + 1] || null;
+
+      if (tk.t === "cmt") {
+        if (tk.line) { if (out && !/[\s]$/.test(out)) out += " "; out += tk.v; nl(); }
+        else { nl(); out += tk.v; nl(); }        /* 块注释独占一行 */
+        continue;
+      }
+
+      /* ★ 源码里本来就在这里的换行，遇到「语句边界」必须保留 */
+      if (tk.nl && isStmtBreak(prev, tk)) nl();
+
+      const optMark = isOptMark(tk, next);
+      const ternary = tk.v === "?" && !optMark;
+      const ternaryColon = tk.v === ":" && ternStack[ternStack.length - 1] > 0;
+      const spaced = (tk.t === "punct" && SPACED.has(tk.v)) || ternary || ternaryColon;
+      /* for(;;) 头里的分号后面补一个空格（for (let i = 0; i < n; i++)） */
+      const after = spaceAfter(tk, next) || (tk.v === ";" && paren > 0);
+      /* 语句块的左花括号前面补一个空格（`) {`、`else {`、`try {`） */
+      const braceGap = tk.v === "{" && !!prev && (prev.t === "word" || prev.v === ")" || prev.v === "]");
+      /* 关键字后面跟 ( 时补一个空格（`for (`），函数调用不留（`f(`） */
+      const parenGap = tk.v === "(" && !!prev && prev.t === "word" && KW_PAREN.has(prev.v);
+      /* `)` / `]` 后面跟标识符是两条语句（`if (x) continue;`），必须留一个空格 */
+      const wordGap = tk.t === "word" && !!prev && (prev.v === ")" || prev.v === "]");
+      /* `} else` / `} catch` / `} finally` / `} while`（do-while）：} 后面跟续接关键字
+         必须有空格 —— 漏了会输出 `}else`（能跑但很难看，实测踩过） */
+      const glueGap = tk.t === "word" && !!prev && prev.v === "}" && GLUE_NEXT.has(tk.v);
+      if (tk.v === "}") { depth--; nl(); }
+      if (TIGHT_BEFORE.test(tk.v) && !ternaryColon) out = out.replace(/[ \t]+$/, "");
+
+      if (out && !/[\s(]$/.test(out) &&
+          (spaced || braceGap || parenGap || wordGap || glueGap || (prev && needSpace(prev, tk, next)))) out += " ";
+      out += tk.v;
+      if (spaced || after) out += " ";
+
+      if (ternary) ternStack[ternStack.length - 1]++;
+      else if (ternaryColon) ternStack[ternStack.length - 1]--;
+
+      if (tk.v === "(" || tk.v === "[") paren++;
+      if (tk.v === ")" || tk.v === "]") paren = Math.max(0, paren - 1);
+      if (tk.v === "{") { ternStack.push(0); depth++; nl(); }
+      else if (tk.v === "}") {
+        if (ternStack.length > 1) ternStack.pop();
+        if (next && !ASI_TAIL.has(next.v) && !(next.t === "word" && GLUE_NEXT.has(next.v))) nl();
+      } else if (tk.v === ";") {
+        if (!paren) nl();                        /* for(;;) 里的分号不能断行 */
+      }
+      prevOpt = optMark;
+      prev = tk;
+    }
+    return out.replace(/[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "") + "\n";
+  }
+
+  /* ============================================================
+     JSON
+     -- 直接交给 JSON.parse：手写正则解析 JSON 一定会漏 case。
+        解析失败时做一次「宽容重试」：去掉行注释与块注释、去掉尾随逗号
+        （JSONC / 配置文件里最常见的两种写法），并如实告诉用户动过手脚。
+     ============================================================ */
+  function stripJsonLoose(src) {
+    let out = "", i = 0, inStr = false;
+    const n = src.length;
+    while (i < n) {
+      const c = src[i];
+      if (inStr) {
+        if (c === "\\") { out += src.slice(i, i + 2); i += 2; continue; }
+        if (c === '"') inStr = false;
+        out += c; i++; continue;
+      }
+      if (c === '"') { inStr = true; out += c; i++; continue; }
+      if (c === "/" && src[i + 1] === "/") { while (i < n && src[i] !== "\n") i++; continue; }
+      if (c === "/" && src[i + 1] === "*") { const j = src.indexOf("*/", i + 2); i = j < 0 ? n : j + 2; continue; }
+      /* 尾随逗号：向前看（跳过空白与注释），下一个实义字符是 ] 或 } 才删。
+         ★ 必须在这里按「非字符串状态」判断 —— 旧实现是全文正则 `,(\s*[\]}])`，
+         会把字符串内容里的 `", ]"` 也改掉（实测 `"x, ]"` 变 `"x ]"`，数据被改）。 */
+      if (c === ",") {
+        let j = i + 1;
+        while (j < n) {
+          const d = src[j];
+          if (d === " " || d === "\t" || d === "\n" || d === "\r") { j++; continue; }
+          if (d === "/" && src[j + 1] === "/") { while (j < n && src[j] !== "\n") j++; continue; }
+          if (d === "/" && src[j + 1] === "*") { const k = src.indexOf("*/", j + 2); j = k < 0 ? n : k + 2; continue; }
+          break;
+        }
+        if (j < n && (src[j] === "]" || src[j] === "}")) { i++; continue; }   /* 删掉这个逗号 */
+      }
+      out += c; i++;
+    }
+    return out;
+  }
+
+  function jsonProcess(src, mode, unit) {
+    let v, loose = false;
+    try { v = JSON.parse(src); }
+    catch (e1) {
+      try { v = JSON.parse(stripJsonLoose(src)); loose = true; }
+      catch (e2) {
+        const msg = String(e1 && e1.message || e1).replace(/^JSON\.parse:\s*/, "");
+        throw new Error("JSON 解析失败：" + msg);
+      }
+    }
+    return {
+      text: mode === "min" ? JSON.stringify(v) : JSON.stringify(v, null, unit),
+      note: loose ? "输入不是严格 JSON，已按 JSONC 处理（去掉注释与尾随逗号）后重新序列化。" : ""
+    };
+  }
+
+  /* ============================================================
+     CSS / SCSS / LESS
+     -- 三种输出（压缩 / 多行缩进 / 每规则一行）走同一个花括号解析器。
+        不用正则硬替换的原因：正则既搞不定嵌套 @media 的层级，
+        也一定会把 url(data:image/png;base64,…) 里的分号当成声明分隔符。
+     ============================================================ */
+  const PH = "\u0000";
+
+  /* 保护字符串、注释、url(...)：换成占位符，最后原样还原。
+     keepCmt=false 时注释直接丢掉 —— 不留占位符，免得删完留下一串多余空格。 */
+  function protectCss(src, lineComment, keepCmt) {
+    const store = [];
+    let out = "", i = 0;
+    const n = src.length;
+    const push = (v, kind) => { store.push({ v: v, kind: kind }); out += PH + (store.length - 1) + PH; };
+    while (i < n) {
+      const c = src[i];
+      if (c === "/" && src[i + 1] === "*") {
+        let j = src.indexOf("*/", i + 2); j = j < 0 ? n : j + 2;
+        if (keepCmt) push(src.slice(i, j), "cmt");
+        i = j; continue;
+      }
+      /* SCSS / LESS 的 // 行注释。★ 前面紧跟冒号的一律不算注释 ——
+         http:// 与 @import 里的协议相对地址不能被吃掉。 */
+      if (lineComment && c === "/" && src[i + 1] === "/" && src[i - 1] !== ":") {
+        let j = i; while (j < n && src[j] !== "\n") j++;
+        if (keepCmt) push(src.slice(i, j), "cmt");
+        i = j; continue;
+      }
+      /* SCSS 插值 #{…}：里面可能有 { } : ; —— 整块保护，
+         否则 `#{$level * 4}` 会被花括号解析器拆成「声明 + 块」（实测拆坏过） */
+      if (lineComment && c === "#" && src[i + 1] === "{") {
+        let j = i + 2, depth = 1;
+        while (j < n && depth > 0) {
+          const ch = src[j];
+          if (ch === '"' || ch === "'") {
+            let k = j + 1;
+            while (k < n && src[k] !== ch) { if (src[k] === "\\") k++; k++; }
+            j = k + 1; continue;
+          }
+          if (ch === "{") depth++;
+          else if (ch === "}") depth--;
+          j++;
+        }
+        push(src.slice(i, j), "str"); i = j; continue;
+      }
+      if (c === '"' || c === "'") {
+        let j = i + 1;
+        while (j < n && src[j] !== c) { if (src[j] === "\\") j++; j++; }
+        j = Math.min(j + 1, n);
+        push(src.slice(i, j), "str"); i = j; continue;
+      }
+      /* url(...) 里可能有分号、逗号、括号、斜杠，必须整块保护 */
+      if ((c === "u" || c === "U") && /^url\(/i.test(src.slice(i, i + 4))) {
+        let j = i + 4, depth = 1;
+        while (j < n && depth > 0) {
+          const ch = src[j];
+          if (ch === '"' || ch === "'") {
+            let k = j + 1;
+            while (k < n && src[k] !== ch) { if (src[k] === "\\") k++; k++; }
+            j = k + 1; continue;
+          }
+          if (ch === "(") depth++;
+          else if (ch === ")") depth--;
+          j++;
+        }
+        push(src.slice(i, j), "url"); i = j; continue;
+      }
+      out += c; i++;
+    }
+    return { text: out, store: store };
+  }
+
+  const restoreCss = (s, store) => s.replace(new RegExp(PH + "(\\d+)" + PH, "g"),
+    (m, k) => store[+k].v);
+
+  /* 声明体归一：折叠空白、第一个冒号两侧不留空格、逗号与 > ~ 两侧不留空格。
+     ★ 刻意不动 + 与 - 两侧的空白 —— calc(100% - 2px + 1px) 少了空格就非法了。
+     pretty=true 时冒号后面补一个空格，输出更像手写的 CSS。 */
+  function normDecl(s, pretty) {
+    let t = s.replace(/\s+/g, " ");
+    t = t.replace(/\s*:\s*/, pretty ? ": " : ":");
+    t = t.replace(/\s*,\s*/g, pretty ? ", " : ",");
+    t = t.replace(/\s*([>~])\s*/g, "$1");
+    return t.trim();
+  }
+  /* 前奏（选择器 / @media 条件）归一。
+     ★ 只压缩「圆括号内」的冒号空白（@media (max-width: 640px)）——
+       选择器里的 `div :first-child` 是后代选择器，删掉空格就变成 `div:first-child`，语义不同。 */
+  function normPrelude(s, pretty) {
+    let t = s.replace(/\s+/g, " ").trim();
+    t = t.replace(/\(([^()]*)\)/g, (m, inner) =>
+      "(" + inner.replace(/\s*:\s*/g, pretty ? ": " : ":") + ")");
+    t = t.replace(/\s*,\s*/g, pretty ? ", " : ",");
+    t = t.replace(/\s*([>~+])\s*/g, pretty ? " $1 " : "$1");
+    return t;
+  }
+
+  const PH_ONE = new RegExp("^" + PH + "\\d+" + PH + "$");
+
+  /* 花括号解析：返回 {type:"decl"|"cmt"|"raw"|"block"} 的节点树 */
+  function parseCss(text, pretty) {
+    let i = 0;
+    const n = text.length;
+    const phRe = new RegExp("^" + PH + "(\\d+)" + PH);
+
+    function list() {
+      const items = [];
+      let buf = "";
+      const flush = () => {
+        const t = buf.replace(/[ \t\r\n]+/g, " ").trim();
+        buf = "";
+        if (!t) return;
+        if (PH_ONE.test(t)) items.push({ type: "cmt", text: t });
+        else items.push({ type: "decl", text: normDecl(t, pretty) });
+      };
+      while (i < n) {
+        const m = text.slice(i).match(phRe);
+        if (m) {
+          if (!buf.trim()) items.push({ type: "raw", text: m[0] });
+          else buf += m[0];
+          i += m[0].length;
+          continue;
+        }
+        const c = text[i];
+        if (c === "{") {
+          i++;
+          const children = list();
+          items.push({ type: "block", prelude: normPrelude(buf, pretty), children: children });
+          buf = "";
+          continue;
+        }
+        if (c === "}") { i++; flush(); return items; }
+        if (c === ";") { i++; flush(); continue; }
+        buf += c; i++;
+      }
+      flush();
+      return items;
+    }
+    return list();
+  }
+
+  /* ① 压缩：全部挤在一行 */
+  function renderCssMin(nodes, keepCmt, store) {
+    const part = list => list.map(nd => {
+      if (nd.type === "decl") return nd.text + ";";
+      if (nd.type === "raw" || nd.type === "cmt") return keepCmt ? nd.text : "";
+      const body = part(nd.children);
+      return (nd.prelude ? nd.prelude + "{" : "{") + body + "}";
+    }).join("");
+    let out = part(nodes);
+    out = out.replace(/;}/g, "}").replace(/\{;/g, "{");
+    return restoreCss(out, store).replace(/^\s+|\s+$/g, "");
+  }
+
+  /* ② 多行缩进：选择器一行，每条声明一行（常规写法） */
+  function renderCssMulti(nodes, unit, keepCmt, store) {
+    const out = [];
+    const walk = (list, depth) => {
+      const ind = unit.repeat(depth);
+      for (const nd of list) {
+        if (nd.type === "decl") { out.push(ind + nd.text + ";"); continue; }
+        if (nd.type === "raw" || nd.type === "cmt") { if (keepCmt) out.push(ind + nd.text); continue; }
+        out.push(ind + nd.prelude + " {");
+        const inner = unit.repeat(depth + 1);
+        for (const c of nd.children) {
+          if (c.type === "decl") out.push(inner + c.text + ";");
+          else if (c.type === "raw" || c.type === "cmt") { if (keepCmt) out.push(inner + c.text); }
+          else walk([c], depth + 1);
+        }
+        out.push(ind + "}");
+      }
+    };
+    walk(nodes, 0);
+    return restoreCss(out.join("\n"), store).replace(/^\s+|\s+$/g, "") + "\n";
+  }
+
+  /* ③ 每规则一行：一个选择器的全部声明挤在同一行，规则之间换行 */
+  function renderCssOneLine(nodes, unit, keepCmt, store) {
+    const out = [];
+    const walk = (list, depth) => {
+      const ind = unit.repeat(depth);
+      for (const nd of list) {
+        if (nd.type === "decl") { out.push(ind + nd.text + ";"); continue; }
+        if (nd.type === "raw" || nd.type === "cmt") { if (keepCmt) out.push(ind + nd.text); continue; }
+        const hasBlock = nd.children.some(c => c.type === "block");
+        if (!hasBlock) {
+          const body = nd.children
+            .map(c => (c.type === "decl" ? c.text + ";" : (keepCmt ? c.text : "")))
+            .filter(Boolean).join(" ");
+          out.push(ind + nd.prelude + (body ? " { " + body + " }" : " {}"));
+        } else {
+          out.push(ind + nd.prelude + " {");
+          walk(nd.children, depth + 1);
+          out.push(ind + "}");
+        }
+      }
+    };
+    walk(nodes, 0);
+    return restoreCss(out.join("\n"), store).replace(/^\s+|\s+$/g, "") + "\n";
+  }
+
+  let cssLayout = "multi";      /* multi | one */
+
+  function cssProcess(src, mode, keep, unit, lineComment) {
+    const pretty = mode !== "min";
+    const p = protectCss(src, lineComment, keep);
+    const nodes = parseCss(p.text, pretty);
+    if (!pretty) return { text: renderCssMin(nodes, keep, p.store) };
+    const text = cssLayout === "one"
+      ? renderCssOneLine(nodes, unit, keep, p.store)
+      : renderCssMulti(nodes, unit, keep, p.store);
+    return { text: text };
+  }
+
+  /* 供 HTML 里的内联 <style> 复用：按默认布局压缩 */
+  function minifyCSS(src, keepCmt) {
+    return cssProcess(src, "min", keepCmt, "  ", false).text;
+  }
+
+  /* ============================================================
+     HTML / XML
+     -- <pre> / <textarea> 内容必须原样保留（空白有语义）；
+        HTML 的 <script> / <style> 交给对应压缩器，XML 里一律原样保留
+        （SVG 内联脚本里的 // 不该被当成 CSS 注释）；
+        条件注释（<!--[if …]>）不能删。
+     ============================================================ */
+  /* 行内级 / 被替换元素的完整清单：这些标签两侧的空白有语义。
+     ★ canvas / iframe / video / audio / embed / svg 默认是 inline 级，
+     不在表里的话 `</canvas> <canvas>` 之间的空格会被删掉（视觉上两图贴住）。 */
+  const INLINE = new Set(("a,abbr,acronym,audio,b,bdi,bdo,big,br,button,canvas,cite,code,data,del,dfn,em,embed,i,iframe,img," +
+    "input,ins,kbd,label,map,mark,meter,nobr,object,output,picture,q,ruby,s,samp,select,small,span," +
+    "strike,strong,sub,sup,svg,time,tt,u,var,video,wbr").split(","));
+
+  function protectMarkup(src, store, keepCmt, rawInner) {
+    let out = "", i = 0;
+    const n = src.length;
+    const tagRe = /^<(script|style|pre|textarea)\b[^>]*>/i;
+    let inTag = false;                       /* 在标签内部时，引号里的属性值必须整块保护 ——
+                                                属性值里的空白有语义（value="a   b"），
+                                                折叠空白不能碰它；顺带挡住属性值里的 `>` `<` */
+    const push = v => { store.push({ v: v }); return PH + (store.length - 1) + PH; };
+    while (i < n) {
+      const m = src.slice(i).match(tagRe);
+      if (m) {
+        const name = m[1].toLowerCase();
+        const openTag = m[0];
+        const openEnd = i + openTag.length;
+        const ci = src.toLowerCase().indexOf("</" + name, openEnd);
+        const inner = ci < 0 ? src.slice(openEnd) : src.slice(openEnd, ci);
+        const closeEnd = ci < 0 ? n : Math.min(n, src.indexOf(">", ci) + 1 || n);
+        const closeStr = ci < 0 ? "" : src.slice(ci, closeEnd);
+        /* ★ pre / textarea / XML 里的一切 raw 标签：内容原样保留 */
+        let body = inner;
+        if (name === "script" && !rawInner) body = minifyJS(inner, keepCmt);
+        else if (name === "style" && !rawInner) body = minifyCSS(inner, keepCmt);
+        store.push({ v: openTag + body + closeStr });
+        out += PH + (store.length - 1) + PH;
+        i = closeEnd;                       /* ★ 继续扫后面的内容，不能把剩余全文当 tail 吞掉 */
+        inTag = false;
+        continue;
+      }
+      if (src.startsWith("<!--", i)) {
+        const j = src.indexOf("-->", i + 4);
+        const end = j < 0 ? n : j + 3;
+        const v = src.slice(i, end);
+        /* 条件注释（<!--[if …]>）是给旧 IE 的指令，不能删 */
+        if (/^<!--\[if/i.test(v)) out += v;
+        /* ★ 不要注释时直接丢掉，不留占位符 —— 否则删完会留下一串多余空白 */
+        else if (keepCmt) out += push(v);
+        i = end; continue;
+      }
+      const c = src[i];
+      if (c === "<") {
+        /* 只有 `<` 后面紧跟 字母 / `/` / `!` / `?` 才当作标签起点；
+           `5 < 3`、`a <b` 这类比较运算不进入「标签内」状态 */
+        if (/[A-Za-z\/!?]/.test(src[i + 1] || "")) inTag = true;
+        out += c; i++; continue;
+      }
+      if (c === ">") { inTag = false; out += c; i++; continue; }
+      if (inTag && (c === '"' || c === "'")) {
+        /* HTML 属性值不支持反斜杠转义，扫到下一个同名引号即结束 */
+        let j = i + 1;
+        while (j < n && src[j] !== c) j++;
+        j = Math.min(j + 1, n);
+        out += push(src.slice(i, j));
+        i = j; continue;
+      }
+      out += c; i++;
+    }
+    return out;
+  }
+
+  function minifyHTML(src, keepCmt) {
+    const store = [];
+    let s = protectMarkup(src, store, keepCmt, false);
+    s = s.replace(/[ \t\r\n\f]+/g, " ");
+    /* 标签之间的空白：两侧都是块级元素才删，否则留一个空格（inline 之间空格有语义）。
+       ★ after 必须从「整个匹配的末尾」切起 —— 用 off+1 会切到 `<` 上，
+         导致下一个标签名永远匹配不到，于是所有标签之间都留着空格。 */
+    s = s.replace(/\s+(<)/g, (m, lt, off) => {
+      const before = s.slice(0, off);
+      const after = s.slice(off + m.length);
+      /* ★ 关闭标签的匹配必须包含结尾的 `>`：旧写法 `<\/([a-z0-9:-]+)\s*$` 永远
+         匹配不上（`>` 卡在那里），于是「</div> <div> 之间的空白」从来没删过，
+         整段删除逻辑只在 before 以开标签结尾时才生效。2026-10-15 修。 */
+      const bm = before.match(/<\/([a-z0-9:-]+)\s*>\s*$/i) || before.match(/<([a-z0-9:-]+)[^>]*>\s*$/i);
+      const am = after.match(/^\/?([a-z0-9:-]+)/i);
+      const bName = bm ? bm[1].toLowerCase() : "";
+      const aName = am ? am[1].toLowerCase() : "";
+      if (INLINE.has(bName) || INLINE.has(aName)) return " <";
+      /* 占位符 = <pre>/<script>/<style> 这类原样保留的块，按块级处理 */
+      const bPH = before.charAt(before.length - 1) === PH;
+      const aPH = after.charAt(0) === PH;
+      if ((!bName && !bPH) || (!aName && !aPH)) return " <";
+      return "<";
+    });
+    s = s.replace(/^\s+|\s+$/g, "");
+    return restore(s, store, false);
+  }
+
+  /* void 元素（没有闭合标签）：美化时绝不能让它们加深缩进层级，
+     否则 `<hr>` 之后整个文档的缩进全部漂移（实测 `<div><hr><p>` → p 缩进多一层）。 */
+  const VOID = new Set("area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr".split(","));
+
+  function prettyHTML(src, unit) {
+    const store = [];
+    let s = protectMarkup(src, store, true, false);
+    /* ★ 只用「本来就有空白」的位置断行（\s+ 而不是 \s*）：
+       用 \s* 会给 <b>a</b><b>b</b> 这种紧贴的 inline 标签插进换行，
+       等于凭空多出一个空格，渲染结果就变了。 */
+    s = s.replace(/>\s+</g, ">\n<");
+    s = s.replace(/[ \t]+/g, " ");
+    let depth = 0, out = "";
+    for (const raw of s.split("\n")) {
+      const t = raw.trim();
+      if (!t) continue;
+      const cm = t.match(/^<\/([a-z0-9:-]+)/i);
+      const isClose = !!cm;
+      const closeInline = isClose && INLINE.has(cm[1].toLowerCase());
+      if (isClose && !closeInline) depth = Math.max(0, depth - 1);
+      out += unit.repeat(depth) + t + "\n";
+      const om = t.match(/^<([a-z0-9:-]+)/i);
+      const name = om ? om[1].toLowerCase() : "";
+      const selfClose = /\/>$/.test(t);
+      const closesSameLine = name ? new RegExp("</" + name + "\\s*>$", "i").test(t) : false;
+      const isSpecial = /^<[!?%]/.test(t);
+      if (!isClose && om && !selfClose && !closesSameLine && !INLINE.has(name) && !VOID.has(name) && !isSpecial) depth++;
+    }
+    return restore(out.trim(), store) + "\n";
+  }
+
+  /* XML：只做「去注释 + 去行首缩进 + 去空行 + 折叠跨行标签间空白」。
+     ★ 不做 HTML 那种「标签之间空白一律删掉」—— XML 的混排内容
+       （<p>文字<b>x</b></p>）里空白有语义，删了就改内容。
+       跨行空白（>\n  <）几乎必然是排版，删掉是安全的，也是通行做法。 */
+  function minifyXML(src, keepCmt) {
+    const store = [];
+    let s = protectMarkup(src, store, keepCmt, true);
+    s = s.replace(/>\s*\n\s*</g, "><");
+    s = s.replace(/^[ \t]+/gm, "").replace(/[ \t]+$/gm, "");
+    s = s.replace(/\n{2,}/g, "\n");
+    s = s.replace(/^\s+|\s+$/g, "");
+    /* 注释被整块删掉后可能空出一行，还原之后再过一遍 */
+    return restore(s, store, false)
+      .replace(/>\s*\n\s*</g, "><").replace(/\n{2,}/g, "\n").replace(/^\s+|\s+$/g, "");
+  }
+
+  function prettyXML(src, unit) {
+    const store = [];
+    let s = protectMarkup(src, store, true, true);
+    /* ★ 这里用 \s* 而不是 \s+：单行 XML（<a><b/></a>）本来一个空白都没有，
+       用 \s+ 的话等于完全不排版，「美化」就没意义了。 */
+    s = s.replace(/>\s*</g, ">\n<");
+    s = s.replace(/[ \t]+/g, " ");
+    let depth = 0, out = "";
+    for (const raw of s.split("\n")) {
+      const t = raw.trim();
+      if (!t) continue;
+      const cm = t.match(/^<\/([A-Za-z_][\w:.-]*)/);
+      if (cm) depth = Math.max(0, depth - 1);
+      out += unit.repeat(depth) + t + "\n";
+      const om = t.match(/^<([A-Za-z_][\w:.-]*)/);
+      const selfClose = /\/>$/.test(t);
+      const closesSameLine = om ? new RegExp("</" + om[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*>$").test(t) : false;
+      const isSpecial = /^<[!?%]/.test(t);
+      if (om && !selfClose && !closesSameLine && !isSpecial && !cm) depth++;
+    }
+    return restore(out.trim(), store) + "\n";
+  }
+
+  /* keepCmt 的取舍已经在上面的 protect* 里做完了，这里只管还原 */
+  const restore = (s, store) => s.replace(new RegExp(PH + "(\\d+)" + PH, "g"),
+    (m, k) => store[+k].v);
+
+  /* ============================================================
+     SQL
+     -- 先扫成 token（字符串 / 引号标识符 / 美元引用 / 嵌套块注释），再重组。
+        压缩 = 去注释 + 空白折叠成单行（SQL 无 ASI，换行无语法意义；
+        字符串与美元引用是整块 token，折叠不会碰它们的内容）。
+        美化 = 子句级断行（SELECT / FROM / WHERE … 各占一行，AND / OR / ON 缩进一级）
+        + 结构关键字统一大写（行业惯例；引号标识符与字符串是 str token，一字不动）。
+     ============================================================ */
+  const SQL_CLAUSE = new Set(["select", "from", "where", "group", "order", "having", "limit",
+    "offset", "union", "except", "intersect", "values", "set", "insert", "update", "delete",
+    "create", "alter", "drop", "truncate", "explain", "with", "returning"]);
+  const SQL_JOIN = new Set(["join", "left", "right", "full", "inner", "cross", "outer"]);
+  const SQL_BOOL = new Set(["and", "or", "on"]);
+  /* 这些词后面紧跟 ( 时留一个空格（`in (1,2)`、`values (…)`），其余按函数调用贴紧（count(*)） */
+  const SQL_PAREN_SPACE = new Set(["in", "exists", "not", "and", "or", "values", "on", "when",
+    "then", "else", "like", "between", "returning", "using", "from", "join", "as"]);
+  /* ★ 美化折行：选择列表平铺超过 SQL_WRAP 列宽时，SELECT 后与每个顶层逗号后断行。
+     80 是各 SQL 格式化器的常用默认宽度；只影响美化，压缩不动。 */
+  const SQL_WRAP = 80;
+  /* 选择列表的结束词：顶层遇到它们就停（后面属于下一个子句/结构） */
+  const SQL_LIST_END = new Set(["from", "where", "group", "order", "having", "limit", "offset",
+    "union", "except", "intersect", "returning", "into", "window", "fetch", "for"]);
+  /* ★ 美化时统一大写的「结构关键字」——压缩不动大小写，只有美化动。
+     不收函数名（count/max 保持原样）；引号里的标识符/字符串是 str token，天然不受影响。
+     未加引号的标识符大小写在不敏感数据库里等价（PG 会折叠到小写），把 `BY` 这类
+     极少数与列重名的关键字大写，语义不变。 */
+  const SQL_UP = new Set(["select", "from", "where", "group", "order", "by", "having", "limit",
+    "offset", "union", "except", "intersect", "values", "set", "insert", "into", "update",
+    "delete", "create", "alter", "drop", "truncate", "explain", "with", "returning",
+    "join", "left", "right", "full", "inner", "cross", "outer", "on", "and", "or", "not",
+    "as", "asc", "desc", "distinct", "all", "case", "when", "then", "else", "end", "in",
+    "is", "null", "like", "ilike", "between", "exists", "over", "partition", "using", "natural"]);
+
+  const SQL_DOLLAR = /\$(?:[A-Za-z_]\w*)?\$/y;
+  const SQL_NUM = /(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)/y;
+
+  function scanSQL(src) {
+    const T = [];
+    const n = src.length;
+    let i = 0;
+    const push = (t, v) => T.push({ t: t, v: v });
+    const PUNCT = ["<=", ">=", "<>", "!=", "||", "::", "->", ":=", "=>"];
+    while (i < n) {
+      const c = src[i];
+      if (/\s/.test(c)) {
+        let j = i; while (j < n && /\s/.test(src[j])) j++;
+        push("ws", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "-" && src[i + 1] === "-") {
+        let j = i; while (j < n && src[j] !== "\n") j++;
+        push("cmt", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "/" && src[i + 1] === "*") {
+        let d = 1, j = i + 2;                       /* 标准 SQL / Postgres 的块注释可以嵌套 */
+        while (j < n && d > 0) {
+          if (src[j] === "/" && src[j + 1] === "*") { d++; j += 2; continue; }
+          if (src[j] === "*" && src[j + 1] === "/") { d--; j += 2; continue; }
+          j++;
+        }
+        push("cmt", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "'" || c === '"' || c === "`") {
+        let j = i + 1;
+        while (j < n) {
+          const d = src[j];
+          if (d === "\\") { j += 2; continue; }                 /* MySQL 反斜杠转义 */
+          if (d === c) {
+            if (src[j + 1] === c) { j += 2; continue; }         /* '' "" `` 双写转义 */
+            j++; break;
+          }
+          j++;
+        }
+        push("str", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "$") {
+        SQL_DOLLAR.lastIndex = i;
+        const m = SQL_DOLLAR.exec(src);                          /* Postgres 美元引用 $tag$…$tag$ */
+        if (m) {
+          const k = src.indexOf(m[0], i + m[0].length);
+          const end = k < 0 ? n : k + m[0].length;
+          push("str", src.slice(i, end)); i = end; continue;
+        }
+      }
+      if (/[0-9]/.test(c) || (c === "." && /[0-9]/.test(src[i + 1] || ""))) {
+        SQL_NUM.lastIndex = i;
+        const m = SQL_NUM.exec(src);
+        push("num", m[0]); i += m[0].length; continue;
+      }
+      if (/[A-Za-z_]/.test(c)) {
+        let j = i; while (j < n && /[\w$]/.test(src[j])) j++;
+        push("word", src.slice(i, j)); i = j; continue;
+      }
+      let p = null;
+      for (const x of PUNCT) if (src.startsWith(x, i)) { p = x; break; }
+      p = p || c;
+      push("punct", p); i += p.length;
+    }
+    return T;
+  }
+
+  /* 两个 token 之间的间距（压缩 / 美化共用；默认单空格，标点按规则收紧） */
+  function sqlGap(prev, cur, pretty) {
+    if (!prev) return "";
+    const a = prev.v, b = cur.v;
+    const ae = a[a.length - 1];
+    if (a === "(" || a === "." || a === "::" || a === "->") return "";
+    if (b === ")" || b === ";" || b === "," || b === "." || b === "::" || b === "->") return "";
+    if (a === "," || a === ";") return pretty ? " " : "";
+    if (b === "(") {
+      if (prev.t === "word" && SQL_PAREN_SPACE.has(a.toLowerCase())) return " ";
+      if (prev.t === "word" || ae === ")" || ae === "]") return "";
+      return " ";
+    }
+    return " ";
+  }
+
+  /* 找出「选择列表过长」的断行点：返回需要在其后插入换行的 token 下标集合。
+     从 SELECT 到下一个顶层子句词（或 ) ;）之间，顶层逗号 + SELECT（有 DISTINCT/ALL
+     时改在其后）参与折行；括号内的逗号（coalesce(a, b, c)）不算顶层，不会被拆开。 */
+  function sqlWrapBreaks(T) {
+    const marks = new Set();
+    for (let i = 0; i < T.length; i++) {
+      if (T[i].t !== "word" || T[i].v.toLowerCase() !== "select") continue;
+      let d = 0, len = T[i].v.length, prev = T[i];
+      const commas = [];
+      for (let j = i + 1; j < T.length; j++) {
+        const u = T[j];
+        const w = u.t === "word" ? u.v.toLowerCase() : "";
+        if (u.v === "(" || u.v === "[") d++;
+        else if (u.v === ")" || u.v === "]") { if (d === 0) break; d--; }
+        else if (d === 0 && (u.v === ";" || SQL_LIST_END.has(w))) break;
+        if (d === 0 && u.v === ",") commas.push(j);
+        len += sqlGap(prev, u, true).length + u.v.length;
+        prev = u;
+      }
+      if (!commas.length || len <= SQL_WRAP) continue;
+      let s = i;
+      const nxt = T[i + 1];
+      if (nxt && nxt.t === "word" && /^(distinct|all)$/i.test(nxt.v)) s = i + 1;
+      marks.add(s);
+      for (const c of commas) marks.add(c);
+    }
+    return marks;
+  }
+
+  function sqlProcess(src, mode, keep, unit) {
+    const T = scanSQL(src).filter(t => t.t !== "ws" && (keep || t.t !== "cmt"));
+    if (mode === "min") {
+      let out = "", prev = null;
+      for (const tk of T) {
+        if (tk.t === "cmt") {
+          if (out && !/[\s(]$/.test(out)) out += " ";
+          out += tk.v;
+          if (tk.v.slice(0, 2) !== "/*") { out += "\n"; prev = null; }   /* 行注释后必须断行 */
+          continue;
+        }
+        if (out && !out.endsWith("\n")) out += sqlGap(prev, tk, false);
+        out += tk.v; prev = tk;
+      }
+      return { text: out.trim() };
+    }
+    /* ---- 美化：子句级断行 + 一级缩进 + 长列表折行 ---- */
+    const wrapMarks = sqlWrapBreaks(T);        /* SELECT 列表过长的断行点 */
+    let out = "", prev = null, paren = 0, lineStart = true, between = false, wrapIndent = false;
+    for (let k = 0; k < T.length; k++) {
+      const tk = T[k], next = T[k + 1];
+      if (tk.t === "cmt") {
+        if (tk.v.slice(0, 2) === "/*") {
+          if (!lineStart && out && !/\s$/.test(out)) out += " ";
+          out += tk.v; continue;                            /* 块注释随行 */
+        }
+        if (!lineStart && out && !/\s$/.test(out)) out += " ";
+        out += tk.v + "\n"; lineStart = true; prev = null; continue;
+      }
+      const w = tk.t === "word" ? tk.v.toLowerCase() : "";
+      if (w === "between") between = true;
+      let brk = 0;
+      if (!lineStart) {
+        const isJoin = SQL_JOIN.has(w) && !(prev && prev.t === "word" && SQL_JOIN.has(prev.v.toLowerCase()));
+        const fnGuard = (w === "left" || w === "right" || w === "cross") && next && next.v === "(";
+        if ((SQL_CLAUSE.has(w) || isJoin) && !fnGuard) brk = 1;
+        else if (SQL_BOOL.has(w) && !(w === "and" && between)) brk = 2;
+      }
+      if (w === "and" && between) between = false;           /* `between x and y` 不断行 */
+      if (brk) { out += "\n"; lineStart = true; }
+      if (lineStart) {
+        /* 折行缩进只给「列/表达式」；折行点后若恰好是子句词（异常输入），按子句处理 */
+        if (wrapIndent && tk.t === "word" && SQL_CLAUSE.has(w)) wrapIndent = false;
+        out += unit.repeat(Math.max(0, paren + (brk === 2 || wrapIndent ? 1 : 0)));
+        lineStart = false; wrapIndent = false; prev = null;
+      } else {
+        out += sqlGap(prev, tk, true);
+      }
+      out += (tk.t === "word" && SQL_UP.has(w)) ? tk.v.toUpperCase() : tk.v;
+      prev = tk;
+      if (tk.v === "(" || tk.v === "[") paren++;
+      else if (tk.v === ")" || tk.v === "]") paren = Math.max(0, paren - 1);
+      if (tk.v === ";") { out += "\n"; lineStart = true; prev = null; }
+      else if (wrapMarks.has(k) && k + 1 < T.length) { out += "\n"; lineStart = true; wrapIndent = true; }
+    }
+    return { text: out.trim() + "\n" };
+  }
+
+  /* ============================================================
+     C 语言族（C / C++ / C# / Go / Java / Rust）
+     -- 与 JS 同样的「先扫描 token、再重组」。语言差异全部收进 conf：
+        Go 的反引号原始串、C# 的 @"…" 逐字串、Rust 的 r#"…"# 原始串、
+        C/C++/C# 的行首 # 预处理行（连同 \ 续行整块保护）。
+        压缩 = 删注释 + 去缩进 + 折叠行内空白 + 标点收紧，保留换行；
+        美化 = 按花括号重排缩进与断行。两者都只动空白，token 文本一字不改。
+        ★ Rust 的 `'a` 生命周期不在严格字符字面量之列，必须按标点处理，
+          否则会被误扫描或误拆开（`' a` 不是合法生命周期）。
+     ============================================================ */
+  const C_CONF = {
+    c:    { hash: true, cpp: true },                     /* C / C++：R"()" 原始串 + 行首 # */
+    cs:   { hash: true, verbatim: true, tblock: true, autoProp: true },  /* C#：逐字串 / 文本块 / 自动属性 */
+    go:   { backtick: true, goStyle: true },             /* Go：反引号原始串 + 切片/复合字面量贴紧 */
+    java: { tblock: true },                              /* Java：""" 文本块（15+） */
+    rust: { rawRust: true, arrowSpace: true }            /* Rust：r#"…"# + `->` 两侧留空格 */
+  };
+  /* 这些关键字后面跟 ( 时留一个空格（if (x)），普通标识符是调用，贴紧（f(x)） */
+  const C_KW_PAREN = new Set(["if", "for", "while", "switch", "catch", "return", "sizeof", "new",
+    "do", "try", "using", "lock", "foreach", "fixed", "checked", "unchecked", "synchronized",
+    "assert", "throw", "import"]);
+  const C_GLUE = new Set(["else", "catch", "finally", "while"]);
+  const C_PRIM = new Set(["int", "char", "short", "long", "float", "double", "bool", "void",
+    "unsigned", "signed", "byte", "size_t", "usize", "isize", "str", "string", "object", "var",
+    "auto", "decimal", "i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128",
+    "f32", "f64", "boolean"]);
+  const C_PUNCT = ["<<=", ">>=", "...", "->", "::", ":=", "<<", ">>", "<=", ">=", "==", "!=", "&&",
+    "||", "++", "--", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "=>", "??=", "??", "?."];
+  /* 字符串字面量的「编码前缀」：这些字母 + 引号必须贴紧（u8"…" / L"…" / b"…"），
+     拆开会把前缀变成标识符；其余 word 与字符串之间照常留空格（import "fmt" / return "s"） */
+  const C_STR_PREFIX = new Set(["L", "u", "U", "u8", "R", "LR", "uR", "UR", "u8R",
+    "b", "c", "r", "br", "rb", "f", "F", "B"]);
+
+  const C_RAW_R = /(?:br|rb|r)(#*)"/y;
+  const C_RAW_CPP = /(?:u8|u|U|L)?R"([^ ()\\\t\r\n]{0,16})\(/y;
+  const C_VERB = /(?:\$?@|\@\$?)"/y;
+  const C_CHAR = /'(?:\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{1,2}|\\.|[^'\\\n]){1,3}'/y;
+  const C_CHAR_RUST = /'(?:\\u\{[0-9a-fA-F]{1,6}\}|\\x[0-9a-fA-F]{2}|\\[nrt0'"\\]|[^'\\\n])'/y;
+  const C_NUM = /(?:0[xX][0-9a-fA-F_]+(?:\.[0-9a-fA-F_]*)?(?:[pP][+-]?\d+)?|0[bB][01_]+|\d[\d_']*(?:\.[\d_']*)?(?:[eE][+-]?\d+)?[fFlLuU]*)/y;
+
+  function scanC(src, conf) {
+    conf = conf || {};
+    const T = [];
+    const n = src.length;
+    let i = 0, wsOnly = true;
+    const push = (t, v) => T.push({ t: t, v: v });
+
+    /* 字面量扫描：返回闭合之后的下标；不是字面量返回 -1。
+       ★ 全程 sticky 正则（lastIndex 定位），不用 src.slice(i) —— 后者在大文件上是 O(n²)。 */
+    const scanLit = at => {
+      const c = src[at];
+      if (conf.backtick && c === "`") {
+        const j = src.indexOf("`", at + 1);
+        return j < 0 ? n : j + 1;
+      }
+      if (conf.rawRust) {
+        C_RAW_R.lastIndex = at;
+        const m = C_RAW_R.exec(src);
+        if (m) {
+          const close = '"' + m[1];
+          const j = src.indexOf(close, at + m[0].length);
+          return j < 0 ? n : j + close.length;
+        }
+      }
+      if (conf.cpp) {
+        C_RAW_CPP.lastIndex = at;
+        const m = C_RAW_CPP.exec(src);
+        if (m) {
+          const close = ")" + m[1] + '"';
+          const j = src.indexOf(close, at + m[0].length);
+          return j < 0 ? n : j + close.length;
+        }
+      }
+      if (conf.verbatim) {
+        C_VERB.lastIndex = at;
+        const m = C_VERB.exec(src);
+        if (m) {
+          let j = at + m[0].length;
+          while (j < n) {
+            if (src[j] === '"') {
+              if (src[j + 1] === '"') { j += 2; continue; }     /* "" = 一个引号 */
+              return j + 1;
+            }
+            j++;
+          }
+          return n;
+        }
+      }
+      /* 三引号文本块（Java 15+ / C# 11+）：整体吞，避免被拆成 "" "…" ""。
+         只认「开分隔符后到行尾全是空白」的合法开头（Java 规范），
+         找不到闭合就退回普通引号逻辑 —— 不扩大对错误源码的破坏面。 */
+      if (conf.tblock && src.startsWith('"""', at)) {
+        const e = src.indexOf("\n", at + 3);
+        if (e > 0 && /^[ \t\r]*$/.test(src.slice(at + 3, e))) {   /* 有行终止符才可能是文本块 */
+          let j = at + 3;
+          while (j < n) {
+            if (src[j] === "\\") { j += 2; continue; }
+            if (src[j] === '"' && src[j + 1] === '"' && src[j + 2] === '"') return j + 3;
+            j++;
+          }
+          return -1;                                          /* 未闭合：退回普通引号逻辑 */
+        }
+      }
+      if (c === '"') {
+        let j = at + 1, ok = false;
+        while (j < n) {
+          const d = src[j];
+          if (d === "\\") { j += 2; continue; }
+          if (d === '"') { ok = true; j++; break; }
+          if (d === "\n") break;                                /* 换行 = 未闭合：当普通标点兜底 */
+          j++;
+        }
+        return ok ? j : -1;
+      }
+      if (c === "'") {
+        C_CHAR.lastIndex = at;
+        const m = (conf.rawRust ? C_CHAR_RUST : C_CHAR).exec(src);
+        return m ? at + m[0].length : -1;
+      }
+      return -1;
+    };
+
+    while (i < n) {
+      const c = src[i];
+
+      if (/\s/.test(c)) {
+        let j = i; while (j < n && /\s/.test(src[j])) j++;
+        const seg = src.slice(i, j);
+        if (seg.indexOf("\n") >= 0) wsOnly = true;
+        push("ws", seg); i = j; continue;
+      }
+      /* 行首 # 预处理行（C / C++ / C#）：连同 \ 续行整块吞成一个 token */
+      if (conf.hash && c === "#" && wsOnly) {
+        let j = i;
+        for (;;) {
+          let e = j;
+          while (e < n && src[e] !== "\n") e++;
+          let last = e - 1;
+          while (last >= j && (src[last] === " " || src[last] === "\t" || src[last] === "\r")) last--;
+          if (last >= j && src[last] === "\\" && e < n) { j = e + 1; continue; }
+          j = e; break;
+        }
+        push("hash", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "/" && src[i + 1] === "/") {
+        let j = i; while (j < n && src[j] !== "\n") j++;
+        push("cmt", src.slice(i, j)); i = j; wsOnly = false; continue;
+      }
+      if (c === "/" && src[i + 1] === "*") {
+        let j = src.indexOf("*/", i + 2); j = j < 0 ? n : j + 2;
+        push("cmt", src.slice(i, j)); i = j; wsOnly = false; continue;
+      }
+      if (c === '"' || c === "'" || c === "`" || c === "@" || c === "$" ||
+          (conf.rawRust && (c === "r" || c === "b")) || (conf.cpp && c === "R")) {
+        const lit = scanLit(i);
+        if (lit >= 0) {
+          push(c === "'" ? "char" : "str", src.slice(i, lit));
+          i = lit; wsOnly = false; continue;
+        }
+      }
+      if (/[0-9]/.test(c) || (c === "." && /[0-9]/.test(src[i + 1] || ""))) {
+        C_NUM.lastIndex = i;
+        const m = C_NUM.exec(src);
+        if (m) { push("num", m[0]); i += m[0].length; wsOnly = false; continue; }
+      }
+      if (/[A-Za-z_$]/.test(c)) {
+        let j = i; while (j < n && /[\w$]/.test(src[j])) j++;
+        push("word", src.slice(i, j)); i = j; wsOnly = false; continue;
+      }
+      let p = null;
+      for (const x of C_PUNCT) if (src.startsWith(x, i)) { p = x; break; }
+      p = p || c;
+      push("punct", p); i += p.length; wsOnly = false;
+    }
+    return T;
+  }
+
+  /* token 间距（美化用；默认单空格，标点与常见习惯按规则收紧）。
+     conf 只影响语言特例：Go 的切片 / 复合字面量、Rust 的返回箭头（C++ 的 p->x 必须贴紧）。 */
+  function cGap(prev, tk, next, prev2, conf) {
+    if (!prev) return "";
+    conf = conf || {};
+    const av = prev.v, bv = tk.v;
+    const ae = av[av.length - 1], bs = bv[0];
+    /* ① 绝不粘连：粘起来会变成别的 token / 注释 / 原始串前缀 */
+    if ((ae === "+" && bs === "+") || (ae === "-" && bs === "-")) return " ";
+    if ((ae === "&" && bs === "&") || (ae === "|" && bs === "|")) return " ";
+    if ((ae === "<" && bs === "<") || (ae === ">" && bs === ">")) return " ";
+    if (ae === "/" && (bs === "/" || bs === "*")) return " ";
+    if (ae === "*" && bs === "/") return " ";
+    /* Go 的 for 头以 i++ { 收尾：`++` 后面必须是空格，不能按 C 的 x++ 贴紧 */
+    if (bv === "{" && conf.goStyle && (av === "++" || av === "--")) return " ";
+    /* ② 左侧贴紧（宏 ! 也不例外）
+       ★ Rust 的 `->` 是返回类型箭头，两侧都要空格；C/C++ 的 `p->x` 必须贴紧。 */
+    if (av === "(" || av === "[" || av === "." || av === "::" ||
+        av === "#" || av === "@" || av === "$" || av === "'" || av === "\\" ||
+        av === "!" || av === "~" || av === "++" || av === "--" ||
+        (av === "->" && !conf.arrowSpace)) return "";
+    /* ③ 右侧贴紧 */
+    if (bv === ")" || bv === "]" || bv === ";" || bv === "," ||
+        bv === "." || bv === "::" || bv === ":" ||
+        bv === "++" || bv === "--" ||
+        (bv === "->" && !conf.arrowSpace)) return "";
+    /* ③b Rust 生命周期：`&'a` / `<'a` 贴紧；`, 'b` 的逗号后照常留空格 */
+    if (bv === "'" && tk.t === "punct") {
+      return (av === "&" || av === "<" || av === "(" || av === "[") ? "" : " ";
+    }
+    /* ③c 一元 * / &：`char *s`、`*s`、`&mut`、`&self` 贴紧后面的标识符；
+           二元乘 / 与（`a * b`）前面是普通标识符或 ) ]，照常留空格。
+           Go 的指针类型 `*Order` 按「大写开头 = 类型名」判（导出类型惯例）。 */
+    if ((av === "*" || av === "&") && tk.t === "word") {
+      const unary = !prev2 ||
+        (prev2.t === "punct" && prev2.v !== ")" && prev2.v !== "]") ||
+        (prev2.t === "word" && C_PRIM.has(prev2.v)) ||
+        (av === "*" && conf.goStyle && /^[A-Z]/.test(tk.v));
+      if (unary) return "";
+    }
+    /* ③d Rust 宏：`format!(` / `println!(` 整体是一个标识符，`!` 两侧都贴紧 */
+    if (bv === "!" && prev.t === "word" && next && next.v === "(") return "";
+    /* ④ 泛型：< 判定为泛型后在 token 上打 _gen，闭合侧（> / >> / ( / ) ）都跟着贴紧，
+          这样 List<String> / HashMap<>() / Vec<&'a T> / Result<(), E> 一套规则全覆盖，
+          比较运算不受影响 */
+    if (bv === "<") {
+      if (next && ((next.t === "word" && (/^[A-Z]/.test(next.v) || C_PRIM.has(next.v))) ||
+                   next.v === "?" || next.v === "'" || next.v === "&" ||
+                   next.v === "(" || next.v === ">" || next.v === ">>")) {
+        tk._gen = true;
+        return "";
+      }
+      return " ";
+    }
+    if (bv === ">" || bv === ">>") {
+      if (prev._gen ||
+          (prev.t === "word" && (/^[A-Z]/.test(av) || C_PRIM.has(av))) ||
+          av === ">" || av === ">>" || av === "]" ||
+          (prev2 && prev2.v === "'")) {
+        tk._gen = true;
+        return "";
+      }
+      return " ";
+    }
+    if (av === "<" && prev._gen) return "";
+    /* ⑤ ( 前：关键字留空格，调用贴紧；泛型闭括号后贴紧（<>()、<T>()）；
+          Go 的 `func (`（方法接收者）要空格，`func()`（匿名函数）贴紧。 */
+    if (bv === "(") {
+      if (prev._gen) { tk._gen = true; return ""; }     /* 泛型里的 ( 带标记，供 ) / > 判断 */
+      if (av === "!" && prev2 && prev2.t === "word") return "";
+      if (av === "func" && conf.goStyle) return (next && next.v === ")") ? "" : " ";
+      /* 关键字大小写敏感：`errors.New(` 的 New 是标识符，不能按 C# 的 new 处理（实测多过空格） */
+      if (prev.t === "word") return C_KW_PAREN.has(av) ? " " : "";
+      if (ae === ")" || ae === "]") return "";
+      return " ";
+    }
+    if (bv === "[") {
+      if (prev.t === "word" || ae === ")" || ae === "]" || ae === ">" || ae === "?") return "";
+      return " ";
+    }
+    /* ⑤b 泛型括号闭合：把 _gen 传下去，`Result<()>` 的 > 才认得出来 */
+    if (bv === ")" && prev._gen) tk._gen = true;
+    /* ⑤c Go 切片 / 复合字面量：`[]Order`、`map[string]int{`、`Order{…}` 贴紧；
+           `if x {` / `for … {` 的块花括号前是表达式，仍然留空格 */
+    if (conf.goStyle) {
+      if (av === "]" && tk.t === "word") return "";
+      if (bv === "{" && prev.t === "word" && !(prev2 && prev2.v === ".") &&
+          !/^(struct|interface|class|enum|union)$/i.test(av) &&
+          (/^[A-Z]/.test(av) || C_PRIM.has(av))) return "";
+    }
+    /* ⑥ 字符串 / 字符前面的「编码前缀字母」不许被拆开（u8"…" L"…" b"…"）；
+          其余 word 与字符串之间留空格（import "fmt" / return "s"，可读且 token 等价） */
+    if (prev.t === "word" && (tk.t === "str" || tk.t === "char")) {
+      return C_STR_PREFIX.has(av) ? "" : " ";
+    }
+    /* ⑦ 一元 +/- 紧贴数字（= -1 / (-1)），二元照常留空格（a - 1） */
+    if ((av === "-" || av === "+") && tk.t === "num") {
+      if (!prev2 || !(prev2.t === "word" || prev2.t === "num" || /[)\]]$/.test(prev2.v))) return "";
+    }
+    return " ";
+  }
+
+  /* 预处理行清理：保留行内空白与续行反斜杠，只处理注释（字符串按语言词法保护） */
+  function hashClean(v, keep, conf) {
+    const T = scanC(v, Object.assign({}, conf, { hash: false }));
+    let out = "";
+    for (const tk of T) {
+      if (tk.t === "cmt") { out += keep ? tk.v : " "; continue; }
+      out += tk.v;
+    }
+    /* 注释删除后可能留下行尾空白；字符串里的空白不会出现在「行尾」（续行以反斜杠结尾） */
+    return out.replace(/[ \t]+$/gm, "").replace(/\n+$/, "");
+  }
+
+  /* 压缩：保留行结构（预处理行 / 宏续行 / Rust 属性都不会被拼坏），
+     只做「去缩进 + 折叠行内空白 + 标点收紧」 */
+  function cMinify(T, keep, conf) {
+    let out = "", prev = null, prev2 = null, sp = false, nl = false;
+    for (const tk of T) {
+      if (tk.t === "ws") {
+        if (tk.v.indexOf("\n") >= 0) nl = true; else sp = true;
+        continue;
+      }
+      if (tk.t === "cmt") {
+        if (!keep) { sp = true; continue; }              /* 注释 ≈ 一个空格，防两侧词粘连 */
+        if (nl) { if (out) out += "\n"; nl = false; sp = false; }
+        else if (out && sp) out += " ";
+        out += tk.v; prev2 = prev; prev = tk;
+        if (tk.v.slice(0, 2) === "//") nl = true;        /* 行注释后必须断行 */
+        sp = false;
+        continue;
+      }
+      if (tk.t === "hash") {
+        if (out && !out.endsWith("\n")) out += "\n";
+        out += hashClean(tk.v, keep, conf) + "\n";
+        prev = null; prev2 = null; sp = false; nl = false;
+        continue;
+      }
+      if (nl) { if (out) out += "\n"; nl = false; sp = false; }
+      else if (out && sp) {
+        const g = cGap(prev, tk, null, prev2, conf);
+        if (g) out += g;
+      }
+      out += tk.v; prev2 = prev; prev = tk; sp = false;
+    }
+    return out.trim();
+  }
+
+  /* C# 自动属性 { get; set; } / { get; init; }：整块保持一行。
+     否则 `public string Name { get; set; } = "x";` 会被拆成多行、初始化表达式还会单独成行。 */
+  const CS_ACCESSOR = new Set(["get", "set", "init", "add", "remove"]);
+  function accessorEnd(T, k) {
+    let j = k + 1, seen = false;
+    for (; j < T.length; j++) {
+      const v = T[j].v;
+      if (v === "}") return seen ? j : -1;
+      if (v === ";") continue;
+      if (T[j].t === "word" && CS_ACCESSOR.has(v.toLowerCase())) { seen = true; continue; }
+      return -1;
+    }
+    return -1;
+  }
+
+  /* 美化：按花括号重排缩进与断行。
+     case / default 标签与其后语句：标签在花括号层，语句再缩一级（caseExtra）。
+     ★ 源码里的换行在「值 → 词」处保留：Go 靠换行分语句（自动分号），
+       Rust 的属性行与结构体字段也靠换行；不保留会把整段挤成一行。 */
+  function cPretty(T, keep, unit, conf) {
+    let out = "", prev = null, prev2 = null, depth = 0, paren = 0;
+    let lineStart = true, pendingCase = false, pendingLabel = false;
+    let caseExtra = 0, caseDepth = -1;
+    const ind = () => unit.repeat(Math.max(0, depth + caseExtra));
+    for (let k = 0; k < T.length; k++) {
+      const tk = T[k], next = T[k + 1];
+      if (tk.t === "hash") {
+        if (!lineStart) out += "\n";
+        out += hashClean(tk.v, keep, conf) + "\n";
+        lineStart = true; prev = null; prev2 = null; continue;
+      }
+      if (tk.t === "cmt") {
+        if (!lineStart && !/[\s(]$/.test(out)) out += " ";
+        out += tk.v;
+        if (tk.v.slice(0, 2) === "//") { out += "\n"; lineStart = true; prev = null; prev2 = null; }
+        else { lineStart = false; prev = tk; }
+        continue;
+      }
+      /* 保留「值 → 词」处的源码换行（见函数头注释）。句尾/大括号后的断行各分支已处理，
+         所以这里只补「行内还有内容」的情况。 */
+      if (tk.nl && !lineStart && prev &&
+          (tk.t === "word" || (tk.t === "str" && prev.t === "str")) &&
+          (prev.t === "word" || prev.t === "num" || prev.t === "str" || prev.t === "char" ||
+           prev.v === ")" || prev.v === "]" ||
+           (prev.v === "," && paren === 0 && depth > 0)) &&
+          !C_GLUE.has(tk.v)) {
+        out = out.replace(/[ \t]+$/, "") + "\n";
+        lineStart = true; prev = null; prev2 = null;
+      }
+      const w = tk.t === "word" ? tk.v.toLowerCase() : "";
+      /* Go 的 import 块：gofmt 习惯一个包一行、括号内缩进一级。
+         不特殊处理会挤成 `import ("errors" "fmt")`（实测）。 */
+      if (conf.goStyle && w === "import" && next && next.v === "(") {
+        out += (lineStart ? ind() : "") + "import (\n";
+        let j = k + 2;
+        for (; j < T.length && T[j].v !== ")"; j++) {
+          if (T[j].t === "cmt") {
+            if (keep) out += unit.repeat(depth + 1) + T[j].v + "\n";
+            continue;
+          }
+          out += unit.repeat(depth + 1) + T[j].v + "\n";
+        }
+        out += unit.repeat(depth) + ")";
+        lineStart = false;
+        prev2 = T[j - 1]; prev = T[j]; k = j;
+        continue;
+      }
+      const isCase = tk.t === "word" && (w === "case" || w === "default");
+      const isLabel = tk.t === "word" &&
+        (w === "public" || w === "private" || w === "protected" || w === "internal") &&
+        next && next.v === ":";
+
+      if (tk.v === "{") {
+        /* C# 自动属性：整块一行，后面的 `= 初始值` 也留在同一行 */
+        if (conf.autoProp) {
+          const end = accessorEnd(T, k);
+          if (end > k) {
+            if (lineStart) { out += ind(); lineStart = false; }
+            else out += cGap(prev, tk, next, prev2, conf);
+            const parts = [];
+            for (let j = k + 1; j < end; j++) parts.push(T[j].v);
+            out += "{ " + parts.join(" ").replace(/ ;/g, ";") + " }";
+            prev2 = T[end - 1]; prev = T[end]; k = end;
+            lineStart = false;
+            const nx = T[end + 1];
+            if (nx && nx.t === "word") { out += "\n"; lineStart = true; prev = null; prev2 = null; }
+            continue;
+          }
+        }
+        if (lineStart) { out += ind(); lineStart = false; }
+        else out += cGap(prev, tk, next, prev2, conf);
+        out += "{";
+        depth++;
+        prev2 = prev; prev = tk;
+        if (next && next.v === "}") continue;                    /* `{}` 贴在一起输出 */
+        out += "\n"; lineStart = true; prev = null; prev2 = null;
+        continue;
+      }
+      if (tk.v === "}") {
+        const inline = prev && prev.v === "{";
+        if (!inline) {
+          if (!lineStart) out += "\n";
+          depth = Math.max(0, depth - 1);
+          if (caseDepth >= 0 && depth < caseDepth) { caseDepth = -1; caseExtra = 0; }
+          out += ind();                                          /* 换行后必须补缩进（旧代码这里漏过） */
+        } else {
+          depth = Math.max(0, depth - 1);
+          out += cGap(prev, tk, next, prev2, conf);
+        }
+        out += "}";
+        lineStart = false;
+        prev2 = prev; prev = tk;
+        const glue = next && next.t === "word" && C_GLUE.has(next.v);
+        if (next && (next.v === ";" || next.v === "," || next.v === ")" || next.v === "]" ||
+                     next.v === "." || next.v === "->" || next.v === "(" || glue)) continue;
+        out += "\n"; lineStart = true; prev = null; prev2 = null;
+        continue;
+      }
+      if (tk.v === ";") {
+        if (lineStart) { out += ind(); lineStart = false; }
+        else out += cGap(prev, tk, next, prev2, conf);
+        out += ";";
+        prev2 = prev; prev = tk;
+        pendingCase = false; pendingLabel = false;
+        /* Go 没有「用分号结束语句」的写法，分号只出现在 for / if 头里，
+           断行靠源码换行 —— 这里绝不能断（实测 `for i := 0;` 被拆成三行） */
+        if (paren === 0 && !conf.goStyle) { out += "\n"; lineStart = true; prev = null; prev2 = null; }
+        continue;
+      }
+      if (tk.v === ":" && (pendingCase || pendingLabel)) {
+        if (lineStart) { out += ind(); lineStart = false; }
+        else out += cGap(prev, tk, next, prev2, conf);
+        out += ":";
+        prev2 = prev; prev = tk;
+        pendingCase = false; pendingLabel = false;
+        out += "\n"; lineStart = true; prev = null; prev2 = null;
+        continue;
+      }
+      /* 普通 token */
+      if (lineStart) {
+        const ded = isLabel ? 1 : 0;
+        const extra = isCase ? 0 : caseExtra;
+        out += unit.repeat(Math.max(0, depth + extra - ded));
+        lineStart = false;
+        prev = null;
+      } else {
+        out += cGap(prev, tk, next, prev2, conf);
+      }
+      out += tk.v;
+      if (isCase) { pendingCase = true; caseDepth = depth; caseExtra = 1; }
+      if (isLabel) pendingLabel = true;
+      if (tk.v === "(") paren++;
+      else if (tk.v === ")") paren = Math.max(0, paren - 1);
+      prev2 = prev; prev = tk;
+    }
+    return out.trim() + "\n";
+  }
+
+  function cProcess(src, mode, keep, unit, lang) {
+    const conf = C_CONF[lang] || {};
+    const T = scanC(src, conf);
+    if (mode === "min") return { text: cMinify(T, keep, conf) };
+    /* 美化前把「这个 token 前面有没有换行」记下来（cPretty 要用），
+       再滤掉空白；注释在 keep=false 时也要保留它带来的换行信息。 */
+    const P = [];
+    let nl = false;
+    for (const t of T) {
+      if (t.t === "ws") { if (t.v.indexOf("\n") >= 0) nl = true; continue; }
+      if (t.t === "cmt" && !keep) {
+        if (t.v.slice(0, 2) === "//") nl = true;             /* 行注释后本来就换行了 */
+        continue;
+      }
+      t.nl = nl; nl = false;
+      P.push(t);
+    }
+    return { text: cPretty(P, keep, unit, conf) };
+  }
+
+  /* ============================================================
+     语法高亮（输出区用）
+     -- 只做展示：把已经成型的文本再扫一遍、包进 <span>。
+        复用压缩管线的扫描器（JS 用 scanJS，其余用各自的扫描器），
+        所以高亮的边界判断和压缩的边界判断永远一致。
+        ★ 所有文本一律经 escHtml 转义后才拼进 innerHTML —— 输入里的
+          `<img onerror=…>` 只会变成字面文本，不可能被执行。
+     ============================================================ */
+  const escHtml = s => String(s).replace(/[&<>"']/g, c =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;");
+  const span = (cls, s) => '<span class="' + cls + '">' + escHtml(s) + "</span>";
+
+  const KW_JS = new Set("var let const function class extends super return if else for while do switch case default break continue new delete typeof instanceof void in of this try catch finally throw async await yield static get set import export from debugger with".split(" "));
+  const KW_TS = new Set([].concat(
+    "interface type enum namespace declare implements public private protected readonly abstract as satisfies keyof infer is asserts override module require global unique accessor",
+    "var let const function class extends super return if else for while do switch case default break continue new delete typeof instanceof void in of this try catch finally throw async await yield static get set import export from debugger with".split(" ")));
+  const KW_LIT = new Set(["true", "false", "null", "undefined", "NaN", "Infinity"]);
+
+  function hlCode(src, lang) {
+    const T = scanJS(src);
+    const kw = lang === "ts" ? KW_TS : KW_JS;
+    let out = "";
+    for (let k = 0; k < T.length; k++) {
+      const t = T[k];
+      if (t.t === "cmt") { out += span("t-c", t.v); continue; }
+      if (t.t === "str" || t.t === "tpl" || t.t === "re") { out += span("t-s", t.v); continue; }
+      if (t.t === "word") {
+        if (/^[0-9]/.test(t.v)) {
+          let v = t.v, j = k;
+          while (j + 2 < T.length && T[j + 1].t === "punct" && T[j + 1].v === "." &&
+                 T[j + 2].t === "word" && /^[0-9]/.test(T[j + 2].v)) {
+            v += "." + T[j + 2].v; j += 2;
+          }
+          out += span("t-n", v); k = j; continue;
+        }
+        if (KW_LIT.has(t.v)) { out += span("t-l", t.v); continue; }
+        if (kw && kw.has(t.v)) { out += span("t-k", t.v); continue; }
+      }
+      out += escHtml(t.v);
+    }
+    return out;
+  }
+
+  /* JSON / JSONC 专用：键与值分开着色。
+     判据：字符串 token 之后（跳过空白与注释）紧跟 `:` 的就是键 —— 引号内的冒号
+     与值里的冒号天然不会误伤。整屏一个绿的问题就出在键值没分开（2026-10-15 实测反馈）。 */
+  function hlJSON(src) {
+    const T = scanJS(src);
+    let out = "";
+    for (let k = 0; k < T.length; k++) {
+      const t = T[k];
+      if (t.t === "cmt") { out += span("t-c", t.v); continue; }
+      if (t.t === "str" || t.t === "tpl" || t.t === "re") {
+        let j = k + 1;
+        while (j < T.length && (T[j].t === "ws" || T[j].t === "cmt")) j++;
+        out += span(j < T.length && T[j].v === ":" ? "t-a" : "t-s", t.v);
+        continue;
+      }
+      if (t.t === "word") {
+        if (/^[0-9]/.test(t.v)) {
+          let v = t.v, j = k;
+          while (j + 2 < T.length && T[j + 1].t === "punct" && T[j + 1].v === "." &&
+                 T[j + 2].t === "word" && /^[0-9]/.test(T[j + 2].v)) {
+            v += "." + T[j + 2].v; j += 2;
+          }
+          out += span("t-n", v); k = j; continue;
+        }
+        if (KW_LIT.has(t.v)) { out += span("t-l", t.v); continue; }
+      }
+      out += escHtml(t.v);
+    }
+    return out;
+  }
+
+  const MK_TAG = /<\/?[A-Za-z][\w:.-]*/y;
+  const MK_SPECIAL = /<[!?][^>]*>?/y;
+
+  function hlMarkup(src) {
+    let out = "", i = 0;
+    const n = src.length;
+    while (i < n) {
+      const c = src[i];
+      if (c !== "<") {
+        const j = src.indexOf("<", i);
+        const end = j < 0 ? n : j;
+        out += escHtml(src.slice(i, end)); i = end; continue;
+      }
+      if (src.startsWith("<!--", i)) {
+        const j = src.indexOf("-->", i + 4);
+        const end = j < 0 ? n : j + 3;
+        out += span("t-c", src.slice(i, end)); i = end; continue;
+      }
+      if (src.startsWith("<![CDATA[", i)) {
+        const j = src.indexOf("]]>", i + 9);
+        const end = j < 0 ? n : j + 3;
+        out += span("t-s", src.slice(i, end)); i = end; continue;
+      }
+      if (/[!?]/.test(src[i + 1] || "")) {
+        MK_SPECIAL.lastIndex = i;
+        const m = MK_SPECIAL.exec(src);
+        if (m) { out += span("t-c", m[0]); i += m[0].length; continue; }
+      }
+      if (/[A-Za-z\/]/.test(src[i + 1] || "")) {
+        MK_TAG.lastIndex = i;
+        const m = MK_TAG.exec(src);
+        if (m) {
+          out += span("t-k", m[0]);
+          let j = i + m[0].length;
+          while (j < n) {
+            const ch = src[j];
+            if (ch === ">") { out += escHtml(ch); j++; break; }
+            if (ch === "/" && src[j + 1] === ">") { out += escHtml("/>"); j += 2; break; }
+            if (/\s/.test(ch)) { out += escHtml(ch); j++; continue; }
+            if (ch === '"' || ch === "'") {
+              const k = src.indexOf(ch, j + 1);
+              const end = k < 0 ? n : k + 1;
+              out += span("t-s", src.slice(j, end)); j = end; continue;
+            }
+            if (ch === "=") { out += escHtml(ch); j++; continue; }
+            const k = j;
+            while (j < n && !/[\s=/>"']/.test(src[j])) j++;
+            if (j === k) { out += escHtml(src[j]); j++; }
+            else out += span("t-a", src.slice(k, j));
+          }
+          i = j; continue;
+        }
+      }
+      out += escHtml("<"); i++;
+    }
+    return out;
+  }
+
+  const CSS_HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-fA-F\w-])/y;
+  const CSS_NUM = /-?(?:\d[\d.]*|\.\d+)(?:[a-z%]+)?/iy;
+
+  function hlCssHl(src, lineComment) {
+    let out = "", i = 0, depth = 0, paren = 0;
+    const n = src.length;
+    while (i < n) {
+      const c = src[i];
+      if (c === "/" && src[i + 1] === "*") {
+        let j = src.indexOf("*/", i + 2); j = j < 0 ? n : j + 2;
+        out += span("t-c", src.slice(i, j)); i = j; continue;
+      }
+      if (lineComment && c === "/" && src[i + 1] === "/" && src[i - 1] !== ":") {
+        let j = i; while (j < n && src[j] !== "\n") j++;
+        out += span("t-c", src.slice(i, j)); i = j; continue;
+      }
+      if (c === '"' || c === "'") {
+        let j = i + 1;
+        while (j < n && src[j] !== c) { if (src[j] === "\\") j++; j++; }
+        j = Math.min(j + 1, n);
+        out += span("t-s", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "@") {
+        let j = i + 1; while (j < n && /[\w-]/.test(src[j])) j++;
+        out += span("t-k", src.slice(i, j)); i = j; continue;
+      }
+      if (c === "#") {
+        CSS_HEX.lastIndex = i;
+        const m = CSS_HEX.exec(src);
+        if (m) { out += span("t-n", m[0]); i += m[0].length; continue; }
+      }
+      if (/\d/.test(c) || (c === "." && /\d/.test(src[i + 1] || "")) ||
+          (c === "-" && /\d/.test(src[i + 1] || ""))) {
+        CSS_NUM.lastIndex = i;
+        const m = CSS_NUM.exec(src);
+        if (m) { out += span("t-n", m[0]); i += m[0].length; continue; }
+      }
+      if (c === "{") { depth++; out += escHtml(c); i++; continue; }
+      if (c === "}") { depth = Math.max(0, depth - 1); out += escHtml(c); i++; continue; }
+      if (c === "(") { paren++; out += escHtml(c); i++; continue; }
+      if (c === ")") { paren = Math.max(0, paren - 1); out += escHtml(c); i++; continue; }
+      if (/[A-Za-z_-]/.test(c)) {
+        let j = i; while (j < n && /[\w-]/.test(src[j])) j++;
+        const word = src.slice(i, j);
+        let k = j; while (k < n && /[ \t]/.test(src[k])) k++;
+        if (depth > 0 && paren === 0 && src[k] === ":" && src[k + 1] !== ":" &&
+            src[i - 1] !== ":" && /[\s;{,]/.test(src[i - 1] || "{")) {
+          out += span("t-a", word); i = j; continue;               /* 声明属性名 */
+        }
+        if (word === "important" && src[i - 1] === "!") {
+          out += span("t-k", word); i = j; continue;
+        }
+        out += escHtml(word); i = j; continue;
+      }
+      out += escHtml(c); i++;
+    }
+    return out;
+  }
+
+  const SQL_KW = new Set(("select from where insert into update delete create alter drop table index view database values set join left right inner outer full cross on as and or not null in like between group by order having limit offset union all distinct case when then else end primary key foreign references default constraint unique check is exists count sum avg min max coalesce cast explain analyze begin commit rollback transaction grant revoke truncate desc asc using returning conflict cascade add column rename to if with recursive over partition window rows range unbounded preceding following current row nulls first last").split(" "));
+  const SQL_LIT = new Set(["null", "true", "false"]);
+
+  function hlSQL(src) {
+    const T = scanSQL(src);
+    let out = "";
+    for (const t of T) {
+      if (t.t === "cmt") out += span("t-c", t.v);
+      else if (t.t === "str") out += span("t-s", t.v);
+      else if (t.t === "num") out += span("t-n", t.v);
+      else if (t.t === "word") {
+        const w = t.v.toLowerCase();
+        if (SQL_LIT.has(w)) out += span("t-l", t.v);
+        else if (SQL_KW.has(w)) out += span("t-k", t.v);
+        else out += escHtml(t.v);
+      } else out += escHtml(t.v);
+    }
+    return out;
+  }
+
+  const C_KWS = {
+    c: "auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while bool true false nullptr class namespace template try catch throw new delete this using public private protected virtual override final constexpr operator friend typename explicit export mutable noexcept static_cast dynamic_cast const_cast reinterpret_cast typeid wchar_t char8_t char16_t char32_t concept requires".split(" "),
+    java: "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while var record sealed permits yield true false null".split(" "),
+    cs: "abstract as base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach goto if implicit in int interface internal is lock long namespace new null object operator out override params private protected public readonly ref return sbyte sealed short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ushort using var virtual void volatile while async await yield record init get set value nameof dynamic where when".split(" "),
+    go: "break case chan const continue default defer else fallthrough for func go goto if import interface map package range return select struct switch type var true false nil iota".split(" "),
+    rust: "as async await break const continue crate dyn else enum extern false fn for if impl in let loop match mod move mut pub ref return self static struct super trait true type unsafe use where while yield box".split(" ")
+  };
+  const C_LIT = new Set(["true", "false", "null", "nullptr", "nil", "undefined"]);
+  const C_KWSET = {};
+
+  function hlC(src, lang) {
+    const kw = C_KWSET[lang] || (C_KWSET[lang] = new Set(C_KWS[lang] || []));
+    const T = scanC(src, C_CONF[lang] || {});
+    let out = "";
+    for (const t of T) {
+      if (t.t === "cmt") out += span("t-c", t.v);
+      else if (t.t === "str" || t.t === "char") out += span("t-s", t.v);
+      else if (t.t === "num") out += span("t-n", t.v);
+      else if (t.t === "hash") out += hlHash(t.v);
+      else if (t.t === "word") {
+        if (C_LIT.has(t.v)) out += span("t-l", t.v);
+        else if (kw.has(t.v)) out += span("t-k", t.v);
+        else out += escHtml(t.v);
+      } else out += escHtml(t.v);
+    }
+    return out;
+  }
+
+  function hlHash(v) {
+    const dm = v.match(/^\s*#\s*[A-Za-z_]\w*/);
+    let out = "", rest = v;
+    if (dm) { out += span("t-k", dm[0]); rest = v.slice(dm[0].length); }
+    const re = /"([^"\\]*)"|(\/\/[^\n]*)|(\/\*[\s\S]*?\*\/)|(<[^>\n]*>)/g;
+    let m, last = 0;
+    while ((m = re.exec(rest))) {
+      out += escHtml(rest.slice(last, m.index));
+      out += span(m[2] || m[3] ? "t-c" : "t-s", m[0]);
+      last = m.index + m[0].length;
+    }
+    out += escHtml(rest.slice(last));
+    return out;
+  }
+
+  function highlight(src, lang) {
+    switch (lang) {
+      case "js": case "ts": return hlCode(src, lang);
+      case "json": return hlJSON(src);
+      case "html": case "xml": return hlMarkup(src);
+      case "css": case "scss": case "less": return hlCssHl(src, lang !== "css");
+      case "sql": return hlSQL(src);
+      case "java": case "c": case "cs": case "go": case "rust": return hlC(src, lang);
+      default: return null;
+    }
+  }
+
+  /* ============================================================
+     语言自动识别
+     -- 省掉「先选语言」这一步；识别结果会写在输出标题上，随时能改。
+     ============================================================ */
+  function detectLang(src) {
+    const t = src.replace(/^\uFEFF/, "").trim();
+    if (!t) return "js";
+    if (/^[[{]/.test(t)) { try { JSON.parse(t); return "json"; } catch (e) { /* 不是 JSON，继续猜 */ } }
+    if (/^<\?xml/i.test(t)) return "xml";
+    if (/^<!DOCTYPE\s+html/i.test(t)) return "html";
+    if (/^</.test(t)) {
+      return /<\/?(html|head|body|div|span|p|a|img|script|style|meta|link|title|table|ul|ol|li|h[1-6]|input|form|button|header|footer|section|nav|pre|code|br|hr|svg)\b/i.test(t)
+        ? "html" : "xml";
+    }
+    /* ---- 新语言：先看「JS 里几乎不会出现」的强信号，避免被下面的 JS 启发式截走 ---- */
+    if (/\bimport\s+java\.|\bSystem\.(out|err)\.|\bpublic\s+static\s+void\s+main\b|\@Override\b/.test(t)) return "java";
+    if (/\busing\s+System\b|\bnamespace\s+[\w.]+\s*[;{]|\bConsole\.(WriteLine|Write|ReadLine)\b/.test(t)) return "cs";
+    if (/^\s*package\s+\w+\s*$/m.test(t) || /\bfunc\s+(\([^)\n]*\)\s*)?\w+\s*\(/.test(t)) return "go";
+    if (/\bfn\s+\w+\s*\(|\blet\s+mut\b|\bimpl\s+\w+|\bprintln!\s*\(|\buse\s+std::/.test(t)) return "rust";
+    if (/^\s*#\s*(include|define|pragma|ifndef)\b/m.test(t) || /\bint\s+main\s*\(|\bprintf\s*\(|\bstd::/.test(t)) return "c";
+    /* SQL：① 经典形态（select…from、insert into…）；② 语句头 + 子句碎片 ——
+       只有 select / where / order by、没有 FROM 的粘贴片段很常见（2026-10-15 实测漏检出 js）。
+       碎片判据要求子句词后面是空白：`.from(`、`.where(` 这类 JS 方法链不会被算进去。 */
+    const sqlWords = (t.match(/\b(?:from|where|having|limit|offset|join|union|returning)\s|\b(?:group|order)\s+by\b/gi) || []).length;
+    /* 语句头允许前置空白 / 头部注释（从文件里复制常带 `-- 说明` 开头）/ 左括号 */
+    const sqlHead = /^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/|\s)*\(?\s*(select|with|insert|update|delete|create|alter|drop|truncate|explain)\b/i.test(t);
+    if (/\bselect\b[\s\S]{0,4000}?\bfrom\b/i.test(t) || /\b(create|alter|drop)\s+table\b/i.test(t) ||
+        /\binsert\s+into\b/i.test(t) || /\bupdate\s+\w+\s+set\b/i.test(t) || /\bdelete\s+from\b/i.test(t) ||
+        (sqlHead && sqlWords >= 2)) {
+      if (!/\b(function|=>|const|let|var|import|export|class|return|typeof|async|await)\b/.test(t)) return "sql";
+    }
+    /* ★ `var` 要排除 CSS 的 var(--x)：否则带自定义属性的样式表会被判成 JS（2026-10-19 实测） */
+    if (/\b(function|=>|const|let|import|export|class|return|typeof|async|await|interface|enum)\b/.test(t) ||
+        /\bvar\b(?!\s*\()/.test(t)) return "js";
+    if (/\{[^{}]*:[^{}]*\}/.test(t)) {
+      if (/@(mixin|include|extend|use|forward)\b|\$[A-Za-z_-][\w-]*\s*:/.test(t)) return "scss";
+      if (/@[\w-]+\s*:/.test(t)) return "less";
+      return "css";
+    }
+    return "js";
+  }
+
+  /* ==== PURE-CORE-END ==== */
+
+  /* ============================================================
+     运行
+     ============================================================ */
+  const byteLen = s => new Blob([s]).size;
+  const bytes = n => n < 1024 ? n + " B" : (n / 1024).toFixed(1) + " KB";
+
+  /* 输出区渲染：≤ 阈值走语法高亮，超过就退化成纯文本（span 太多反而卡）。
+     实测（本机 Chromium）：10 万字符 ≈ 147ms、25 万 ≈ 0.8s、38 万 ≈ 1.9s —— 25 万是「仍流畅」的边界。
+     raw 文本始终留在 lastOut —— 复制 / 下载 / 回填都读它，与高亮无关。 */
+  const HL_MAX = 250000;
+  let lastOut = "", lastLang = "js";
+  function renderOut(text) {
+    const el = $("out");
+    lastOut = text;
+    if (!text) { el.textContent = ""; return; }
+    let html = null;
+    if (text.length <= HL_MAX) {
+      try { html = highlight(text, lastLang); } catch (e) { html = null; }
+    }
+    if (html == null) el.textContent = text;
+    else el.innerHTML = html;
+  }
+
+  function process(src, lang, mode, keep, unit) {
+    switch (lang) {
+      case "json": return jsonProcess(src, mode, unit);
+      case "html": return { text: mode === "min" ? minifyHTML(src, keep) : prettyHTML(src, unit) };
+      case "xml":  return { text: mode === "min" ? minifyXML(src, keep) : prettyXML(src, unit) };
+      case "css":  return cssProcess(src, mode, keep, unit, false);
+      case "scss": case "less": return cssProcess(src, mode, keep, unit, true);
+      case "sql":  return sqlProcess(src, mode, keep, unit);
+      case "java": case "c": case "cs": case "go": case "rust":
+        return cProcess(src, mode, keep, unit, lang);
+      default:     return { text: mode === "min" ? minifyJS(src, keep) : prettyJS(src, unit) };
+    }
+  }
+
+  function setStatus(msg, warn) {
+    const el = $("statusText");
+    el.textContent = msg;
+    el.classList.toggle("warn", !!warn);
+  }
+
+  let lastMode = "min";
+
+  function run(mode) {
+    lastMode = mode;
+    const src = $("in").value;
+    if (!src.trim()) {
+      renderOut("");
+      $("sizes").textContent = "";
+      $("outHint").textContent = "点顶部「压缩」或「美化」生成结果";
+      setStatus("先粘贴要处理的代码。", true);
+      return;
+    }
+    const picked = $("lang").value;
+    const lang = picked === "auto" ? detectLang(src) : picked;
+    const keep = $("keepCmt").checked;
+    const unit = $("indent").value === "tab" ? "\t" : " ".repeat(+$("indent").value);
+
+    let res, note = "";
+    try {
+      const r = process(src, lang, mode, keep, unit);
+      res = r.text; note = r.note || "";
+    } catch (e) {
+      renderOut("");
+      $("sizes").textContent = "";
+      $("outHint").textContent = "—";
+      setStatus("处理失败：" + String(e && e.message || e), true);
+      return;
+    }
+
+    lastLang = lang;
+    renderOut(res);
+    const a = byteLen(src), b = byteLen(res);
+    const diff = a ? Math.round((1 - b / a) * 100) : 0;
+    $("sizes").innerHTML = "原始 <b>" + bytes(a) + "</b> → 结果 <b>" + bytes(b) + "</b> " +
+      (b <= a ? '<span class="cut">省 ' + diff + "%</span>" : '<span class="grow">增 ' + Math.abs(diff) + "%</span>");
+    /* 美化结果以 \n 结尾，直接 split 会多算一行（实测：3 行内容显示成「4 行」） */
+    const lineCount = res.replace(/\n+$/, "").split("\n").length;
+    $("outHint").textContent = (mode === "min" ? "已压缩" : "已美化") + " · " + LANGS[lang].name +
+      (picked === "auto" ? "（自动识别）" : "") + " · " + lineCount + " 行";
+
+    /* JS 压缩后做一次「能不能重新解析」的自检 —— 语法坏了要立刻说出来。
+       TypeScript 不能这样验（类型标注不是合法 JS），所以只验 JS。 */
+    if (lang === "js" && mode === "min") {
+      try { new Function(res); }
+      catch (e) { note = "压缩结果无法通过语法解析（" + (e && e.message) + "），请检查输入是否本身就不完整。"; }
+    }
+    const fam = (lang === "sql") ? "sql" : (C_CONF[lang] ? "c" : "");
+    let msg;
+    if (mode === "min") {
+      msg = fam === "sql" ? "完成。SQL 安全模式：删注释、折叠空白；字符串、引号标识符与美元引用原样。"
+          : fam === "c" ? "完成。C 语言族安全模式：删注释、去缩进、折叠行内空白；换行、预处理指令与宏续行保留。"
+          : "完成。安全模式：删注释、去缩进、折叠行内空白；只在 `; { }` 之后合并行，其余换行保留（避免 ASI 改变语义）。";
+    } else {
+      msg = fam === "sql" ? "完成。结构关键字统一大写 + 子句级缩进（SELECT / FROM / WHERE）；字符串与引号标识符原样。"
+          : fam === "c" ? "完成。按花括号重排缩进；预处理指令、case 标签与宏内容保持原样。"
+          : "完成。缩进用顶部「缩进」选择；源码里的语句换行会保留，大小写与字面量一律原样。";
+    }
+    if (res.length > HL_MAX) msg += " 结果较长，输出区用纯文本显示（保证流畅）。";
+    setStatus(note || msg, !!note);
+  }
+
+  /* ============================================================
+     示例 / 复制 / 下载 / 提示
+     ============================================================ */
+  /* 示例都写得长一些 —— 太短的样例看不出压缩率、SQL 折行，尤其看不出 CSS
+     「多行缩进 / 每规则一行」两种布局的差别（2026-10-19 用户反馈）。
+     ★ 这里是模板字面量：反引号写 \`、`${` 写 `\${`；正则的 \s、\d 与 C 系字符串里的
+       \n 都要双写成 \\s / \\d / \\n（否则会被 JS 当场吃掉）。 */
+  const SAMPLES = {
+    js: `// 购物车结算：压缩后仍是可运行代码
+const TAX = 0.06;
+
+/* 只统计有货且未删除的商品；
+   金额按分计算，避免浮点误差 */
+function total(items, coupon) {
+  let sum = 0;
+  for (const it of items) {
+    if (!it.inStock || it.deleted) continue;
+    sum += Math.round(it.price * 100) * it.qty;
+  }
+  if (coupon && sum >= coupon.min) {
+    sum -= Math.round(coupon.off * 100);
+  }
+  const rate = sum > 50000 ? 0.9 : 1;
+  const re = /^\\s*\\d+\\s*$/;      // 正则里带空白
+  const tip = \`共 \${items.length} 件，应付 ¥\${(sum * rate / 100).toFixed(2)}\`;
+  return { sum: sum * rate, tip, ok: re.test(String(sum)) };
+}
+
+// 可选链与空值合并：压缩时不能被粘坏
+const first = cart?.items?.[0]?.name ?? "空";
+console.log(total(cart.items, { min: 10000, off: 5 }), first);`,
+    ts: `// 订单状态机：联合类型 + 可选属性 + 类型收窄
+type Status = "draft" | "paid" | "shipped" | "done";
+
+interface OrderItem {
+  sku: string;
+  price: number;
+  qty: number;
+}
+
+interface Order {
+  id: string;
+  status: Status;
+  items: OrderItem[];
+  note?: string;
+  createdAt: Date;
+}
+
+interface Store {
+  find(id: string): Order | null;
+  save(row: Order): void;
+}
+
+export function amount(order: Order): number {
+  return order.items.reduce((s, it) => s + it.price * it.qty, 0);
+}
+
+export function ship(store: Store, id: string): Order {
+  const order = store.find(id);
+  if (!order) throw new Error("order not found: " + id);
+  if (order.status !== "paid") {
+    throw new Error(\`bad status \${order.status}\`);
+  }
+  order.status = "shipped";   // 收窄后只允许这两个字面量
+  store.save(order);
+  return order;
+}`,
+    json: `{
+  "requestId": "b1f0c3a2-77de-4f5b-9a10-6c2e8d4b7f31",
+  "ok": false,
+  "took": 128,
+  "service": {
+    "name": "order-api",
+    "version": "2.14.0",
+    "region": "cn-hangzhou",
+    "endpoints": [
+      { "path": "/v1/orders", "methods": ["GET", "POST"], "auth": true },
+      { "path": "/v1/orders/{id}", "methods": ["GET", "PATCH", "DELETE"], "auth": true }
+    ]
+  },
+  "error": {
+    "code": "PAYMENT_DECLINED",
+    "message": "card declined: insufficient funds",
+    "retryable": false,
+    "detail": { "gateway": "stripe", "traceId": "tr_9f2c", "docs": "https://example.com/e/4021" }
+  },
+  "metrics": { "qps": 42.5, "p99": 0.318, "errors": 7, "cacheHit": 0.93 },
+  "tags": ["prod", "cn", "v2"],
+  "notes": "逗号 , 冒号 : 在字符串里必须原样保留",
+  "deletedAt": null
+}`,
+    html: `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>订单详情 · 示例</title>
+  <style>
+    .badge { padding: 2px 8px; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <!-- 页头：inline 标签之间的空格有语义 -->
+  <header class="top">
+    <h1>订单 <span class="id">#1024</span></h1>
+    <nav><a href="/a">概览</a> <a href="/b">明细</a> <a href="/c">日志</a></nav>
+  </header>
+
+  <main>
+    <ul class="items">
+      <li>机械键盘 <b>¥499</b></li>
+      <li>腕托 <b>¥59</b></li> <li>数据线 <b>¥29</b></li>
+    </ul>
+    <pre>
+  这里的两行
+  空白必须原样保留
+    </pre>
+    <p>备注：&lt;加急&gt; 请在工作日送达</p>
+  </main>
+  <script>console.log("html 里的脚本也会被压缩", 1 + 2);<\/script>
+</body>
+</html>`,
+    xml: `<?xml version="1.0" encoding="UTF-8"?>
+<!-- 站点配置：修改后重启生效 -->
+<config version="3">
+  <site name="pelican" lang="zh-CN">
+    <title>Pelican 工具箱</title>
+    <baseUrl>https://example.com/</baseUrl>
+    <features>
+      <feature key="search" enabled="true" />
+      <feature key="comments" enabled="false" />
+      <feature key="rss" enabled="true" />
+    </features>
+  </site>
+  <server>
+    <listen host="127.0.0.1" port="8080" />
+    <timeouts connect="5" read="30" write="30" />
+    <cache dir="/var/cache/pelican" maxSize="512m" />
+  </server>
+  <logging level="info" format="json">
+    <file path="/var/log/pelican/app.log" rotate="daily" keep="14" />
+    <sentry dsn="https://key@sentry.example.com/42" sampleRate="0.1" />
+  </logging>
+  <contact><![CDATA[运维：ops@example.com <值班电话>]]></contact>
+</config>`,
+    /* CSS 示例特意放 6 组规则 + @media / @supports / @keyframes，
+       切到「每规则一行」时，每条规则会收成一行 —— 差别一眼可见。 */
+    css: `/* 卡片组件：切到「每规则一行」看差别 —— 每条规则会收成一行 */
+:root {
+  --brand: #4f6bed;
+  --brand-weak: #7c8aff;
+  --radius: 12px;
+  --shadow: 0 6px 24px rgba(31, 41, 55, 0.12);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius);
+  background: linear-gradient(140deg, var(--brand), var(--brand-weak));
+  box-shadow: var(--shadow);
+  content: "a , b";
+  width: calc(100% - 2px + 1px);
+}
+
+.card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.card:hover,
+.card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(31, 41, 55, 0.18);
+}
+
+.card__meta {
+  display: inline-flex;
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px;
+  }
+  .card__meta {
+    margin-left: 0;
+    font-size: 12px;
+  }
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  .card {
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}`,
+    scss: `// 主题变量与混入
+$brand: #4f6bed;
+$radius: 12px;
+$gap: 12px;
+
+@mixin shadow($level: 1) {
+  box-shadow: 0 #{$level * 4}px #{$level * 12}px rgba(31, 41, 55, 0.12);
+}
+
+.card {
+  display: flex;
+  gap: $gap;
+  padding: 14px 16px;
+  border-radius: $radius;
+  color: $brand;
+  @include shadow(2);
+
+  &:hover {
+    color: darken($brand, 10%);
+    @include shadow(3);
+  }
+
+  .title {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 640px) {
+  .card { flex-direction: column; padding: 10px; }
+}`,
+    less: `// 主题（@media 里的 @ 不会被当成变量）
+@brand: #4f6bed;
+@radius: 12px;
+@gap: 12px;
+
+.shadow(@level: 1) {
+  box-shadow: 0 (@level * 4px) (@level * 12px) rgba(31, 41, 55, 0.12);
+}
+
+.card {
+  display: flex;
+  gap: @gap;
+  padding: 14px 16px;
+  border-radius: @radius;
+  color: @brand;
+  background: url(http://example.com/a.png) no-repeat center / cover;
+  .shadow(2);
+
+  &:hover {
+    color: darken(@brand, 10%);
+    .shadow(3);
+  }
+
+  .title {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 640px) {
+  .card { flex-direction: column; padding: 10px; }
+}`,
+    sql: `-- 近 7 日订单：按渠道聚合，排除测试账号
+WITH paid AS (
+  SELECT o.id,
+         o.user_id,
+         o.channel,
+         o.amount,
+         o.created_at,
+         u.name AS user_name
+  FROM orders o
+  LEFT JOIN users u ON u.id = o.user_id
+  WHERE o.status = 'paid'
+    AND o.created_at >= CURRENT_DATE - INTERVAL '7 days'
+    AND o.amount BETWEEN 1 AND 100000
+)
+SELECT p.channel,
+       COUNT(*) AS order_cnt,
+       COUNT(DISTINCT p.user_id) AS user_cnt,
+       SUM(p.amount) AS gmv,
+       ROUND(AVG(p.amount), 2) AS avg_amount,
+       MAX(p.created_at) AS last_order_at
+FROM paid p
+WHERE p.user_name NOT LIKE '%测试%'
+GROUP BY p.channel
+HAVING SUM(p.amount) > 1000
+ORDER BY gmv DESC
+LIMIT 20;`,
+    java: `import java.util.ArrayList;
+import java.util.List;
+
+/** 购物车：泛型 + 增强 for + 异常 */
+public class Cart {
+    private final List<Item> items = new ArrayList<>();
+    private double discount;
+
+    public void add(Item item) {
+        if (item == null) {
+            throw new IllegalArgumentException("item is null");
+        }
+        items.add(item);   // 添加时不去重
+    }
+
+    public double total() {
+        double sum = 0;
+        for (Item it : items) {
+            if (!it.inStock()) continue;
+            sum += it.price() * it.qty();
+        }
+        if (discount > 0) {
+            sum *= (1 - discount);
+        }
+        return sum;
+    }
+
+    public static void main(String[] args) {
+        Cart cart = new Cart();
+        cart.add(new Item("键盘", 499, 1));
+        System.out.printf("合计 %.2f 元%n", cart.total());
+    }
+}`,
+    c: `#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX(a, b) \\
+  ((a) > (b) ? (a) : (b))
+
+#define BUF_SIZE 64
+
+/* 统计一行里的大写字母 */
+static int count_upper(const char *s) {
+    int n = 0;
+    for (; *s; s++) {
+        if (*s >= 'A' && *s <= 'Z') n++;
+    }
+    return n;
+}
+
+int main(void) {
+    char buf[BUF_SIZE];
+    double r = 1.0 / 3.0;   // 三分之一
+    if (fgets(buf, sizeof buf, stdin) != NULL) {
+        printf("upper=%d\\n", count_upper(buf));
+    }
+    printf("max=%.3f\\n", MAX(r, 0.5));
+    return EXIT_SUCCESS;
+}`,
+    cs: `using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Shop
+{
+    public sealed class Cart
+    {
+        private readonly List<Item> _items = new List<Item>();
+
+        public string Name { get; set; } = "默认购物车";
+
+        // 逐字串：反斜杠不转义，引号双写
+        private readonly string _path = @"C:\\temp\\a ""b""\\c";
+
+        public decimal Total()
+        {
+            return _items.Where(i => i.InStock)
+                         .Sum(i => i.Price * i.Qty);
+        }
+
+        public string Describe()
+        {
+            var n = _items.Count;
+            return $"{Name}：{n} 件，合计 {Total():C}；缓存 {_path}";
+        }
+    }
+}`,
+    go: `package main
+
+import (
+\t"errors"
+\t"fmt"
+\t"strings"
+)
+
+// 订单校验：错误处理 + 字符串与数值转换
+func validate(id string, amount float64, paid bool) error {
+\tif id == "" {
+\t\treturn errors.New("empty id")
+\t}
+\tif amount <= 0 {
+\t\treturn fmt.Errorf("bad amount: %.2f", amount)
+\t}
+\tif paid {
+\t\treturn errors.New("already paid")
+\t}
+\treturn nil
+}
+
+func main() {
+\tids := strings.Split("A-1,B-2,C-3", ",")
+\tvar ok int
+\tfor i := 0; i < len(ids); i++ {
+\t\tif err := validate(ids[i], float64(i+1)*99.5, false); err != nil {
+\t\t\tfmt.Println("skip:", err)
+\t\t\tcontinue
+\t\t}
+\t\tok++
+\t}
+\traw := \`路径 C:\\tmp\\a // 反引号里不是注释\`
+\tfmt.Println(strings.ToUpper(raw), ok, 10/4)
+}`,
+    rust: `use std::collections::HashMap;
+use std::fmt;
+
+#[derive(Debug)]
+struct Order<'a> {
+    id: &'a str,
+    amount: f64,
+    paid: bool,
+}
+
+impl<'a> Order<'a> {
+    fn pay(&mut self) -> Result<(), String> {
+        if self.paid {
+            return Err("already paid".to_string());
+        }
+        if self.amount <= 0.0 {
+            return Err(format!("bad amount: {:.2}", self.amount));
+        }
+        self.paid = true;
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Order<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let raw = r#"路径 "C:\\tmp" // 不是注释"#;
+        write!(f, "{}: {:.2} {} {}", self.id, self.amount, self.paid, raw)
+    }
+}`
+  };
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     事件
+     ============================================================ */
+  $("btnMin").addEventListener("click", () => run("min"));
+  $("btnPretty").addEventListener("click", () => run("pretty"));
+
+  $("btnSample").addEventListener("click", () => {
+    const picked = $("lang").value;
+    const key = picked === "auto" ? "js" : picked;
+    $("in").value = SAMPLES[key];
+    run("min");
+    toast("已填入 " + LANGS[key].name + " 示例并压缩");
+  });
+
+  $("btnUpload").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", function () {
+    const f = this.files && this.files[0];
+    this.value = "";
+    if (!f) return;
+    if (f.size > 8 * 1048576) { toast("文件超过 8 MB，浏览器处理起来会很慢"); return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      $("in").value = String(fr.result);
+      const byExt = { js: "js", mjs: "js", cjs: "js", ts: "ts", tsx: "ts", json: "json",
+        html: "html", htm: "html", xml: "xml", svg: "xml", css: "css", scss: "scss", less: "less",
+        sql: "sql", java: "java", c: "c", h: "c", cpp: "c", cc: "c", cxx: "c", hpp: "c", hh: "c",
+        cs: "cs", go: "go", rs: "rust" };
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      if (byExt[ext]) $("lang").value = byExt[ext];
+      $("inInfo").textContent = f.name + " · " + bytes(f.size);
+      run("min");
+    };
+    fr.onerror = () => toast("读取文件失败");
+    fr.readAsText(f);
+  });
+
+  $("btnClear").addEventListener("click", () => {
+    $("in").value = ""; renderOut("");
+    $("sizes").textContent = "";
+    $("outHint").textContent = "点顶部「压缩」或「美化」生成结果";
+    $("inInfo").textContent = "粘贴代码，或导入文件";
+    setStatus("等待输入…", false);
+    $("in").focus();
+  });
+
+  $("btnCopy").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    copyText(lastOut, "结果已复制");
+  });
+  $("btnDownload").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    const picked = $("lang").value;
+    const lang = picked === "auto" ? detectLang($("in").value) : picked;
+    const name = (lastMode === "min" ? "min." : "pretty.") + LANGS[lang].ext;
+    const blob = new Blob([lastOut], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast("已下载 " + name);
+  });
+  $("btnUseAsInput").addEventListener("click", () => {
+    if (!lastOut) { toast("还没有结果"); return; }
+    $("in").value = lastOut;
+    toast("结果已放回输入框");
+  });
+
+  /* 语言切换：只在样式表语言下露出「CSS 布局」分段控件（上下文相关，不是响应式藏控件） */
+  function syncLang() {
+    const v = $("lang").value;
+    $("cssLayoutWrap").hidden = !(v === "css" || v === "scss" || v === "less");
+  }
+  $("lang").addEventListener("change", () => {
+    syncLang();
+    /* 已有结果时立即按新语言重算 —— 否则「切到 SQL 还显示旧结果」会被当成没生效（实测踩过） */
+    if (lastOut && $("in").value.trim()) run(lastMode);
+  });
+  document.querySelectorAll("#cssLayoutWrap button").forEach(b => {
+    b.addEventListener("click", () => {
+      cssLayout = b.dataset.layout;
+      document.querySelectorAll("#cssLayoutWrap button").forEach(x => x.classList.toggle("on", x === b));
+      if ($("in").value.trim()) run(lastMode);      /* 按上一次的模式重跑，布局只影响美化 */
+    });
+  });
+
+  /* Ctrl / ⌘ + Enter 直接压缩，顺手一步 */
+  $("in").addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run("min"); }
+  });
+
+  syncLang();
+  $("in").value = SAMPLES.js;
+  run("min");
+})();
+</script>
+</body>
+</html>

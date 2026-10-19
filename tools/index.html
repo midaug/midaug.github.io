@@ -353,7 +353,10 @@ var ICONS = {
   image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.4" y="4.6" width="17.2" height="14.8" rx="2.4"/><circle cx="9" cy="10" r="1.6"/><path d="m4.6 17.4 4.6-4.3 3.4 3 2.6-2.3 4.2 3.9"/></svg>',
   swap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h13"/><path d="m14.2 5.3 3.2 3.2-3.2 3.2"/><path d="M20 15.5H7"/><path d="m9.8 12.3-3.2 3.2 3.2 3.2"/></svg>',
   tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.3 12.7 12.7 20.3a2 2 0 0 1-2.8 0L3.7 14.1a2 2 0 0 1-.6-1.4V5.2a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.4.6l6.3 6.3a2 2 0 0 1 0 2.6z"/><circle cx="8.6" cy="8.6" r="1.5"/></svg>',
-  idcard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="2.2"/><path d="M7.2 9.2v5.6"/><path d="M10.4 9.2v5.6"/><path d="M13.6 9.2v5.6"/><path d="M16.8 9.2v5.6"/></svg>'
+  idcard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.2" width="18" height="13.6" rx="2.2"/><path d="M7.2 9.2v5.6"/><path d="M10.4 9.2v5.6"/><path d="M13.6 9.2v5.6"/><path d="M16.8 9.2v5.6"/></svg>',
+  minify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5H7.2A2.7 2.7 0 0 0 4.5 6.2v11.6a2.7 2.7 0 0 0 2.7 2.7H9"/><path d="M15 3.5h1.8a2.7 2.7 0 0 1 2.7 2.7v11.6a2.7 2.7 0 0 1-2.7 2.7H15"/><path d="M9.6 12h4.8"/></svg>',
+  numfmt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18.6 5.4 5.4 18.6"/><circle cx="7.8" cy="7.8" r="2.5"/><circle cx="16.2" cy="16.2" r="2.5"/></svg>',
+  favicon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><path d="M3 9.4h18"/><circle cx="6.4" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="9.4" cy="7" r="1" fill="currentColor" stroke="none"/><rect x="7.6" y="12.4" width="5.4" height="4.4" rx="1" fill="currentColor" stroke="none"/></svg>'
 };
 
 var GROUPS = ['开发工具','日期时间','网络运维','媒体工具','生活工具'];
@@ -386,7 +389,11 @@ var TOOLS = [
   { group:'开发工具', name:'随机 ID 生成', path:'uuid/', icon:'idcard',
     desc:'UUID v4 / v7、ULID、NanoID、ObjectId 与自定义短 ID 批量生成，WebCrypto 真随机并给出熵值与碰撞概率。', tags:['UUID','ULID','NanoID','ObjectId','随机ID','短ID'] },
   { group:'开发工具', name:'颜色工具', path:'color/', icon:'palette',
-    desc:'HEX / RGB / HSL / HSV / CMYK 互转、WCAG 对比度检查、11 档明暗梯度与一键复制色值。', tags:['颜色','HEX','RGB','HSL','对比度','WCAG'] },
+    desc:'HEX / RGB / HSL / HSV / CMYK 互转、WCAG 对比度检查、11 档明暗梯度、调色板与渐变生成器，一键复制色值。', tags:['颜色','HEX','RGB','HSL','对比度','WCAG','调色板','渐变'] },
+  { group:'开发工具', name:'代码压缩美化', path:'minify/', icon:'minify',
+    desc:'15 种语言的压缩 / 美化（C 与 C++ 共用一个条目）：HTML / CSS / JS / TS / JSON / XML / SCSS / LESS / SQL / Java / C / C++ / C# / Go / Rust，可自动识别。压缩走「安全模式」——不合并行、不踩 ASI 自动分号；字符串、正则、原始串与 pre 内容按原文保留，压缩后有语法自检与体积对比，美化结果带语法高亮。', tags:['压缩','美化','minify','语法高亮','HTML','CSS','JavaScript','SQL'] },
+  { group:'开发工具', name:'数字格式化', path:'numfmt/', icon:'numfmt',
+    desc:'千分位、货币、百分比、科学计数、紧凑与二 / 八 / 十六进制格式化，并把数字转成中文小写与人民币大写；大整数按字符串逐位处理，20 位以上也不丢精度。', tags:['数字','格式化','千分位','人民币大写','中文数字'] },
 
   /* --- 日期时间 --- */
   { group:'日期时间', name:'日期时间工具', path:'datetime/', icon:'clock',
@@ -402,13 +409,15 @@ var TOOLS = [
   { group:'网络运维', name:'字节与网速计算', path:'byte-calc/', icon:'transfer',
     desc:'字节单位换算（1000/1024 双基准）、文件大小与速度算耗时、带宽换算实际速率、码率算体积。', tags:['字节','带宽','网速','换算'] },
   { group:'网络运维', name:'客户端信息查看', path:'client-info/', icon:'monitor',
-    desc:'实时显示当前时间戳、浏览器 User-Agent 与页面 meta 信息。', tags:['UA','调试'] },
+    desc:'实时显示当前时间戳、浏览器 User-Agent 与页面 meta 信息，并可粘贴任意 UA 解析出浏览器、渲染内核、操作系统与设备形态。', tags:['UA','User-Agent','调试','浏览器'] },
   { group:'网络运维', name:'JumpServer 解密', path:'jumpserver/', icon:'unlock',
     desc:'用 SECRET_KEY 还原堡垒机里存的资产密码与 SSH 私钥，依次尝试 signer、AES-ECB、AES-GCM、SM4-ECB，密文与密钥都不出浏览器。', tags:['JumpServer','堡垒机','解密','AES','SM4','SECRET_KEY'] },
 
   /* --- 媒体工具 --- */
   { group:'媒体工具', name:'图片工具', path:'image/', icon:'image',
-    desc:'图片压缩、缩放与 JPEG / WebP / PNG 互转，附带主色提取，全部在本地 canvas 内处理。', tags:['图片','压缩','WebP','主色','取色'] },
+    desc:'图片压缩、缩放与 JPEG / WebP / PNG 互转，支持旋转 / 翻转 / 交互式裁剪、文字水印，另有主色提取与 SVG 优化 / SVG ↔ PNG 互转，全部在本地 canvas 内处理。', tags:['图片','压缩','WebP','裁剪','旋转','水印','SVG','主色'] },
+  { group:'媒体工具', name:'favicon 生成器', path:'favicon/', icon:'favicon',
+    desc:'一张图生成 16~512 的全套 favicon（含 apple-touch-icon 与 android-chrome），打包成 ZIP，并给出可直接粘的 ICO 与 HTML 片段。', tags:['favicon','ICO','图标','ZIP','站点图标'] },
   { group:'媒体工具', name:'二维码', path:'qrcode/', icon:'qr',
     desc:'二维码生成与识别，支持自定义容错、颜色、透明背景与 SVG/PNG 导出；识别支持拖拽和粘贴截图。', tags:['二维码','QR','扫码'] },
   { group:'媒体工具', name:'麦克风 · 音响 · 摄像头', path:'media-test/', icon:'av',

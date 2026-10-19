@@ -121,8 +121,11 @@
   .drop b { display: block; font-size: 13px; margin-bottom: 4px; }
   .drop small { color: var(--text-3); font-size: 11.5px; }
 
+  /* 常驻卡片内部：左预览、右导出设置；窄屏自动改上下堆叠 */
+  .main-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+
   /* 预览 */
-  .previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
   .pv {
     border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--panel-2);
     background-image:
@@ -161,6 +164,92 @@
   .tip { font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
   .err-tip { color: var(--err); }
 
+  /* ===== 表单补充 ===== */
+  .chk { display: flex; align-items: center; gap: 6px; color: var(--text-2); cursor: pointer; white-space: nowrap; }
+  .chk input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  input[type="color"] { padding: 1px; width: 42px; height: 26px; cursor: pointer; flex: none; }
+  input[type="number"] { cursor: text; }
+  input[disabled] { opacity: .5; cursor: not-allowed; }
+  .numin { width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
+  button.mini.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  textarea {
+    display: block; width: 100%; resize: vertical;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; font: 12px/1.65 var(--mono);
+    outline: 0; cursor: text; tab-size: 2;
+    transition: border-color .15s, box-shadow .15s;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+  textarea::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--panel-2); }
+  textarea::-webkit-scrollbar-track { background: transparent; }
+
+  .sizes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .sizes b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .sizes .cut { color: var(--ok); font-weight: 600; }
+  .sizes .grow { color: var(--num); font-weight: 600; }
+
+  /* ===== Tab 分类 ===== */
+  .tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px;
+  }
+  .tabs button { padding: 5px 12px; background: var(--panel-2); color: var(--text-2); border-color: var(--border); }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .panel[hidden] { display: none; }
+
+  /* ===== 变换与裁剪 =====
+     ★ 画面尺寸由 JS 的 fitStage() 按容器实测尺寸等比算好、写成 px 交给 canvas，
+       容器只留一个固定高度、不设 overflow:auto —— 整张图永远可见，不用滚动着找边角。
+       因为 canvas 的 CSS 尺寸是 JS 写死的 px，.cropstage 的盒子 == 画面盒子，
+       用百分比定位的选区天然对齐。这也正是这里不写 max-width 的原因：
+       一旦浏览器按 max-width 对 canvas 做二次缩放，选区立刻和画面错位。 */
+  .cropwrap {
+    --stage-h: min(58vh, 560px);
+    height: var(--stage-h);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 9px;
+    padding: 10px; overflow: hidden;
+  }
+  .cropstage {
+    position: relative; display: block;
+    line-height: 0; user-select: none; -webkit-user-select: none;
+  }
+  .cropstage canvas { display: block; border-radius: 4px; }
+  .cropsel {
+    position: absolute; border: 1px solid #fff; outline: 1px solid var(--accent);
+    box-shadow: 0 0 0 9999px rgba(15,23,42,.5);
+    cursor: move; touch-action: none; z-index: 2;
+  }
+  .cropsel i {
+    position: absolute; display: block; width: 11px; height: 11px;
+    background: #fff; border: 1px solid var(--accent); border-radius: 2px;
+  }
+  .cropsel i[data-mode="nw"] { left: -6px; top: -6px; cursor: nwse-resize; }
+  .cropsel i[data-mode="n"]  { left: 50%; top: -6px; margin-left: -6px; cursor: ns-resize; }
+  .cropsel i[data-mode="ne"] { right: -6px; top: -6px; cursor: nesw-resize; }
+  .cropsel i[data-mode="w"]  { left: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+  .cropsel i[data-mode="e"]  { right: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+  .cropsel i[data-mode="sw"] { left: -6px; bottom: -6px; cursor: nesw-resize; }
+  .cropsel i[data-mode="s"]  { left: 50%; bottom: -6px; margin-left: -6px; cursor: ns-resize; }
+  .cropsel i[data-mode="se"] { right: -6px; bottom: -6px; cursor: nwse-resize; }
+
+  .wmprev {
+    text-align: center; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 9px; padding: 8px;
+  }
+  .wmprev canvas { display: block; margin: 0 auto; max-width: 100%; border-radius: 4px; }
+
+  .svgprev {
+    margin-top: 10px; display: flex; align-items: center; justify-content: center;
+    min-height: 78px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 9px; padding: 8px;
+  }
+  .svgprev img { max-width: 100%; max-height: 200px; display: block; border-radius: 4px; }
+
   .spinner {
     width: 12px; height: 12px; border: 2px solid var(--border-2); border-top-color: var(--accent);
     border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: -1px;
@@ -178,6 +267,7 @@
 
   @media (max-width: 900px) {
     main { grid-template-columns: minmax(0, 1fr); }
+    .main-grid { grid-template-columns: minmax(0, 1fr); }
     .hide-sm { display: none; }
   }
   @media (max-width: 640px) {
@@ -187,9 +277,13 @@
     .card { padding: 12px; }
     .row > label.k { width: 54px; }
     button, select { padding: 5px 9px; font-size: 12px; }
-    select { font-size: 16px; }   /* iOS 对 select 同样会触发聚焦缩放，故提到 16px */
     .previews { grid-template-columns: minmax(0, 1fr); }
     .pv img { max-height: 220px; }
+    /* iOS 对输入控件聚焦会放大整页，低于 16px 就会触发（color / range 除外） */
+    input[type="text"], input[type="number"], textarea, select { font-size: 16px; }
+    .cropwrap { --stage-h: 46vh; }
+    .numin { width: 64px; }
+    .svgprev img { max-height: 150px; }
   }
 </style>
 </head>
@@ -198,7 +292,7 @@
 <header>
   <div class="brand">Image<span>Tool</span></div>
   <span class="sep"></span>
-  <span class="stat">压缩 · 转 WebP · 提取主色</span>
+  <span class="stat">压缩 · 转换 · 裁剪旋转 · 水印 · 主色 · SVG</span>
   <span class="sep hide-sm"></span>
   <span class="stat hide-sm">全部在本地浏览器内处理，图片不会上传</span>
   <button class="mini" id="btnClear" title="清空当前图片与结果">清空</button>
@@ -206,77 +300,60 @@
 
 <main>
 
-  <!-- ============ 1. 选择与设置 ============ -->
-  <section class="card">
-    <h2>
-      选择图片
-      <span class="hint">点击或把文件拖进来</span>
-    </h2>
-    <div class="drop" id="drop">
-      <b>拖放图片到此处，或点击选择</b>
-      <small>支持 JPEG / PNG / WebP / GIF（首帧）/ BMP，单张即可</small>
-    </div>
-    <input type="file" id="file" accept="image/*" hidden />
-
-    <div class="row" style="margin-top:12px">
-      <label class="k" for="maxSide">最大边长</label>
-      <select id="maxSide" style="flex:1">
-        <option value="0">不缩放（保持原尺寸）</option>
-        <option value="2560">2560 px</option>
-        <option value="1920" selected>1920 px</option>
-        <option value="1280">1280 px</option>
-        <option value="800">800 px</option>
-        <option value="640">640 px</option>
-      </select>
-    </div>
-    <div class="row">
-      <label class="k" for="fmt">输出格式</label>
-      <select id="fmt" style="flex:1">
-        <option value="image/webp" selected>WebP（体积最小）</option>
-        <option value="image/jpeg">JPEG</option>
-        <option value="image/png">PNG（无损，体积最大）</option>
-      </select>
-    </div>
-    <div class="row">
-      <label class="k" for="quality">质量</label>
-      <input type="range" id="quality" min="10" max="100" step="1" value="82" style="flex:1" />
-      <span class="len-val" id="qualityVal">82</span>
-    </div>
-    <div class="row" style="margin-bottom:0">
-      <span style="flex:1"></span>
-      <button class="primary" id="btnRun" disabled>压缩 / 转换</button>
-    </div>
-    <div class="tip" id="runTip" style="margin-top:8px">
-      · JPEG 不支持透明，透明区域会被填成白色；要保留透明请选 WebP 或 PNG。<br>
-      · 动图只处理第一帧。EXIF 方向由浏览器自动摆正。
-    </div>
-  </section>
-
-  <!-- ============ 2. 主色 ============ -->
-  <section class="card">
-    <h2>
-      主色提取
-      <span class="hint">点色块复制 HEX</span>
-    </h2>
-    <div class="palette" id="palette"></div>
-    <div class="kv" id="palKv"></div>
-    <div class="tip" style="margin-top:10px">
-      做法：把图缩到 64×64 采样，按每通道 4 bit 量化后统计出现频次，
-      取占比最高的 6 色（并合并相近色）；平均色单独算。适合取「整体色调」，
-      不适合当严格的主题色分析。
-    </div>
-  </section>
-
-  <!-- ============ 3. 预览与结果 ============ -->
+  <!-- ============ 1. 图片与导出（常驻：任何 Tab 下都能导出） ============ -->
   <section class="card wide">
     <h2>
-      预览与结果
+      图片与导出
       <span class="hint" id="preHint">还没有图片</span>
       <span class="right">
         <button class="mini" id="btnDownload" disabled>下载结果</button>
         <button class="mini" id="btnCopyInfo" disabled>复制信息</button>
       </span>
     </h2>
+    <div class="main-grid">
+      <div>
+        <div class="drop" id="drop">
+          <b>拖放图片到此处，或点击选择</b>
+          <small>支持 JPEG / PNG / WebP / GIF（首帧）/ BMP；.svg 会自动送到「SVG」页</small>
+        </div>
+        <input type="file" id="file" accept="image/*" hidden />
+      </div>
+      <div>
+        <div class="row">
+          <label class="k" for="maxSide">最大边长</label>
+          <select id="maxSide" style="flex:1">
+            <option value="0">不缩放（保持原尺寸）</option>
+            <option value="2560">2560 px</option>
+            <option value="1920" selected>1920 px</option>
+            <option value="1280">1280 px</option>
+            <option value="800">800 px</option>
+            <option value="640">640 px</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="k" for="fmt">输出格式</label>
+          <select id="fmt" style="flex:1">
+            <option value="image/webp" selected>WebP（体积最小）</option>
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/png">PNG（无损，体积最大）</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="k" for="quality">质量</label>
+          <input type="range" id="quality" min="10" max="100" step="1" value="82" style="flex:1" />
+          <span class="len-val" id="qualityVal">82</span>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <span style="flex:1"></span>
+          <button class="primary" id="btnRun" disabled>压缩 / 转换</button>
+        </div>
+        <div class="tip" id="runTip" style="margin-top:8px">
+          · 导出会把「裁剪旋转」与「水印」两页的改动一并写入结果，不用来回切页。<br>
+          · JPEG 不支持透明，透明区域会被填成白色；要保留透明请选 WebP 或 PNG。<br>
+          · 动图只处理第一帧。EXIF 方向由浏览器自动摆正。
+        </div>
+      </div>
+    </div>
     <div class="previews">
       <div class="pv">
         <div class="hd"><b>原图</b><span id="origMeta">—</span></div>
@@ -288,6 +365,173 @@
       </div>
     </div>
     <div class="kv" id="resKv"></div>
+  </section>
+
+  <!-- ============ 2. 操作（Tab 分类） ============ -->
+  <section class="card wide">
+    <h2>
+      操作
+      <span class="hint">这里的改动会在导出时写入结果</span>
+    </h2>
+    <div class="tabs" id="tabs">
+      <button class="mini on" data-tab="crop">裁剪旋转</button>
+      <button class="mini" data-tab="wm">水印</button>
+      <button class="mini" data-tab="pal">主色</button>
+      <button class="mini" data-tab="svg">SVG</button>
+    </div>
+
+    <!-- 2.1 裁剪旋转 -->
+    <div class="panel" id="panel-crop">
+      <div class="row">
+        <label class="k">旋转</label>
+        <button class="mini" id="btnRotL">↺ 左转 90°</button>
+        <button class="mini" id="btnRotR">↻ 右转 90°</button>
+        <button class="mini" id="btnRot180">转 180°</button>
+        <label class="chk" style="margin-left:8px"><input type="checkbox" id="flipH" /> 水平翻转</label>
+        <label class="chk"><input type="checkbox" id="flipV" /> 垂直翻转</label>
+        <span style="flex:1"></span>
+        <button class="mini" id="btnEditReset">重置变换</button>
+      </div>
+      <div class="row">
+        <label class="k">比例</label>
+        <button class="mini on" data-rw="0" data-rh="1">自由（全图）</button>
+        <button class="mini" data-rw="1" data-rh="1">1:1</button>
+        <button class="mini" data-rw="4" data-rh="3">4:3</button>
+        <button class="mini" data-rw="3" data-rh="4">3:4</button>
+        <button class="mini" data-rw="16" data-rh="9">16:9</button>
+        <button class="mini" data-rw="9" data-rh="16">9:16</button>
+      </div>
+      <div class="row">
+        <label class="k">像素</label>
+        <span class="tip">X</span><input class="numin" id="cropX" type="number" min="0" step="1" value="0" disabled />
+        <span class="tip">Y</span><input class="numin" id="cropY" type="number" min="0" step="1" value="0" disabled />
+        <span class="tip">宽</span><input class="numin" id="cropW" type="number" min="1" step="1" value="0" disabled />
+        <span class="tip">高</span><input class="numin" id="cropH" type="number" min="1" step="1" value="0" disabled />
+      </div>
+      <div class="cropwrap" id="cropWrap">
+        <div class="cropstage" id="cropStage">
+          <canvas id="cropCanvas"></canvas>
+          <div class="cropsel" id="cropSel">
+            <i data-mode="nw"></i><i data-mode="n"></i><i data-mode="ne"></i>
+            <i data-mode="w"></i><i data-mode="e"></i>
+            <i data-mode="sw"></i><i data-mode="s"></i><i data-mode="se"></i>
+          </div>
+        </div>
+        <span class="tip" id="cropEmpty">先选一张图片</span>
+      </div>
+      <div class="tip" style="margin-top:9px">
+        · 画面按容器尺寸自动等比缩放，整张图始终完整可见，不用滚动着找边角。<br>
+        · 拖动选区内部移动，拖角 / 拖边改大小；点比例会立刻套用「该比例的最大居中选区」，
+        之后手动拖拽即回到自由比例。四个像素框可直接输入精确裁剪范围。<br>
+        · 旋转 / 翻转只改画面，不动裁剪框的比例位置；先摆正再裁剪最省事。
+      </div>
+    </div>
+
+    <!-- 2.2 水印 -->
+    <div class="panel" id="panel-wm" hidden>
+      <div class="main-grid">
+        <div>
+          <div class="row">
+            <label class="k" for="wmText">文字</label>
+            <input id="wmText" type="text" placeholder="留空则不加" style="flex:1" />
+          </div>
+          <div class="row">
+            <label class="k" for="wmPos">位置</label>
+            <select id="wmPos" style="flex:1">
+              <option value="br" selected>右下</option>
+              <option value="bc">下中</option>
+              <option value="bl">左下</option>
+              <option value="cc">居中</option>
+              <option value="tr">右上</option>
+              <option value="tc">上中</option>
+              <option value="tl">左上</option>
+            </select>
+          </div>
+          <div class="row">
+            <label class="k" for="wmSize">字号</label>
+            <input type="range" id="wmSize" min="2" max="20" step="1" value="6" style="flex:1" />
+            <span class="len-val" id="wmSizeVal">6%</span>
+          </div>
+          <div class="row">
+            <label class="k" for="wmOpacity">不透明</label>
+            <input type="range" id="wmOpacity" min="5" max="100" step="1" value="70" style="flex:1" />
+            <span class="len-val" id="wmOpacityVal">70%</span>
+          </div>
+          <div class="row" style="margin-bottom:0">
+            <label class="k" for="wmColor">颜色</label>
+            <input type="color" id="wmColor" value="#ffffff" />
+            <label class="chk"><input type="checkbox" id="wmShadow" checked /> 加阴影</label>
+          </div>
+        </div>
+        <div class="wmprev">
+          <canvas id="wmCanvas"></canvas>
+          <span class="tip" id="wmEmpty">先选一张图片</span>
+        </div>
+      </div>
+      <div class="tip" style="margin-top:8px">
+        字号按图片短边的百分比算，所以同一套设置在大图和缩略图上观感一致；
+        导出时按最终尺寸重绘，不会因为先缩放而糊掉。预览画的是「裁剪框内的区域」。
+      </div>
+    </div>
+
+    <!-- 2.3 主色 -->
+    <div class="panel" id="panel-pal" hidden>
+      <div class="palette" id="palette"></div>
+      <div class="kv" id="palKv"></div>
+      <div class="tip" style="margin-top:10px">
+        做法：把图缩到 64×64 采样，按每通道 4 bit 量化后统计出现频次，
+        取占比最高的 6 色（并合并相近色）；平均色单独算。点色块复制 HEX。
+        适合取「整体色调」，不适合当严格的主题色分析。
+      </div>
+    </div>
+
+    <!-- 2.4 SVG -->
+    <div class="panel" id="panel-svg" hidden>
+      <div class="row">
+        <button class="mini" id="btnSvgLoad">载入 SVG</button>
+        <input type="file" id="fileSvg" accept=".svg,image/svg+xml" hidden />
+        <span class="tip">优化 · 转 PNG · 位图封装</span>
+      </div>
+      <textarea id="svgIn" rows="6" spellcheck="false"
+        placeholder="把 SVG 源码粘贴到这里，或点「载入 SVG」／直接把 .svg 文件拖到页面上"></textarea>
+      <div class="row" style="margin-top:9px">
+        <label class="k" for="svgPrec">精度</label>
+        <select id="svgPrec" style="flex:1">
+          <option value="0">整数（最小）</option>
+          <option value="1">1 位小数</option>
+          <option value="2" selected>2 位小数</option>
+          <option value="3">3 位小数</option>
+        </select>
+        <button class="primary" id="btnSvgOpt">优化</button>
+      </div>
+      <div class="row">
+        <label class="k" for="svgW">PNG 宽</label>
+        <input class="numin" id="svgW" type="number" min="1" max="4096" step="1" value="512"
+          style="flex:1;width:auto;text-align:left" />
+        <button class="mini" id="btnSvgPng">转 PNG</button>
+        <button class="mini" id="btnSvgUse">载入为源图</button>
+      </div>
+      <div class="row">
+        <button class="mini" id="btnSvgFromImg">当前图片 → SVG</button>
+        <span class="tip">按原尺寸内嵌成 SVG，是「容器」不是矢量化</span>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <span style="flex:1"></span>
+        <button class="mini" id="btnSvgDl" disabled>下载 SVG</button>
+        <button class="mini" id="btnSvgPngDl" disabled>下载 PNG</button>
+        <button class="mini" id="btnSvgCopy">复制</button>
+      </div>
+      <div class="svgprev" id="svgPrev"><span class="tip">还没有内容</span></div>
+      <div class="sizes" id="svgKv" style="margin-top:9px"></div>
+      <div class="tip" style="margin-top:8px">
+        · 优化做四件事：去 XML 声明 / DOCTYPE / 注释、去 metadata 与 Inkscape、Sodipodi 等编辑器残留、
+        折叠标签间空白、按所选精度收敛数值。「text」「style」这类元素的内容原样保留（空白有语义），
+        改完会做一次 XML 校验，校验不过就保留原文。<br>
+        · 转 PNG 走 img + canvas，SVG 里若引用了外部图片或字体可能被判定为跨域而失败；
+        有些编辑器导出的 SVG 带未声明的命名空间前缀，XML 解析不通过时先点一次「优化」就能修好。
+        PNG 最长边封顶 4096 px，再大 canvas 会拖死浏览器。
+      </div>
+    </div>
   </section>
 
 </main>
@@ -311,7 +555,21 @@
   let outURL = "";          // 结果预览 / 下载
   let outBlob = null;
   let outName = "";
+  let outW = 0, outH = 0;
   let origFile = null;
+
+  /* 变换 / 裁剪 / 水印。
+     crop 存的是「占变换后画面的比例」(0..1)：画布尺寸一变、窗口一缩放都不用重算，
+     指针拖拽直接按百分比累加即可；只有给用户看的输入框才换算成像素。 */
+  let edit = { rot: 0, flipH: false, flipV: false, crop: { x: 0, y: 0, w: 1, h: 1 } };
+  let wm = { text: "", pos: "br", size: 6, opacity: 70, color: "#ffffff", shadow: true };
+  let ratio = 0;            // 0 = 自由
+  let drag = null;          // 正在拖拽的裁剪选区
+
+  /* SVG 工具状态 */
+  let svgPrevURL = "";
+  let svgPngBlob = null;
+  let svgPngW = 0, svgPngH = 0;
 
   const fmtBytes = n => {
     if (n < 1024) return n + " B";
@@ -328,6 +586,231 @@
   function releaseOut() {
     if (outURL) { URL.revokeObjectURL(outURL); outURL = ""; }
     outBlob = null;
+    outW = outH = 0;
+  }
+
+  /* ============================================================
+     Tab 分类
+     -- 面板一旦隐藏，里面所有元素的 clientWidth / clientHeight 都变 0，
+        所以「裁剪」页必须在切回来的那一刻重新量一次画面尺寸，否则
+        fitStage() 会拿到 0 直接跳过，画面保持上一次的（甚至没设过）大小。
+     ============================================================ */
+  const TABS = ["crop", "wm", "pal", "svg"];
+  const tabBtns = [...document.querySelectorAll("#tabs button")];
+
+  function setTab(name) {
+    if (TABS.indexOf(name) < 0) name = TABS[0];
+    tabBtns.forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+    TABS.forEach(t => { $("panel-" + t).hidden = t !== name; });
+    /* 只有「裁剪」页依赖实测布局；水印预览画在 canvas 上，跟可见性无关 */
+    if (name === "crop") fitStage();
+  }
+
+  /* ============================================================
+     画面适配
+     -- 把「变换后的画面」等比缩放进 .cropwrap 的可用区域，写死成 px。
+        这样整张图永远完整可见（不需要滚动），并且 .cropstage 的盒子尺寸
+        就等于画面尺寸 —— 用百分比定位的选区天然对齐。
+     ============================================================ */
+  function fitStage() {
+    const cv = $("cropCanvas"), wrap = $("cropWrap");
+    if (!bitmap || !cv.width || !cv.height) return;
+    const PAD = 20;                        /* .cropwrap 左右 / 上下各 10px 内边距 */
+    const aw = wrap.clientWidth - PAD, ah = wrap.clientHeight - PAD;
+    if (aw <= 0 || ah <= 0) return;        /* 面板还藏着，量不到；等切回来再量 */
+    const k = Math.min(aw / cv.width, ah / cv.height);
+    cv.style.width = Math.max(1, Math.round(cv.width * k)) + "px";
+    cv.style.height = Math.max(1, Math.round(cv.height * k)) + "px";
+    /* 放大超过 1.4 倍时按像素方块渲染：否则小图被插值糊成一片，看不出真实像素 */
+    cv.style.imageRendering = k > 1.4 ? "pixelated" : "";
+  }
+
+  /* ============================================================
+     变换（旋转 / 翻转）→ 画到 #cropCanvas
+     -- 这张 canvas 就是「裁剪的输入」：run() 从它上面取裁剪区域再缩放导出，
+        所以变换只需要在这里算一次，拖裁剪框时完全不用重画。
+     ============================================================ */
+  function renderCropStage() {
+    const cv = $("cropCanvas");
+    if (!bitmap) {
+      cv.width = 0; cv.height = 0;
+      cv.style.display = "none";
+      cv.style.width = ""; cv.style.height = "";   /* 顺手清掉上一张图留下的显示尺寸 */
+      $("cropSel").style.display = "none";
+      $("cropEmpty").style.display = "inline";
+      renderWmPreview();     // 走同一条「没图」分支，别让上一张图的水印留在画布上
+      return;
+    }
+    cv.style.display = "block";
+    $("cropSel").style.display = "block";
+    $("cropEmpty").style.display = "none";
+
+    const sw = bitmap.width, sh = bitmap.height;
+    const swap = edit.rot === 90 || edit.rot === 270;
+    const cw = swap ? sh : sw, ch = swap ? sw : sh;
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+    /* 顺序必须是 translate → scale → rotate：
+       先 rotate 再 scale 的话，scale 作用在「图像自身坐标系」上，旋转 90° 后
+       用户点「水平翻转」会看到垂直方向被翻 —— 与直觉相反。 */
+    ctx.translate(cw / 2, ch / 2);
+    ctx.scale(edit.flipH ? -1 : 1, edit.flipV ? -1 : 1);
+    ctx.rotate(edit.rot * Math.PI / 180);
+    ctx.drawImage(bitmap, -sw / 2, -sh / 2);
+
+    fitStage();            /* 换了画面尺寸就得重量一次显示尺寸 */
+    syncCropInputs();
+    renderWmPreview();
+  }
+
+  /* 裁剪区域（变换后画布上的像素坐标），始终夹在画面内且至少 1×1 */
+  function cropPx() {
+    const cv = $("cropCanvas");
+    const W = cv.width || 1, H = cv.height || 1;
+    const c = edit.crop;
+    const x = Math.max(0, Math.min(W - 1, Math.round(c.x * W)));
+    const y = Math.max(0, Math.min(H - 1, Math.round(c.y * H)));
+    const w = Math.max(1, Math.min(W - x, Math.round(c.w * W)));
+    const h = Math.max(1, Math.min(H - y, Math.round(c.h * H)));
+    return { x: x, y: y, w: w, h: h };
+  }
+
+  /* 选区用百分比定位：外层 stage 收缩包裹 canvas，所以百分比天然对齐画面 */
+  function paintCrop() {
+    const s = $("cropSel"), c = edit.crop;
+    s.style.left = (c.x * 100) + "%";
+    s.style.top = (c.y * 100) + "%";
+    s.style.width = (c.w * 100) + "%";
+    s.style.height = (c.h * 100) + "%";
+  }
+
+  function syncCropInputs(skip) {
+    const cv = $("cropCanvas");
+    const W = cv.width || 0, H = cv.height || 0;
+    const c = edit.crop;
+    const vals = {
+      cropX: Math.round(c.x * W), cropY: Math.round(c.y * H),
+      cropW: Math.round(c.w * W), cropH: Math.round(c.h * H)
+    };
+    Object.keys(vals).forEach(id => { if (id !== skip) $(id).value = vals[id]; });
+    ["cropX", "cropY", "cropW", "cropH"].forEach(id => { $(id).disabled = !W; });
+  }
+
+  function applyCropInputs(from) {
+    const cv = $("cropCanvas");
+    const W = cv.width, H = cv.height;
+    if (!W || !H) return;
+    const num = k => { const v = parseFloat($(k).value); return isFinite(v) ? v : 0; };
+    const x = Math.max(0, Math.min(W - 1, Math.round(num("cropX"))));
+    const y = Math.max(0, Math.min(H - 1, Math.round(num("cropY"))));
+    const w = Math.max(1, Math.min(W - x, Math.round(num("cropW"))));
+    const h = Math.max(1, Math.min(H - y, Math.round(num("cropH"))));
+    edit.crop = { x: x / W, y: y / H, w: w / W, h: h / H };
+    setRatio(0);
+    paintCrop();
+    syncCropInputs(from);   // 跳过用户正在敲的那个框，否则边输边被改写
+    renderWmPreview();
+  }
+
+  const ratioBtns = [...document.querySelectorAll("[data-rw]")];
+  function setRatio(r) {
+    ratio = r;
+    ratioBtns.forEach(b => {
+      const br = (+b.dataset.rw) / (+b.dataset.rh);
+      b.classList.toggle("on", Math.abs(br - r) < 1e-6);
+    });
+  }
+  /* 比例预设只做「套用最大居中选区」，之后拖拽即回自由 —— 
+     比在拖拽中实时锁比例简单得多，也不会出现拖到边界后抖动的情况 */
+  function applyRatioPreset(r) {
+    const cv = $("cropCanvas");
+    if (!cv.width) return;
+    if (!r) {
+      edit.crop = { x: 0, y: 0, w: 1, h: 1 };
+    } else {
+      const ar = cv.width / cv.height;
+      let w = 1, h = 1;
+      if (r > ar) h = ar / r; else w = r / ar;
+      edit.crop = { x: (1 - w) / 2, y: (1 - h) / 2, w: w, h: h };
+    }
+    setRatio(r);
+    paintCrop();
+    syncCropInputs();
+    renderWmPreview();
+  }
+
+  function resetEdit() {
+    edit.rot = 0; edit.flipH = false; edit.flipV = false;
+    edit.crop = { x: 0, y: 0, w: 1, h: 1 };
+    $("flipH").checked = false;
+    $("flipV").checked = false;
+    setRatio(0);
+    paintCrop();
+  }
+
+  /* ============================================================
+     水印
+     -- 字号按短边百分比算，所以「预览按小尺寸画」和「导出按最终尺寸画」
+        观感一致，不需要等导出才能看效果。
+     ============================================================ */
+  const WM_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+  function drawWatermark(ctx, w, h) {
+    const text = wm.text.trim();
+    if (!text || !w || !h) return;
+    const fs = Math.max(8, Math.round(Math.min(w, h) * wm.size / 100));
+    const pad = Math.max(4, Math.round(fs * 0.55));
+    ctx.save();
+    ctx.globalAlpha = wm.opacity / 100;
+    ctx.font = "600 " + fs + "px " + WM_FONT;
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+    const tw = ctx.measureText(text).width;
+    let x, y;
+    switch (wm.pos) {
+      case "tl": x = pad; y = pad + fs; break;
+      case "tc": x = (w - tw) / 2; y = pad + fs; break;
+      case "tr": x = w - tw - pad; y = pad + fs; break;
+      case "cc": x = (w - tw) / 2; y = (h + fs) / 2; break;
+      case "bl": x = pad; y = h - pad; break;
+      case "bc": x = (w - tw) / 2; y = h - pad; break;
+      default:   x = w - tw - pad; y = h - pad; break;   // br
+    }
+    if (wm.shadow) {
+      ctx.shadowColor = "rgba(0,0,0,.55)";
+      ctx.shadowBlur = Math.max(2, fs * 0.16);
+      ctx.shadowOffsetY = Math.max(1, fs * 0.05);
+    }
+    ctx.fillStyle = wm.color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function renderWmPreview() {
+    const cv = $("wmCanvas"), src = $("cropCanvas");
+    if (!bitmap || !src.width) {
+      cv.width = 0; cv.height = 0;
+      cv.style.display = "none";
+      $("wmEmpty").style.display = "inline";
+      return;
+    }
+    cv.style.display = "block";
+    $("wmEmpty").style.display = "none";
+    const c = cropPx();
+    const k = Math.min(300 / c.w, 180 / c.h, 1);
+    const W = Math.max(1, Math.round(c.w * k));
+    const H = Math.max(1, Math.round(c.h * k));
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    /* 直接从全分辨率画面缩这一块。曾经试过先做一张 ≤900px 的缩略代理再从这里取，
+       实测没有收益（见 .memory/tools/image.md 的性能小节），故不保留。 */
+    ctx.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, W, H);
+    drawWatermark(ctx, W, H);
   }
 
   /* ============================================================
@@ -350,6 +833,12 @@
 
   function pickFile(file) {
     if (!file) return;
+    /* SVG 不是位图，走不通 canvas 那条路：直接送进 SVG 工具区，
+       想拿它当源图就点那边的「载入为源图」光栅化一下 */
+    if (/svg/i.test(file.type || "") || /\.svg$/i.test(file.name || "")) {
+      loadSvgFile(file);
+      return;
+    }
     if (!/^image\//.test(file.type)) { toast("这不是图片文件"); return; }
     /* 超大图保护：源图先看体积，解码后还会看像素数 */
     if (file.size > 60 * 1048576) { toast("图片超过 60 MB，浏览器可能处理不动"); return; }
@@ -381,6 +870,8 @@
       $("outBox").innerHTML = '<span class="tip">点「压缩 / 转换」生成</span>';
       $("outMeta").textContent = "—";
       $("resKv").textContent = "";
+      resetEdit();
+      renderCropStage();
       renderPalette(bmp);
     }).catch(err => {
       $("preHint").innerHTML = '<span class="err-tip">解码失败：' + String(err && err.message || err) + "</span>";
@@ -393,14 +884,17 @@
      ============================================================ */
   function run() {
     if (!bitmap) { toast("先选一张图片"); return; }
+    const src = $("cropCanvas");
+    const c = cropPx();
     const maxSide = +$("maxSide").value;
     const type = $("fmt").value;
     const q = +$("quality").value / 100;
 
-    const sw = bitmap.width, sh = bitmap.height;
-    const scale = maxSide ? Math.min(1, maxSide / Math.max(sw, sh)) : 1;
-    const tw = Math.max(1, Math.round(sw * scale));
-    const th = Math.max(1, Math.round(sh * scale));
+    /* 缩放以「裁剪后的短边/长边」为基准，而不是原始图 —— 
+       否则裁掉一大半再选 1920，导出的还是原图的长边尺寸 */
+    const scale = maxSide ? Math.min(1, maxSide / Math.max(c.w, c.h)) : 1;
+    const tw = Math.max(1, Math.round(c.w * scale));
+    const th = Math.max(1, Math.round(c.h * scale));
 
     const cv = document.createElement("canvas");
     cv.width = tw; cv.height = th;
@@ -412,7 +906,8 @@
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, tw, th);
     }
-    ctx.drawImage(bitmap, 0, 0, tw, th);
+    ctx.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, tw, th);
+    drawWatermark(ctx, tw, th);
 
     const cvs = $("btnRun");
     cvs.disabled = true;
@@ -429,6 +924,7 @@
       }
       releaseOut();
       outBlob = blob;
+      outW = tw; outH = th;
       outURL = URL.createObjectURL(blob);
       const ext = type === "image/png" ? "png" : type === "image/webp" ? "webp" : "jpg";
       const base = (origFile && origFile.name ? origFile.name.replace(/\.[^.]+$/, "") : "image");
@@ -452,6 +948,13 @@
       add("体积 <b>" + fmtBytes(blob.size) + "</b>");
       if (raw) add("相对原图 <b class='" + (blob.size <= raw ? "good" : "") + "'>"
         + (delta <= 0 ? "↓ " + Math.abs(delta).toFixed(1) + "%" : "↑ " + delta.toFixed(1) + "%") + "</b>");
+      const ed = [];
+      if (edit.rot) ed.push("旋转 " + edit.rot + "°");
+      if (edit.flipH) ed.push("水平翻转");
+      if (edit.flipV) ed.push("垂直翻转");
+      if (c.w !== src.width || c.h !== src.height) ed.push("裁剪 " + c.w + " × " + c.h);
+      if (wm.text.trim()) ed.push("水印「" + wm.text.trim() + "」");
+      if (ed.length) add("编辑 <b>" + ed.join(" · ") + "</b>");
       $("btnDownload").disabled = false;
       $("btnCopyInfo").disabled = false;
       $("preHint").textContent = outName;
@@ -537,6 +1040,234 @@
   }
 
   /* ============================================================
+     SVG 优化
+     -- 全是纯文本替换，不引第三方库。改完必须过一遍 DOMParser 校验：
+        正则改 XML 天然有风险，校验不过就原样退回，绝不把内容弄丢。
+     ============================================================ */
+  const PH = "\u0000";
+  const MAX_PX = 4096;             // SVG 栅格化的最长边上限（约 4096² 像素，再大 canvas 会拖死浏览器）
+  const svgBytes = s => new Blob([s]).size;
+
+  function fmtNum(v, prec) {
+    if (!isFinite(v)) return "0";
+    let s = v.toFixed(prec);
+    if (s.indexOf(".") >= 0) s = s.replace(/0+$/, "").replace(/\.$/, "");
+    if (s === "-0") s = "0";
+    return s.replace(/^(-?)0\./, "$1.");     // 0.5 → .5，省一个字符
+  }
+  function trimNums(str, prec) {
+    return String(str).replace(/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g, m => fmtNum(parseFloat(m), prec));
+  }
+  /* 只对「确定是数值」的属性动手：id / class / url(#..) 这些一律不碰 */
+  const SVG_NUM_ATTRS = "d|points|viewBox|transform|gradientTransform|patternTransform"
+    + "|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|fx|fy|width|height"
+    + "|stroke-width|stroke-dasharray|opacity|fill-opacity|stroke-opacity|stop-opacity"
+    + "|offset|dx|dy|rotate|font-size|letter-spacing|stdDeviation|refX|refY"
+    + "|markerWidth|markerHeight|pathLength";
+
+  function optimizeSVG(src, prec) {
+    let s = String(src).replace(/^\uFEFF/, "");
+    /* 1. XML 声明 / DOCTYPE / 注释 —— 去掉都不影响渲染 */
+    s = s.replace(/<\?xml[\s\S]*?\?>/g, "");
+    s = s.replace(/<!DOCTYPE[\s\S]*?>/gi, "");
+    s = s.replace(/<!--[\s\S]*?-->/g, "");
+    /* 2. 空白有语义的元素整块存起来（text 里换行会变成空格、style 里是 CSS），
+          折叠空白前先换占位符，最后原样放回 */
+    const store = [];
+    s = s.replace(/<(text|tspan|textPath|style|script|foreignObject)\b[\s\S]*?<\/\1>/gi,
+      m => { store.push(m); return PH + (store.length - 1) + PH; });
+    /* 3. 编辑器私货：metadata 与带命名空间前缀的元素 / 属性 */
+    s = s.replace(/<metadata\b[\s\S]*?<\/metadata>/gi, "");
+    s = s.replace(/<(sodipodi|inkscape|dc|cc|rdf|svg):[a-zA-Z][\w-]*\b[^>]*\/>/g, "");
+    s = s.replace(/<(sodipodi|inkscape|dc|cc|rdf|svg):([a-zA-Z][\w-]*)\b[^>]*>[\s\S]*?<\/\1:\2>/g, "");
+    s = s.replace(/\s+xmlns:(?:sodipodi|inkscape|dc|cc|rdf)="[^"]*"/g, "");
+    s = s.replace(/\s+(?:sodipodi|inkscape|dc|cc|rdf):[\w-]+="[^"]*"/g, "");
+    /* 4. 数值精度（同时顺手把 d = "x" 这种写法规范成 d="x"） */
+    s = s.replace(new RegExp("\\s(" + SVG_NUM_ATTRS + ')\\s*=\\s*"([^"]*)"', "g"),
+      (m, k, v) => " " + k + '="' + trimNums(v, prec) + '"');
+    /* 5. 空白 */
+    s = s.replace(/>\s+</g, "><");
+    s = s.replace(/\s+\/>/g, "/>");
+    s = s.replace(/\s{2,}/g, " ");
+    s = s.replace(/\s+>/g, ">");
+    /* 6. 还原 */
+    s = s.replace(new RegExp(PH + "(\\d+)" + PH, "g"), (m, i) => store[+i]);
+    return s.trim();
+  }
+
+  function svgValid(text) {
+    try {
+      const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+      if (doc.querySelector("parsererror")) return false;
+      return !!(doc.documentElement && doc.documentElement.localName.toLowerCase() === "svg");
+    } catch (e) { return false; }
+  }
+
+  /* 拿 SVG 的固有尺寸：viewBox 优先，width/height 覆盖之（width="100%" 会被忽略） */
+  function svgDims(text) {
+    const tag = (String(text).match(/<svg\b[^>]*>/i) || [""])[0];
+    let w = 0, h = 0;
+    const vb = tag.match(/viewBox\s*=\s*["']([^"']+)["']/i);
+    if (vb) {
+      const p = vb[1].trim().split(/[\s,]+/).map(Number);
+      if (p.length === 4 && isFinite(p[2]) && isFinite(p[3])) { w = p[2]; h = p[3]; }
+    }
+    const wm2 = tag.match(/\swidth\s*=\s*["']([\d.]+)/i);
+    const hm2 = tag.match(/\sheight\s*=\s*["']([\d.]+)/i);
+    if (wm2) w = parseFloat(wm2[1]);
+    if (hm2) h = parseFloat(hm2[1]);
+    return { w: w > 0 ? w : 300, h: h > 0 ? h : 150 };
+  }
+
+  /* 没有 width/height 的 SVG 在 Safari 里可能压根不渲染，栅格化前补上 */
+  function ensureSvgSize(text) {
+    const tag = (String(text).match(/<svg\b[^>]*>/i) || [""])[0];
+    if (!tag) return text;
+    const hasW = /\swidth\s*=/i.test(tag), hasH = /\sheight\s*=/i.test(tag);
+    if (hasW && hasH) return text;
+    const d = svgDims(text);
+    let add = "";
+    if (!hasW) add += ' width="' + d.w + '"';
+    if (!hasH) add += ' height="' + d.h + '"';
+    return text.replace(tag, tag.replace(/<svg\b/i, "<svg" + add));
+  }
+
+  function rasterSvg(text, width, cb) {
+    const t = ensureSvgSize(text);
+    const d = svgDims(t);
+    let W = Math.max(1, Math.round(width || d.w));
+    let H = Math.max(1, Math.round(W * d.h / d.w));
+    /* 像素预算：极端 viewBox（比如 1×10000）会把 H 顶到天上，
+       8192×5461 就是 179 MB 的 canvas，浏览器直接卡死 —— 按最长边等比压回来 */
+    const k = Math.min(1, MAX_PX / W, MAX_PX / H);
+    if (k < 1) {
+      W = Math.max(1, Math.round(W * k));
+      H = Math.max(1, Math.round(H * k));
+    }
+    const url = URL.createObjectURL(new Blob([t], { type: "image/svg+xml;charset=utf-8" }));
+    const im = new Image();
+    let done = false;
+    const finish = (blob, w, h) => {
+      if (done) return;
+      done = true;
+      URL.revokeObjectURL(url);
+      cb(blob, w, h);
+    };
+    im.onload = () => {
+      const cv = document.createElement("canvas");
+      cv.width = W; cv.height = H;
+      const ctx = cv.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(im, 0, 0, W, H);
+      cv.toBlob(b => finish(b, W, H), "image/png");
+    };
+    im.onerror = () => finish(null, 0, 0);
+    im.src = url;
+  }
+
+  /* 位图 → SVG：按原尺寸内嵌 base64。这是「矢量容器」，不是把像素描成路径 */
+  function wrapRasterInSvg(blob, w, h, cb) {
+    const fr = new FileReader();
+    fr.onload = () => cb(
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
+      + ' width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '">'
+      + '<image width="' + w + '" height="' + h + '" xlink:href="' + String(fr.result) + '"/></svg>'
+    );
+    fr.onerror = () => cb(null);
+    fr.readAsDataURL(blob);
+  }
+
+  /* 当前编辑结果（含裁剪与水印）转 PNG —— 不经过压缩输出，
+     因为 SVG 里嵌 WebP 兼容性不好 */
+  function currentPng(cb) {
+    const src = $("cropCanvas");
+    if (!bitmap || !src.width) { cb(null, 0, 0); return; }
+    const c = cropPx();
+    const cv = document.createElement("canvas");
+    cv.width = Math.max(1, Math.round(c.w));
+    cv.height = Math.max(1, Math.round(c.h));
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, cv.width, cv.height);
+    drawWatermark(ctx, cv.width, cv.height);
+    cv.toBlob(b => cb(b, cv.width, cv.height), "image/png");
+  }
+
+  function svgStats(before, after) {
+    const kv = $("svgKv");
+    kv.textContent = "";
+    const add = (html, cls) => {
+      const s = document.createElement("span");
+      if (cls) s.className = cls;
+      s.innerHTML = html;
+      kv.appendChild(s);
+    };
+    add("原始 <b>" + fmtBytes(before) + "</b>");
+    if (after != null) {
+      add("现在 <b>" + fmtBytes(after) + "</b>");
+      const d = before ? (after - before) / before * 100 : 0;
+      add((d <= 0 ? "↓ " : "↑ ") + Math.abs(d).toFixed(1) + "%", d <= 0 ? "cut" : "grow");
+    }
+  }
+
+  function setSvgPreview(url, tip) {
+    if (svgPrevURL) { URL.revokeObjectURL(svgPrevURL); svgPrevURL = ""; }
+    const box = $("svgPrev");
+    box.textContent = "";
+    if (!url) {
+      const s = document.createElement("span");
+      s.className = "tip" + (tip === "err" ? " err-tip" : "");
+      s.textContent = tip === "err" ? "无法渲染（可能不是合法 SVG）" : "还没有内容";
+      box.appendChild(s);
+      return;
+    }
+    svgPrevURL = url;
+    const im = document.createElement("img");
+    im.alt = "SVG 预览";
+    im.src = url;
+    box.appendChild(im);
+  }
+
+  function renderSvgPreview() {
+    const text = $("svgIn").value;
+    if (!text.trim()) { setSvgPreview("", ""); return; }
+    setSvgPreview(URL.createObjectURL(new Blob([text], { type: "image/svg+xml;charset=utf-8" })), "");
+  }
+
+  function loadSvgFile(file) {
+    if (file.size > 4 * 1048576) { toast("SVG 超过 4 MB，先自己精简一下再进来"); return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      const text = String(fr.result);
+      $("svgIn").value = text;
+      svgPngBlob = null; svgPngW = svgPngH = 0;
+      $("btnSvgPngDl").disabled = true;
+      $("btnSvgDl").disabled = false;
+      const d = svgDims(text);
+      $("svgW").value = Math.max(1, Math.min(MAX_PX, Math.round(d.w)));
+      renderSvgPreview();
+      svgStats(svgBytes(text), null);
+      setTab("svg");     /* 拖进来一个 .svg，直接跳到 SVG 页，别让用户自己找 */
+      toast("已载入 SVG：" + (file.name || "未命名") + "，可转成 PNG 再「载入为源图」");
+    };
+    fr.onerror = () => toast("读取 SVG 失败");
+    fr.readAsText(file);
+  }
+
+  function downloadBlob(blob, name) {
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = u;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 4000);
+  }
+
+  /* ============================================================
      复制 / 下载 / 提示
      ============================================================ */
   let toastTimer = 0;
@@ -605,6 +1336,206 @@
   });
   $("btnRun").addEventListener("click", run);
 
+  /* ===== 变换 ===== */
+  $("btnRotL").addEventListener("click", () => { edit.rot = (edit.rot + 270) % 360; renderCropStage(); });
+  $("btnRotR").addEventListener("click", () => { edit.rot = (edit.rot + 90) % 360; renderCropStage(); });
+  $("btnRot180").addEventListener("click", () => { edit.rot = (edit.rot + 180) % 360; renderCropStage(); });
+  $("flipH").addEventListener("change", () => { edit.flipH = $("flipH").checked; renderCropStage(); });
+  $("flipV").addEventListener("change", () => { edit.flipV = $("flipV").checked; renderCropStage(); });
+  $("btnEditReset").addEventListener("click", () => {
+    if (!bitmap) { toast("先选一张图片"); return; }
+    resetEdit();
+    renderCropStage();
+    toast("已重置变换与裁剪");
+  });
+
+  /* ===== 裁剪：比例预设 / 像素输入 / 指针拖拽 ===== */
+  ratioBtns.forEach(b => b.addEventListener("click", () => {
+    if (!bitmap) { toast("先选一张图片"); return; }
+    applyRatioPreset((+b.dataset.rw) / (+b.dataset.rh));
+  }));
+  ["cropX", "cropY", "cropW", "cropH"].forEach(id => {
+    $(id).addEventListener("input", () => applyCropInputs(id));
+    $(id).addEventListener("blur", () => syncCropInputs());
+  });
+
+  const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+  function selDown(e, mode) {
+    if (!bitmap || !$("cropCanvas").width) return;
+    e.preventDefault();
+    drag = { mode: mode, x0: e.clientX, y0: e.clientY, c0: Object.assign({}, edit.crop) };
+    try { $("cropSel").setPointerCapture(e.pointerId); } catch (err) { /* 老浏览器忽略 */ }
+  }
+  function selMove(e) {
+    if (!drag) return;
+    e.preventDefault();
+    const r = $("cropStage").getBoundingClientRect();
+    const dx = (e.clientX - drag.x0) / (r.width || 1);
+    const dy = (e.clientY - drag.y0) / (r.height || 1);
+    const c0 = drag.c0, m = drag.mode, M = 0.03;   // 最小 3%，再小就抓不住了
+    let c;
+    if (m === "move") {
+      c = {
+        x: clamp01(Math.min(c0.x + dx, 1 - c0.w)),
+        y: clamp01(Math.min(c0.y + dy, 1 - c0.h)),
+        w: c0.w, h: c0.h
+      };
+    } else {
+      let x0 = c0.x, y0 = c0.y, x1 = c0.x + c0.w, y1 = c0.y + c0.h;
+      if (m.indexOf("w") >= 0) x0 = Math.max(0, Math.min(x1 - M, c0.x + dx));
+      if (m.indexOf("e") >= 0) x1 = Math.min(1, Math.max(x0 + M, c0.x + c0.w + dx));
+      if (m.indexOf("n") >= 0) y0 = Math.max(0, Math.min(y1 - M, c0.y + dy));
+      if (m.indexOf("s") >= 0) y1 = Math.min(1, Math.max(y0 + M, c0.y + c0.h + dy));
+      c = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    }
+    edit.crop = c;
+    setRatio(0);        // 手动拖过就不再是某个固定比例了
+    paintCrop();
+    syncCropInputs();
+    renderWmPreview();
+  }
+  function selUp(e) {
+    if (!drag) return;
+    drag = null;
+    try { $("cropSel").releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  const sel = $("cropSel");
+  sel.addEventListener("pointerdown", e => {
+    /* 落在手柄上就让手柄自己处理（mode 由 data-mode 给） */
+    const h = e.target.closest ? e.target.closest("i[data-mode]") : null;
+    selDown(e, h ? h.dataset.mode : "move");
+  });
+  sel.addEventListener("pointermove", selMove);
+  sel.addEventListener("pointerup", selUp);
+  sel.addEventListener("pointercancel", selUp);
+
+  /* ===== 水印 ===== */
+  $("wmText").addEventListener("input", () => { wm.text = $("wmText").value; renderWmPreview(); });
+  $("wmPos").addEventListener("change", () => { wm.pos = $("wmPos").value; renderWmPreview(); });
+  $("wmSize").addEventListener("input", () => {
+    wm.size = +$("wmSize").value;
+    $("wmSizeVal").textContent = wm.size + "%";
+    renderWmPreview();
+  });
+  $("wmOpacity").addEventListener("input", () => {
+    wm.opacity = +$("wmOpacity").value;
+    $("wmOpacityVal").textContent = wm.opacity + "%";
+    renderWmPreview();
+  });
+  $("wmColor").addEventListener("input", () => { wm.color = $("wmColor").value; renderWmPreview(); });
+  $("wmShadow").addEventListener("change", () => { wm.shadow = $("wmShadow").checked; renderWmPreview(); });
+
+  /* ===== SVG ===== */
+  $("btnSvgLoad").addEventListener("click", () => $("fileSvg").click());
+  $("fileSvg").addEventListener("change", function () {
+    if (this.files && this.files[0]) loadSvgFile(this.files[0]);
+    this.value = "";
+  });
+  let svgTimer = 0;
+  $("svgIn").addEventListener("input", () => {
+    clearTimeout(svgTimer);
+    svgTimer = setTimeout(() => {
+      svgPngBlob = null; svgPngW = svgPngH = 0;
+      $("btnSvgPngDl").disabled = true;
+      renderSvgPreview();
+      const t = $("svgIn").value;
+      $("btnSvgDl").disabled = !t.trim();
+      svgStats(svgBytes(t), null);
+    }, 400);
+  });
+
+  $("btnSvgOpt").addEventListener("click", () => {
+    const src = $("svgIn").value;
+    if (!src.trim()) { toast("先粘贴或载入 SVG"); return; }
+    const out = optimizeSVG(src, +$("svgPrec").value);
+    if (!svgValid(out)) {
+      $("svgKv").textContent = "";
+      const s = document.createElement("span");
+      s.className = "err-tip";
+      s.textContent = "优化结果没通过 XML 校验，已保留原文（宁可少压，不弄坏文件）";
+      $("svgKv").appendChild(s);
+      toast("校验未通过，保留原文");
+      return;
+    }
+    const before = svgBytes(src), after = svgBytes(out);
+    $("svgIn").value = out;
+    svgPngBlob = null; svgPngW = svgPngH = 0;
+    $("btnSvgPngDl").disabled = true;
+    $("btnSvgDl").disabled = false;
+    renderSvgPreview();
+    svgStats(before, after);
+    toast("已优化 · " + fmtBytes(before) + " → " + fmtBytes(after));
+  });
+
+  function svgPngWidth() {
+    const v = parseInt($("svgW").value, 10);
+    return Math.max(1, Math.min(MAX_PX, isFinite(v) && v > 0 ? v : 512));
+  }
+  $("btnSvgPng").addEventListener("click", () => {
+    const text = $("svgIn").value;
+    if (!text.trim()) { toast("先粘贴或载入 SVG"); return; }
+    if (!svgValid(text)) { toast("XML 解析不通过（常见是命名空间前缀没声明），可先点「优化」"); return; }
+    const w = svgPngWidth();
+    $("svgW").value = w;
+    rasterSvg(text, w, (blob, W, H) => {
+      if (!blob) { toast("光栅化失败（SVG 里可能引用了外部资源）"); return; }
+      svgPngBlob = blob; svgPngW = W; svgPngH = H;
+      $("btnSvgPngDl").disabled = false;
+      setSvgPreview(URL.createObjectURL(blob), "");
+      toast("已生成 PNG " + W + " × " + H + " · " + fmtBytes(blob.size));
+    });
+  });
+
+  $("btnSvgUse").addEventListener("click", () => {
+    const use = (blob, w, h) => {
+      if (!blob) { toast("先生成 PNG"); return; }
+      pickFile(new File([blob], "svg-" + w + "x" + h + ".png", { type: "image/png" }));
+    };
+    if (svgPngBlob) { use(svgPngBlob, svgPngW, svgPngH); return; }
+    const text = $("svgIn").value;
+    if (!text.trim() || !svgValid(text)) { toast("先粘贴或载入合法的 SVG"); return; }
+    const w = svgPngWidth();
+    $("svgW").value = w;
+    rasterSvg(text, w, (blob, W, H) => {
+      if (!blob) { toast("光栅化失败"); return; }
+      svgPngBlob = blob; svgPngW = W; svgPngH = H;
+      $("btnSvgPngDl").disabled = false;
+      use(blob, W, H);
+    });
+  });
+
+  $("btnSvgFromImg").addEventListener("click", () => {
+    if (!bitmap) { toast("先选一张图片"); return; }
+    currentPng((blob, w, h) => {
+      if (!blob) { toast("生成失败"); return; }
+      wrapRasterInSvg(blob, w, h, svg => {
+        if (!svg) { toast("生成失败"); return; }
+        $("svgIn").value = svg;
+        svgPngBlob = null; svgPngW = svgPngH = 0;
+        $("btnSvgPngDl").disabled = true;
+        $("btnSvgDl").disabled = false;
+        renderSvgPreview();
+        svgStats(svgBytes(svg), null);
+        toast("已生成内嵌位图的 SVG（" + w + " × " + h + " · " + fmtBytes(svgBytes(svg)) + "）");
+      });
+    });
+  });
+
+  $("btnSvgDl").addEventListener("click", () => {
+    const text = $("svgIn").value;
+    if (!text.trim()) { toast("没有可下载的内容"); return; }
+    downloadBlob(new Blob([text], { type: "image/svg+xml;charset=utf-8" }), "image.svg");
+  });
+  $("btnSvgPngDl").addEventListener("click", () => {
+    if (!svgPngBlob) { toast("先点「转 PNG」"); return; }
+    downloadBlob(svgPngBlob, "svg-" + svgPngW + "x" + svgPngH + ".png");
+  });
+  $("btnSvgCopy").addEventListener("click", () => {
+    const text = $("svgIn").value;
+    if (!text.trim()) { toast("没有可复制的内容"); return; }
+    copyText(text, "SVG 源码已复制");
+  });
+
   $("btnDownload").addEventListener("click", () => {
     if (!outBlob || !outURL) { toast("还没有可下载的结果"); return; }
     const a = document.createElement("a");
@@ -640,6 +1571,20 @@
     $("btnRun").disabled = true;
     $("btnDownload").disabled = true;
     $("btnCopyInfo").disabled = true;
+
+    /* 变换 / 裁剪 / 水印 */
+    resetEdit();
+    wm.text = "";
+    $("wmText").value = "";
+    renderCropStage();
+
+    /* SVG */
+    $("svgIn").value = "";
+    svgPngBlob = null; svgPngW = svgPngH = 0;
+    $("btnSvgPngDl").disabled = true;
+    $("btnSvgDl").disabled = true;
+    setSvgPreview("", "");
+    $("svgKv").textContent = "";
     toast("已清空");
   });
 
@@ -648,7 +1593,29 @@
     releaseBitmaps();
     releaseOut();
     if (origURL) { URL.revokeObjectURL(origURL); origURL = ""; }
+    if (svgPrevURL) { URL.revokeObjectURL(svgPrevURL); svgPrevURL = ""; }
   });
+
+  /* ===== Tab 分类 ===== */
+  tabBtns.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+  /* 容器尺寸一变就要重新适配画面（--stage-h 用的是 vh，窗口高度变化同样会触发） */
+  if (window.ResizeObserver) new ResizeObserver(fitStage).observe($("cropWrap"));
+  window.addEventListener("resize", fitStage);
+
+  /* ============================================================
+     初始状态：裁剪区 / 水印区 / SVG 区都先摆成「空」的样子，
+     免得没选图时看到一堆 0×0 的空框
+     ============================================================ */
+  wm.text = $("wmText").value;
+  wm.pos = $("wmPos").value;
+  wm.size = +$("wmSize").value;
+  wm.opacity = +$("wmOpacity").value;
+  wm.color = $("wmColor").value;
+  wm.shadow = $("wmShadow").checked;
+  setRatio(0);
+  renderCropStage();
+  setTab("crop");
+  setSvgPreview("", "");
 
   /* WebP 支持探测：Safari 14 之前不支持 toBlob('image/webp')，提前把选项标出来 */
   (function probe() {
