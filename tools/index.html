@@ -351,7 +351,8 @@ var ICONS = {
   minify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5H7.2A2.7 2.7 0 0 0 4.5 6.2v11.6a2.7 2.7 0 0 0 2.7 2.7H9"/><path d="M15 3.5h1.8a2.7 2.7 0 0 1 2.7 2.7v11.6a2.7 2.7 0 0 1-2.7 2.7H15"/><path d="M9.6 12h4.8"/></svg>',
   numfmt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18.6 5.4 5.4 18.6"/><circle cx="7.8" cy="7.8" r="2.5"/><circle cx="16.2" cy="16.2" r="2.5"/></svg>',
   csv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.4" width="18" height="15.2" rx="2.2"/><path d="M3 9.4h18"/><path d="M9.2 9.4v10.2"/><path d="M15 9.4v10.2"/></svg>',
-  favicon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><path d="M3 9.4h18"/><circle cx="6.4" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="9.4" cy="7" r="1" fill="currentColor" stroke="none"/><rect x="7.6" y="12.4" width="5.4" height="4.4" rx="1" fill="currentColor" stroke="none"/></svg>'
+  favicon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.6" width="18" height="14.8" rx="2.4"/><path d="M3 9.4h18"/><circle cx="6.4" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="9.4" cy="7" r="1" fill="currentColor" stroke="none"/><rect x="7.6" y="12.4" width="5.4" height="4.4" rx="1" fill="currentColor" stroke="none"/></svg>',
+  ocr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V5.6A1.6 1.6 0 0 1 5.6 4h2.6"/><path d="M15.8 4h2.6A1.6 1.6 0 0 1 20 5.6v2.6"/><path d="M20 15.8v2.6a1.6 1.6 0 0 1-1.6 1.6h-2.6"/><path d="M8.2 20H5.6A1.6 1.6 0 0 1 4 18.4v-2.6"/><path d="M8 9.2h8M8 12.4h8M8 15.6h4.6"/></svg>'
 };
 
 var GROUPS = ['开发工具','日期时间','网络运维','媒体工具','生活工具'];
@@ -417,6 +418,8 @@ var TOOLS = [
     desc:'一张图生成 16~512 的全套 favicon（含 apple-touch-icon 与 android-chrome），打包成 ZIP，并给出可直接粘的 ICO 与 HTML 片段。', tags:['favicon','ICO','图标','ZIP','站点图标'] },
   { group:'媒体工具', name:'二维码', path:'qrcode/', icon:'qr',
     desc:'二维码生成与识别，支持自定义容错、颜色、透明背景与 SVG/PNG 导出；识别支持拖拽和粘贴截图。', tags:['二维码','QR','扫码'] },
+  { group:'媒体工具', name:'图片文字识别', path:'ocr/', icon:'ocr',
+    desc:'本地 OCR：多图队列，支持选文件 / 拖拽 / Ctrl+V 粘贴，简体中文、繁体中文、英文、日文、韩文，识别框预览、结果可编辑并导出 TXT，图片不上传也不保存。', tags:['OCR','图片转文字','文字识别','离线','本地'] },
   { group:'媒体工具', name:'麦克风 · 音响 · 摄像头', path:'media-test/', icon:'av',
     desc:'麦克风实时电平与录音回放、HRTF 环绕声试听与左右声道检测、摄像头预览与拍照，全部本地运行。', tags:['麦克风','音响','摄像头','环绕声'] },
 
