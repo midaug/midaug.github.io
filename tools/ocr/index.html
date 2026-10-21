@@ -792,14 +792,13 @@
     });
   }
 
-  function getModels(code, it) {
+  /* 模型包：按语言缓存。onProg 可选 —— 页面预热时没有具体图片项，就不传。 */
+  function getModels(code, onProg) {
     if (tfCache.has(code)) return tfCache.get(code);
     var defs = TF[code], sizes = TSIZE[code];
     var prog = [0, 0, 0];
     var bump = function () {
-      var r = (prog[0] + prog[1] + prog[2]) / 3;
-      it.prog = Math.round(r * 30);
-      paint(it);
+      if (onProg) onProg((prog[0] + prog[1] + prog[2]) / 3);
     };
     var p = Promise.all(defs.map(function (f, i) {
       return fetchBuf(VENDOR + f, sizes[i], function (r) {
@@ -814,7 +813,29 @@
     return p;
   }
 
-  function runWorker(buffer, w, h, params, it) {
+  /* ===== 引擎预热 =====
+     ★ 引擎 worker 只能「Init 一次 + rec 一次」（第二次 rec 无任何回包，见 .memory/tools/ocr.md），
+     所以没法复用同一个 worker；但可以在**空闲时先把后面的 worker 的 wasm 初始化跑完**：
+     页面打开就预热，每次用掉立刻补一个 —— 真正识别时直接 postMessage，省掉 ~15s 的 wasm init。
+     预热失败不阻塞页面：真正识别时会再试一次，仍失败才报「引擎不可用」。
+
+     池子深度：初始化一次 ~15s，一张图消耗一个，所以**深度 1 只能救第一张**，连拍三张时第 2、3 张
+     仍要各等一次 init。深度 2 才能让「识别一张 + 备好下一张」成立。低内存/低核设备退回 1，
+     避免同时挂着 3 个 wasm 实例。 */
+  var WARM_MAX = ((navigator.deviceMemory || 4) >= 4 && (navigator.hardwareConcurrency || 4) >= 4) ? 2 : 1;
+  var warmPool = [];                      /* 已 Init 就绪、待用的 worker */
+  var inflight = [];                      /* 正在初始化的 Promise<Worker> */
+  var engineReady = false;
+  var modelReady = {};                    /* lang -> true，模型包已下完 */
+
+  /* 空闲时的状态文案：引擎与当前语言的模型都就绪才写「就绪」 */
+  function idleStatus() {
+    if (imgs.length || busy) return;
+    if (engineReady && modelReady[lang]) setGlobal('就绪');
+    else if (!engineReady) setGlobal('引擎预热中…');
+  }
+
+  function spawnWorker() {
     return new Promise(function (res, rej) {
       var wk;
       try {
@@ -823,56 +844,151 @@
         rej(new Error('无法启动识别引擎'));
         return;
       }
-      var finished = false;
-      var timer = setTimeout(function () { fail('识别超时'); }, 180000);
-      function fail(msg) {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
         try { wk.terminate(); } catch (e) {}
-        rej(new Error(msg));
-      }
-      function ok(items) {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        try { wk.terminate(); } catch (e) {}
-        res(items);
-      }
-      wk.onerror = function (e) { fail(e && e.message ? e.message : '引擎异常'); };
+        rej(new Error('引擎初始化超时'));
+      }, 120000);
       wk.onmessage = function (e) {
-        var d = e.data;
-        if (d === 'Init') {
-          wk.postMessage({
-            cmd: 'rec', width: w, height: h, buffer: buffer, params: params,
-            unclipRadio: 1.6, limitSideLen: 960, splitThres: 1, splitOverlap: 64
-          }, [buffer]);
-          return;
+        if (done || e.data !== 'Init') return;
+        done = true;
+        clearTimeout(timer);
+        wk.onmessage = null;
+        wk.onerror = null;
+        res(wk);
+      };
+      wk.onerror = function (e) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { wk.terminate(); } catch (x) {}
+        rej(new Error(e && e.message ? e.message : '引擎异常'));
+      };
+    });
+  }
+
+  /* 起一个初始化任务并入队（单独一个函数，保证 p 是每次调用自己的闭包变量） */
+  function warmOne() {
+    var p = spawnWorker().then(function (wk) {
+      var i = inflight.indexOf(p);
+      if (i >= 0) inflight.splice(i, 1);
+      warmPool.push(wk);
+      engineReady = true;
+      idleStatus();
+      return wk;
+    }, function (e) {
+      var i = inflight.indexOf(p);
+      if (i >= 0) inflight.splice(i, 1);
+      engineReady = warmPool.length > 0;
+      if (!imgs.length && !busy) setGlobal('引擎预热失败');
+      throw e;
+    });
+    inflight.push(p);
+    return p;
+  }
+
+  /* 把池子补到 WARM_MAX。返回「第一个可用 worker」：
+     - 池里已有 → 直接给（takeWarm 会取走）；
+     - 池空但有在初始化的 → 等最先成功的那个（**不能直接 reject**：页面刚打开时两个都在 init，
+       池子必然是空的，直接 reject 会让第一次识别报「引擎预热失败」）；
+     - 池空且没有在初始化 → 全部初始化失败，才报错。 */
+  function ensureWarm() {
+    while (warmPool.length + inflight.length < WARM_MAX) warmOne();
+    if (warmPool.length) return Promise.resolve(warmPool[0]);
+    if (inflight.length) {
+      var list = inflight.slice();
+      return new Promise(function (res, rej) {
+        var left = list.length, lastErr = null;
+        list.forEach(function (pr) {
+          pr.then(res, function (e) { lastErr = e; if (--left === 0) rej(lastErr); });
+        });
+      });
+    }
+    return Promise.reject(new Error('引擎预热失败'));
+  }
+
+  /* 取一个已就绪的 worker（池子空就等预热完成），并立刻在后台补位 */
+  function takeWarm() {
+    if (warmPool.length) {
+      var wk = warmPool.shift();
+      ensureWarm().catch(function () {});   /* 补位失败不打断当前识别，下次再试 */
+      return Promise.resolve(wk);
+    }
+    return ensureWarm().then(function (w) {
+      var idx = warmPool.indexOf(w);
+      if (idx >= 0) warmPool.splice(idx, 1);
+      ensureWarm().catch(function () {});
+      return w;
+    });
+  }
+
+  /* 预热某语言：模型包 + 引擎 worker 都提前备好（worker 与语言无关，模型才分语言） */
+  function warmFor(code) {
+    getModels(code, function (r) {
+      if (!imgs.length && !busy) setGlobal('引擎预热 ' + Math.round(r * 100) + '%');
+    }).then(function () {
+      modelReady[code] = true;
+      idleStatus();
+    }, function () {});
+    ensureWarm().catch(function () {});
+  }
+
+  function runWorker(buffer, w, h, params, it) {
+    /* worker 已经预热好（Init 过），拿到就直接发任务；没预热好时这里会等它初始化完 */
+    return takeWarm().then(function (wk) {
+      return new Promise(function (res, rej) {
+        var finished = false;
+        var timer = setTimeout(function () { fail('识别超时'); }, 180000);
+        function fail(msg) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          try { wk.terminate(); } catch (e) {}
+          rej(new Error(msg));
         }
-        if (!Array.isArray(d)) return;
-        if (d[0] === 'progressCB') {
-          var stage = +d[1] || 0;
-          var p = Math.min(1, Math.max(0, (+d[2] || 0) / 100));
-          var r = Math.min(1, (stage + p) / 2);
-          it.prog = 30 + Math.round(r * 70);
-          paint(it);
-          return;
+        function ok(items) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          try { wk.terminate(); } catch (e) {}
+          res(items);
         }
-        if (d[0] === 'runError') {
-          fail(String(d[1] || '识别失败'));
-          return;
-        }
-        if (d[0] === 'recFinish') {
-          var items;
-          try {
-            items = JSON.parse(d[3]);
-          } catch (err) {
-            fail('结果解析失败');
+        wk.onerror = function (e) { fail(e && e.message ? e.message : '引擎异常'); };
+        wk.onmessage = function (e) {
+          var d = e.data;
+          if (!Array.isArray(d)) return;
+          if (d[0] === 'progressCB') {
+            var stage = +d[1] || 0;
+            var p = Math.min(1, Math.max(0, (+d[2] || 0) / 100));
+            var r = Math.min(1, (stage + p) / 2);
+            it.prog = 30 + Math.round(r * 70);
+            paint(it);
             return;
           }
-          ok(Array.isArray(items) ? items : []);
-        }
-      };
+          if (d[0] === 'runError') {
+            fail(String(d[1] || '识别失败'));
+            return;
+          }
+          if (d[0] === 'recFinish') {
+            var items;
+            try {
+              items = JSON.parse(d[3]);
+            } catch (err) {
+              fail('结果解析失败');
+              return;
+            }
+            ok(Array.isArray(items) ? items : []);
+          }
+        };
+        wk.postMessage({
+          cmd: 'rec', width: w, height: h, buffer: buffer, params: params,
+          unclipRadio: 1.6, limitSideLen: 960, splitThres: 1, splitOverlap: 64
+        }, [buffer]);
+      });
+    }, function (e) {
+      throw new Error('引擎不可用：' + (e && e.message ? e.message : e));
     });
   }
 
@@ -973,7 +1089,10 @@
     setGlobal('识别中…');
     syncButtons();
 
-    getModels(lang, it).then(function (params) {
+    getModels(lang, function (r) {
+      it.prog = Math.round(r * 30);
+      paint(it);
+    }).then(function (params) {
       it.prog = 30;
       paint(it);
       return loadImg(it.url).then(function (img) {
@@ -1037,7 +1156,7 @@
       }
     }
     if (!imgs.length) {
-      setGlobal('就绪');
+      idleStatus();
     } else if (imgs.some(function (x) { return x.status === 'run'; })) {
       setGlobal('识别中…');
     } else if (imgs.some(function (x) { return x.status === 'error'; })) {
@@ -1108,7 +1227,7 @@
     renderPreview();
     renderText();
     syncButtons();
-    setGlobal('就绪');
+    idleStatus();
   }
 
   function resetItem(it) {
@@ -1189,17 +1308,27 @@
     pump();
   }
 
+  /* ★ 切语言只换「下一次识别用哪套模型」，**不自动重跑**（用户 2026-10-21 要求）：
+     已经识别好的结果原样保留，是否用新语言重识别由用户点「重识别 / 全部重新识别」决定。
+     切换时立刻把新语言的模型包与引擎预热好，点重识别时就不用再等下载。 */
   function onLangChange() {
     lang = langEl.value;
     try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-    if (busy) return;
-    autoFollow = false;
-    imgs.forEach(resetItem);
-    renderList();
-    renderPreview();
-    renderText();
+    if (!imgs.length) { warmFor(lang); syncButtons(); return; }
+    warmFor(lang);
+    var doneCount = 0;
+    imgs.forEach(function (x) { if (x.status === 'done') doneCount++; });
+    if (doneCount) {
+      toast('已切到' + langLabel(lang) + '，点「重识别」按新语言重跑');
+    }
     syncButtons();
-    pump();
+  }
+
+  function langLabel(code) {
+    for (var i = 0; i < langEl.options.length; i++) {
+      if (langEl.options[i].value === code) return langEl.options[i].textContent;
+    }
+    return code;
   }
 
   function fallbackCopy(txt) {
@@ -1383,6 +1512,12 @@
     if (localStorage.getItem(ENH_KEY) === '0') enhEl.checked = false;
   } catch (e) {}
   langEl.value = lang;
+
+  /* ★ 打开页面就预热默认语言（用户 2026-10-21 要求）：模型包 + 一个引擎 worker 都提前备好。
+     以前是「第一次识别时才下 7MB 模型 + 跑 ~15s 的 wasm 初始化」，首次识别体感非常慢。
+     预热失败不弹错，只在顶栏写「引擎预热失败」，真正识别时会再试一次。 */
+  setGlobal('引擎预热中…');
+  warmFor(lang);
 
   renderList();
   renderPreview();
