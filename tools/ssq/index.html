@@ -310,7 +310,8 @@
   </section>
 </main>
 
-<!-- 前端库已本地化到 vendor/（jquery 3.6.4 / tesseract.js 7.0.0 / Compressor.js 1.2.1）。
+<!-- 前端库已本地化到 vendor/（jquery 3.6.4 / tesseract.js 7.0.0；Compressor.js 1.2.1 已于
+     2026-10-20 随「去掉预压缩」一起删除，不要按旧清单去找它）。
      策略：本地优先，文件缺失或损坏时才回退 CDN（同样锁版本）—— 两个方向都保住。
      OCR 的 worker / core / 语言包同样是本地文件（本目录 vendor/），在 initTesseractWorker() 里指定。
      开奖数据仍走线上接口（由爬虫定期重新生成，本地化会让数据冻结在打包那一刻）。 -->
@@ -1525,6 +1526,23 @@
 
         console.log("提取的红球:", redNumbers, "蓝球:", blueNumbers);
 
+        /* ★ 蓝球缺失必须显式失败，不能往下走：
+           ① 这里 `blueNumbers.length` 会抛 TypeError（"Cannot read properties of null"）——
+              而 ocrParseQuality 每一档都会调本函数，于是识别梯**第一档**就抛，后面更清晰的
+              3000 档根本跑不到，用户只看到一句「OCR识别失败: Cannot read properties of null」；
+           ② 就算兜成空数组也不行：generateOCRSpecCombinations 会算出 0 注，页面显示
+              「展开 0 注」，用户会当成「这张票一注没中」—— 比报错危险得多。
+           「红球读全、蓝球行被印章/红框糊住」是最常见的部分识别失败形态，所以返回带
+           incomplete 的规格：由 processOCRResult 明确报错，ocrParseQuality 判 1 让识别梯继续换档。 */
+        if (!blueNumbers || !blueNumbers.length) {
+            return {
+                redBalls: redNumbers,
+                blueBalls: [],
+                isCompound: redNumbers.length > 6,
+                incomplete: '识别到红球，但没读出蓝球'
+            };
+        }
+
         /* 防止OCR误识别导致组合爆炸：数量超范围时放弃此解析路径（与 MAX_COMBINATIONS 闸门对齐） */
         if (redNumbers.length > 18 || blueNumbers.length > 16) {
             console.warn("红球/蓝球数量异常，放弃OCR复式解析:", redNumbers.length, blueNumbers.length);
@@ -1824,6 +1842,14 @@
 
         // 然后尝试解析OCR格式的复式投注 (zw: 和 wm: 格式)
         var ocrSpec = parseOCRSpec(text);
+        if (ocrSpec && ocrSpec.incomplete) {
+            /* 红球读全、蓝球没读出来：不猜、不出「0 注」，如实报缺什么（见 parseOCRSpec 的注释） */
+            showData('<div class="alert err">' + esc(ocrSpec.incomplete) + '：已读出红球 '
+                + esc(ocrSpec.redBalls.join(' ')) + '（' + ocrSpec.redBalls.length
+                + ' 个），请换一张更清晰的图，或只把号码区裁出来重拍。</div>');
+            $('#up-btn').removeAttr('disabled');
+            return;
+        }
         if (ocrSpec) {
             console.log("OCR复式规格解析结果:", ocrSpec);
 
@@ -2107,10 +2133,8 @@
         });
     }
 
-    const OCR_TARGET_LONG_SIDE = 1830;   /* 识别梯第一档目标长边：小图放大到此，大图保持原样。
-                                            实测 700px 票 ×2.2、1080px 票 ×1.7 都在最佳区；
-                                            每张票的最佳分辨率不同（×2.9 反而会让某行变糊），
-                                            所以由 handleImage 的识别梯做多档尝试。 */
+    /* 目标长边由 OCR_LADDER 每档自己带（1830 / 3000），这里不再单列一个常量：
+       2026-10-21 复查发现 OCR_TARGET_LONG_SIDE 声明后从未被读取，属死代码。 */
     const OCR_MAX_SCALE = 4;             /* 放大上限：232px 缩略图 ×4 足够，再大只添噪 */
 
     function ocrScaleFor(longSide, targetLong) {
@@ -2164,7 +2188,10 @@
             if (!markers || single.length >= markers) return 2;
             return 1;
         }
-        if (parseOCRSpec(text)) return 2;
+        /* 复式：蓝球缺失（incomplete）只算「可解析但没读全」，让识别梯继续换档，
+           而不是像以前那样判 2 提前收工、或直接抛异常中断整条梯子 */
+        var sp = parseOCRSpec(text);
+        if (sp) return sp.incomplete ? 1 : 2;
         const cleanText = text.replace(/[^\w\d\s\-\:\#\*\$\.\,\;]/gi, ' ');
         return findAllPatterns(cleanText, /[A-E][\d\#\*\$]+/g).length > 0 ? 1 : 0;
     }
@@ -2205,9 +2232,16 @@
                 if (q > bestQuality) {
                     bestText = t; bestPrep = prep; bestQuality = q;
                     if (step.psm === '11') fileInfo.ocrPsm = '11'; else delete fileInfo.ocrPsm;
-                    if (step.long !== OCR_LADDER[0].long) fileInfo.ocrLong = step.long; else delete fileInfo.ocrLong;
                 }
                 if (bestQuality >= 2) break;   /* 行数证据齐全，无需继续 */
+            }
+            /* 四档都没读出可解析的文字（空白图 / 完全不是票面 / 糊到读不出）：
+               以前 bestPrep 还是 null，下一行立刻抛 "Cannot read properties of null
+               (reading 'originalDims')"，用户看到的是 JS 报错而不是「没识别到」 */
+            if (!bestText || !bestPrep) {
+                showData('<div class="alert err">没读到可识别的文字：图片可能太糊、太小，或者不是彩票票面。</div>');
+                $('#up-btn').removeAttr('disabled');
+                return;
             }
             fileInfo.originalDims = bestPrep.originalDims;
             fileInfo.prepDims = bestPrep.prepDims;
