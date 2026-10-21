@@ -199,6 +199,12 @@
     display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; padding-top: 10px;
     border-top: 1px solid var(--border); font-size: 11px; color: var(--text-3);
   }
+  .ocr-spec-note {
+    margin-top: 12px; padding: 8px 12px; border-left: 3px solid var(--ok);
+    background: color-mix(in srgb, var(--ok) 8%, transparent);
+    font-size: 12px; line-height: 1.7; color: var(--text-2); border-radius: 0 6px 6px 0;
+  }
+  .ocr-spec-note b { color: var(--text-2); letter-spacing: 1px; }
 
   /* 隐私说明：图片识别全在本机完成。常驻在识别卡底部，任何状态都可见 */
   .privacy {
@@ -313,16 +319,8 @@
 <script>window.jQuery || document.write('<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"><\/script>');</script>
 <script src='vendor/tesseract-7.0.0.min.js'></script>
 <script>window.Tesseract || document.write('<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"><\/script>');</script>
-<script src='vendor/compressorjs-1.2.1.min.js' async="async"></script>
-<script>
-    /* Compressor 是 async 加载的，本地缺失时在 load 之后补一个 CDN 版本（上传前必然已就绪）。 */
-    window.addEventListener('load', function () {
-        if (window.Compressor) return;
-        var s = document.createElement('script');
-        s.src = 'https://cdn.bootcdn.net/ajax/libs/compressorjs/1.2.1/compressor.min.js';
-        document.head.appendChild(s);
-    });
-</script>
+<!-- 图片不再预压缩：压缩（800px/JPEG）会让票据小字粘连、小图更糊，是识别准确率的最大杀手。
+     改为 canvas 自适应预处理：小图放大到目标长边、大图原样保留，并抑制红色印章/红框干扰。 -->
 <!-- <script src="https://fastly.jsdelivr.net/gh/midaug/dream-lottery/spider_data/ssq.js"></script> -->
 <script src="https://100180.xyz/ssq/data/ssq.js"></script>
 <script>
@@ -641,6 +639,13 @@
         var html = draw
             ? drawBlockHtml(draw)
             : '<div class="draw-info"><div class="draw-title">第 <b>' + esc(ssqData.code) + '</b> 期 · ' + esc(ssqData.drawDate) + '</div></div>';
+        /* OCR 复式票：组合展开后每注以 single 形态渲染，必须有这行说明「这是复式展开」，
+           否则 N 行 single 会被误读成解析成了单注（cp.jpg 实测反馈） */
+        if (ssqData.ocrSpec && ssqData.ocrSpec.isCompound) {
+            html += '<div class="ocr-spec-note">识别为复式投注：红球 <b>' + esc(ssqData.ocrSpec.redBalls.join(' ')
+                ) + '</b>（' + ssqData.ocrSpec.redBalls.length + ' 个）· 蓝球 <b>' + esc(ssqData.ocrSpec.blueBalls.join(' ')
+                ) + '</b>（' + ssqData.ocrSpec.blueBalls.length + ' 个）→ 展开 ' + ssqData.noteDtos.length + ' 注</div>';
+        }
         /* 每一注之间是「并列」关系，宽屏下横向多列铺排（见 .result-bets）。
            不要改成一条条整宽的行：单行内容只占约 300px，右侧会空出一大片。 */
         html += '<div class="result-bets">';
@@ -725,10 +730,10 @@
         /* 缺值的字段显示「—」，避免出现 "undefined" 字样 */
         var fv = function (v) { return (v === undefined || v === null || v === '') ? '—' : v; };
         html += '<div class="fileinfo">';
-        html += '<span>压缩耗时 ' + esc(fv(fileInfo.compressionTime)) + '</span>';
-        html += '<span>压缩前 ' + esc(fv(fileInfo.originalSize)) + '</span>';
-        html += '<span>压缩后 ' + esc(fv(fileInfo.compressedSize)) + '</span>';
-        html += '<span>压缩比 ' + esc(fv(fileInfo.compressionRatio)) + '</span>';
+        html += '<span>原图 ' + esc(fv(fileInfo.originalDims)) + ' ' + esc(fv(fileInfo.originalSize)) + '</span>';
+        html += '<span>预处理 ' + esc(fv(fileInfo.prepDims)) + ' ' + esc(fv(fileInfo.prepScale)) + '</span>';
+        html += '<span>预处理耗时 ' + esc(fv(fileInfo.prepTime)) + '</span>';
+        if (fileInfo.ocrPsm) html += '<span>稀疏模式重试(PSM ' + esc(fileInfo.ocrPsm) + ')</span>';
         html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
         html += '</div>';
 
@@ -749,7 +754,13 @@
     function parseCode(text) {
         var match = findPattern(text, [/20[012]\d{4}-\d{3}/g]);
         if (match) {
-            return match.split('-')[0];
+            var c1 = match.split('-')[0];
+            if (dataMap[c1]) return c1;
+        }
+        /* 印章/噪点会让「开奖期」行局部乱码：逐个候选期号，优先取本地开奖数据里真实存在的 */
+        var all = findAllPatterns(text, /20[012]\d{4}/g);
+        for (var i = 0; i < all.length; i++) {
+            if (dataMap[all[i]]) return all[i];
         }
         return findPattern(text, [/20[012]\d{4}/g]);
     }
@@ -1375,46 +1386,152 @@
     }
 
     // 解析OCR格式的复式投注（增强版）
+    /* ===== OCR 字符混淆与粘连修复（2026-10-20 矩阵实验产物）=====
+       票面号码粘连（"3 19 21"→"3192123"）与形近字符误读（7→T）是识别残留的主要形态。
+       两件武器都只作用于「已判定为号码」的 token / 数字串，不碰中文文本：
+       - normNumToken：行首单个形近字母→数字（"T1217"=7 12 17）；≥2 个行首字母视为乱掉的
+         行标签直接剥掉（"ax:02"→02）；行尾字母是粘连噪点，剥掉（"6b"→6）。
+       - splitDigitsAscending：把粘连数字串按「严格升序 + 号码值域」穷举拆分。
+         双色球票面号码必升序（红 01-33 / 蓝 01-16），实测粘连串在该约束下几乎都唯一解。 */
+    /* 带类别的号码 token 归一化（结构化解析专用）。返回 { t, v, lead }：
+       t: 'num'=普通号码 / 'red'=红标签值 / 'blue'=蓝标签值 / 'break'=纯标签分段符 / ''=噪点；
+       v: 归一后的数字串；lead: 原始 token 行首 ASCII 字母数——
+       ≥2 视为乱标签行首（"sw:09"/"ax:02"），只能作为新段起点、不能并入已有段。
+       实测要点（cp.jpg 上海票）：「红复:05」被误读成 "g52:05" —— 中文标签被搅成拉丁字母时
+       冒号后的值段必须按号码救回（老逻辑把 g 映射成 9 得到 "952:05" 整个丢弃 → 红球 05 丢失，
+       剩 6 个号被当成单注）；「倍数:1」「合计14元」「机号:31130370」这类中文标签+数字必须整体丢弃
+       （老逻辑产出裸 "1"/"14" 幻影号码，"1" 会被蓝球扫描认成蓝球 01）。
+       同一张票的两种 JPEG 编码会给出不同的误读形态（已实测）：208KB 剪贴板版读出 "g52:05"，
+       738KB 原版读出 "45:05"（撞时间正则）和 "蓝单;07"（分号）——归一化必须按「标签可为任意
+       1-3 字符垃圾 + 冒号/分号 + 值段」的形态兜底，不能只针对某一种固定误读。 */
+    function normNumTokenC(raw) {
+        raw = String(raw);
+        const lead = (raw.match(/^[A-Za-z]*/) || [''])[0].length;
+        let tok = raw.replace(/^[^\dA-Za-z\u4e00-\u9fa5]+|[^\dA-Za-z\u4e00-\u9fa5]+$/g, '');
+        if (!/\d/.test(tok)) {
+            /* 纯标签 token（"wg:"/"ax:"/"蓝复:"）= 分段符：其后的号码是新列表（红/蓝分界） */
+            const isLabel = /^[A-Za-z\u4e00-\u9fa5]{1,8}[:：]$/.test(tok);
+            return { t: isLabel ? 'break' : '', v: '', lead: lead };
+        }
+        /* 时间 "19:57:31"（带秒）整体丢弃；"19:57"（无秒）仅当时段 ≤23 才算时间丢弃——
+           「红复:05」在原版高清票上会误读成 "45:05"，45 不可能是小时，必须落下去把 05 救回 */
+        if (/^\d{1,2}[:：]\d{2}[:：]\d{2}$/.test(tok)) return { t: '', v: '', lead: lead };
+        if (/^\d{1,2}[:：]\d{2}$/.test(tok) && parseInt(tok, 10) <= 23) return { t: '', v: '', lead: lead };
+        const ci = tok.search(/[:：;；]/);
+        if (ci >= 0) {
+            const label = tok.slice(0, ci);
+            if (/蓝/.test(label)) return { t: 'blue', v: coreNum(tok.slice(ci + 1)), lead: 0 };
+            if (/红/.test(label)) return { t: 'red', v: coreNum(tok.slice(ci + 1)), lead: 0 };
+            /* 中文标签（机号/开奖期/合计/倍数/销售期…）OCR 可读性高，其值全是噪音 → 丢弃；
+               拉丁乱标签（"g52:"/"ax:"/"sw:"）→ 值段继续按号码处理 */
+            if (/[\u4e00-\u9fa5]/.test(label)) return { t: '', v: '', lead: lead };
+            tok = tok.slice(ci + 1).replace(/^[^\dA-Za-z]+/, '');
+        } else if (/[\u4e00-\u9fa5]/.test(tok)) {
+            /* 无冒号但带中文（"合计14元"/"余月略27号"）= 文字嵌数字 → 丢弃 */
+            return { t: '', v: '', lead: lead };
+        }
+        if (/[A-Za-z]/.test(tok.charAt(0))) {
+            if (lead >= 2) {
+                tok = tok.replace(/^[A-Za-z]+/, '');      /* 行首 ≥2 字母 = 乱掉的行标签（ax: / uu:） */
+            } else {
+                const c = tok.charAt(0);
+                const map = { T: '7', O: '0', o: '0', Q: '0', q: '0', D: '0', I: '1', i: '1', l: '1', S: '5', s: '5', Z: '2', z: '2', G: '9', g: '9', B: '8', b: '8' };
+                tok = (map[c] || '') + tok.slice(1);      /* 行首 1 个字母 = 形近数字误读 */
+            }
+            tok = tok.replace(/^[^\dA-Za-z]+/, '');   /* 标签剥离后残留的 ":" 等（"sw:09"→09） */
+        }
+        tok = tok.replace(/[A-Za-z|]+$/, '');     /* 行尾字母 = 粘连噪点 */
+        tok = tok.replace(/[OoQqD]/g, '0').replace(/[Iil|]/g, '1').replace(/[Ss]/g, '5')
+                 .replace(/[Zz]/g, '2').replace(/[Gg]/g, '9').replace(/[Bb]/g, '8').replace(/T/g, '7');
+        return /^\d+$/.test(tok) ? { t: 'num', v: tok, lead: lead } : { t: '', v: '', lead: lead };
+    }
+
+    /* 标签值段归一：形近字母映射后只留数字（"蓝单:O7"→"07"），不合法返回空串 */
+    function coreNum(s) {
+        s = String(s).replace(/^[^\dA-Za-z]+|[^\dA-Za-z]+$/g, '');
+        s = s.replace(/[OoQqD]/g, '0').replace(/[Iil|]/g, '1').replace(/[Ss]/g, '5')
+             .replace(/[Zz]/g, '2').replace(/[Gg]/g, '9').replace(/[Bb]/g, '8').replace(/T/g, '7')
+             .replace(/[A-Za-z|]/g, '');
+        return /^\d+$/.test(s) ? s : '';
+    }
+
+    /* 旧接口：只要数字串（单注行内 token 用，行内不含中文标签，行为与老版一致） */
+    function normNumToken(tok) {
+        return normNumTokenC(tok).v;
+    }
+
+    /* 把数字串拆成严格升序的号码序列；minCount/maxCount 限定号码个数，maxVal 限定值域。
+       返回全部可行拆分（按号码数升序——优先拆得最少的解），无可行解返回 []。 */
+    function splitDigitsAscending(digits, minCount, maxCount, maxVal) {
+        const results = [];
+        const n = digits.length;
+        (function dfs(pos, prev, acc) {
+            if (pos === n) {
+                if (acc.length >= minCount && acc.length <= maxCount) results.push(acc.slice());
+                return;
+            }
+            if (acc.length >= maxCount) return;
+            for (let len = 1; len <= 2 && pos + len <= n; len++) {
+                const v = parseInt(digits.substr(pos, len), 10);
+                if (v < 1 || v > maxVal || v <= prev) continue;
+                acc.push(v);
+                dfs(pos + len, v, acc);
+                acc.pop();
+            }
+        })(0, 0, []);
+        results.sort(function (a, b) { return a.length - b.length; });
+        return results;
+    }
+
+    function digitsToAscending(digits, minCount, maxCount, maxVal) {
+        if (!digits) return null;
+        const sols = splitDigitsAscending(digits, minCount, maxCount, maxVal);
+        if (!sols.length) return null;
+        return sols[0].map(function (v) { return String(v).padStart(2, '0'); });
+    }
+
     function parseOCRSpec(text) {
         console.log("解析OCR格式复式投注:", text);
 
-        // 查找红球号码（支持多种格式：zw:, ax:, 红球, red等）
-        var redMatch = text.match(/(?:zw|ax|红\s*球|red)[:\s]*([\d\s]+)/i);
-        // 如果上面的模式没找到，尝试查找连续的红球号码模式
-        if (!redMatch) {
-            // 查找至少6个连续的两位数字（红球号码）
-            redMatch = text.match(/(\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}(?:\s+\d{1,2})*)/);
+        /* 路径一：标签锚定（红复/红单/红球/蓝复/蓝单/蓝球/zw/ax/wm/blue…可读时） */
+        var redMatch = text.match(/(?:zw|ax|red|红\s*[复单球])[:：;\s；]*([\d\s]+)/i);
+        var blueMatch = text.match(/(?:wm|blue|蓝\s*[复单球])[:：;\s；]*([\d\s]+)/i);
+        var redNumbers = null, blueNumbers = null;
+
+        if (redMatch) {
+            /* 不再按 \d{1,2} 硬切（会把 "11217" 切成 11/21/7 拼出假号码）；
+               整段数字串交给升序拆分，拆不出合法序列就当没有这段 */
+            redNumbers = digitsToAscending(redMatch[1].replace(/\D/g, ''), 6, 18, 33);
+        }
+        if (blueMatch) {
+            blueNumbers = digitsToAscending(blueMatch[1].replace(/\D/g, ''), 1, 16, 16);
         }
 
-        // 查找蓝球号码（支持多种格式：wm:, 蓝单:, 蓝球, blue等）
-        var blueMatch = text.match(/(?:wm|蓝\s*单|蓝\s*球|blue)[:\s]*([\d\s]+)/i);
-
-        if (!redMatch || !blueMatch) {
+        /* 路径二：结构化兜底 —— 标签经常被印章/红框搅成 "wg:"/"uu:"（实测），锚定失败时
+           按 token 扫描：连续号码 token（含粘连长串）构成红球段，
+           其后首个 1..3 个 01-16 号码的组 = 蓝球。期号/机号等长串靠升序拆分失败被自然排除。
+           单式票（含 A. 行锚点）绝不走这条路径：粘连的长串会把多行连读、
+           把 "(1)" 倍数符拼成幻影红球（实测 "27 3 (1)" → 多出红球 31）。 */
+        if (!redNumbers && !/[A-E]\s*\./.test(text)) {
+            var st = structuralParse(text);
+            if (st) {
+                redNumbers = st.reds;
+                if (!blueNumbers) blueNumbers = st.blues;
+            }
+        }
+        if (!redNumbers) {
             return null;
         }
 
-        // 提取红球和蓝球号码
-        var redNumbers = redMatch[1].match(/\d{1,2}/g) || [];
-        var blueNumbers = blueMatch[1].match(/\d{1,2}/g) || [];
+        console.log("提取的红球:", redNumbers, "蓝球:", blueNumbers);
 
-        // 转换为两位数格式，并过滤掉不合法的号码（红球01-33、蓝球01-16，同时过滤OCR噪声）
-        redNumbers = redNumbers.map(num => String(parseInt(num)).padStart(2, '0'))
-            .filter(num => parseInt(num) >= 1 && parseInt(num) <= 33);
-        blueNumbers = blueNumbers.map(num => String(parseInt(num)).padStart(2, '0'))
-            .filter(num => parseInt(num) >= 1 && parseInt(num) <= 16);
-
-        console.log("提取的红球:", redNumbers);
-        console.log("提取的蓝球:", blueNumbers);
-
-        // 防止OCR误识别导致组合爆炸：数量超过正常复式票范围时放弃此解析路径。
-        // 红球上限 18 与 MAX_COMBINATIONS=20000 对齐（C(19,6)=27132 必撞闸门，提前拦截）；
-        // 蓝球上限 16 为双色球全部取值，红×蓝总量闸门在 generateOCRSpecCombinations 里兜底。
+        /* 防止OCR误识别导致组合爆炸：数量超范围时放弃此解析路径（与 MAX_COMBINATIONS 闸门对齐） */
         if (redNumbers.length > 18 || blueNumbers.length > 16) {
             console.warn("红球/蓝球数量异常，放弃OCR复式解析:", redNumbers.length, blueNumbers.length);
             return null;
         }
 
-        // 判断是否为复式投注（红球超过6个或蓝球超过1个）
+        /* 判断是否为复式投注（红球超过6个或蓝球超过1个） */
         if (redNumbers.length > 6 || blueNumbers.length > 1) {
             return {
                 redBalls: redNumbers,
@@ -1423,7 +1540,7 @@
             };
         }
 
-        // 如果是标准单注
+        /* 标准单注 */
         if (redNumbers.length >= 6 && blueNumbers.length >= 1) {
             return {
                 redBalls: redNumbers.slice(0, 6),
@@ -1432,6 +1549,50 @@
             };
         }
 
+        return null;
+    }
+
+    /* 结构化兜底：无标签/标签被搅时按 token 扫号码段（详见 parseOCRSpec 路径二注释）。
+       - 号码 token 长度不设上限：整行粘连（"112172225"=12 17 22 25）也参与，由升序拆分验收，
+         期号/机号拆不出合法升序序列被自然排除（中文标签 token 已在归一化层丢弃）；
+       - lead≥2 的 token（"sw:09" 蓝球行标签粘连）只能作为新段起点，不能并入已有段——
+         否则蓝球 09 会混进红球串导致整段拆分失败；
+       - 蓝/红标签值（"蓝单:07"）会终止红段并优先作为蓝球候选；
+       - 蓝球 = 红段之后 15 token 窗口内首个可拆成 1..3 个 ≤16 升序号的连续 blue/num 组
+         （"sw:09 14"→09,14；"2 612"→02,06,12——后者实测来自 "蓝复:2 6 12" 的粘连变体）。 */
+    function structuralParse(text) {
+        const ctoks = String(text).split(/\s+/).map(normNumTokenC);
+        for (let i = 0; i < ctoks.length; i++) {
+            const ti = ctoks[i];
+            if ((ti.t !== 'num' && ti.t !== 'red') || !ti.v) continue;
+            let j = i, digits = '';
+            while (j < ctoks.length && (ctoks[j].t === 'num' || ctoks[j].t === 'red') && ctoks[j].v &&
+                   (j === i || ctoks[j].lead < 2)) {
+                digits += ctoks[j].v;
+                j++;
+            }
+            /* ≥6 个 token 或 ≥12 位数字（整行粘连成一个长串）才可能是红球段 */
+            if (j - i < 6 && digits.length < 12) { i = j - 1; continue; }
+            const reds = digitsToAscending(digits, 6, 18, 33);
+            if (!reds) { i = j - 1; continue; }
+            let blues = null;
+            for (let k = j; k < Math.min(ctoks.length, j + 15) && !blues; k++) {
+                const tk = ctoks[k];
+                if ((tk.t !== 'num' && tk.t !== 'blue') || !tk.v) continue;
+                let m = k, bd = '', cnt = 0;
+                while (m < ctoks.length && (ctoks[m].t === 'num' || ctoks[m].t === 'blue') && ctoks[m].v && cnt < 4) {
+                    const vv = ctoks[m].v;
+                    if (vv.length <= 2 && parseInt(vv, 10) > 16) break;
+                    if (bd.length + vv.length > 6) break;
+                    bd += vv; cnt++; m++;
+                }
+                if (cnt >= 1 && cnt <= 3) {
+                    const cand = digitsToAscending(bd, 1, 3, 16);
+                    if (cand) blues = cand;
+                }
+            }
+            return { reds: reds, blues: blues || [] };
+        }
         return null;
     }
 
@@ -1475,12 +1636,43 @@
         return combinations;
     }
 
+    /* 6 个升序红球(01-33) + 末尾 1 个蓝球(01-16，不参与升序) 的联合拆分。
+       用于 "-" 分隔符被粘连吃掉的行（实测 "C. 2 62223242813 (1)" = 2 6 22 23 24 28-13）。 */
+    function splitDigitsRedsPlusBlue(digits) {
+        const results = [];
+        const n = digits.length;
+        (function dfs(pos, prev, acc) {
+            if (acc.length === 6) {
+                const rest = digits.slice(pos);
+                if (rest.length >= 1 && rest.length <= 2) {
+                    const bv = parseInt(rest, 10);
+                    if (bv >= 1 && bv <= 16) results.push({ reds: acc.slice(), blue: bv });
+                }
+                return;
+            }
+            if (pos >= n) return;
+            for (let len = 1; len <= 2 && pos + len <= n; len++) {
+                const v = parseInt(digits.substr(pos, len), 10);
+                if (v < 1 || v > 33 || v <= prev) continue;
+                acc.push(v);
+                dfs(pos + len, v, acc);
+                acc.pop();
+            }
+        })(0, 0, []);
+        return results;
+    }
+
     // 解析新的单注OCR格式（增强版）
     function parseSingleOCRSpec(text) {
         console.log("解析单注OCR格式:", text);
 
-        // 查找所有符合格式的投注行，例如: A.06 14 15 19 22 30-03
-        var lines = text.match(/[A-E]\.[\d\s\-]+\(?\d*\)?/g);
+        /* 行格式（兼容实测的多种票面）:
+           A.06 14 15 19 22 30-03        标准单注（- 连接）
+           A.04 08 14 22 26 27+14 x2     深圳票（+ 连接，x2 倍数）
+           A. 3192123 26 27- 3 (1)       粘连场景：号码挤在一个 token、倍数为 (1)
+           D 1 2 91215 27-16 (1)         行锚点的 "." 被吃掉（点可选）
+           C. 2 62223242813 (1)          "-" 被吃掉：整段 = 6红+1蓝联合拆分 */
+        var lines = text.match(/[A-E](?:\s*\.)?\s*[\d][\d\s\-\+\.]*(?:[xX×]\s*\d+)?(?:\(\s*\d*\s*\))?/g);
         if (!lines || lines.length === 0) {
             return null;
         }
@@ -1491,37 +1683,53 @@
             var line = lines[i].trim();
             console.log("处理行:", line);
 
-            // 提取字母前缀（A-E）
-            var letterMatch = line.match(/^([A-E])\./);
+            var letterMatch = line.match(/^([A-E])/);
             if (!letterMatch) continue;
 
-            // 提取号码部分（去除字母和倍数）
-            var numbersPart = line.substring(2); // 去掉"A."
-            numbersPart = numbersPart.replace(/\(\d*\)$/, ''); // 去掉倍数部分(2)
+            var numbersPart = line.replace(/^[A-E]\s*\.?\s*/, '');
+            numbersPart = numbersPart.replace(/[xX×]\s*\d+\s*$/, '');      /* x2 倍数 */
+            numbersPart = numbersPart.replace(/\(\s*\d*\s*\)\s*$/, '');    /* (1) 倍数 */
+            if (!/\d/.test(numbersPart)) continue;
 
-            // 分离红球和蓝球
-            var parts = numbersPart.split('-');
-            if (parts.length !== 2) continue;
+            var redNumbers = null, blueValue = NaN;
+            var sep = numbersPart.match(/[-+]/);
+            if (sep) {
+                var redPart = numbersPart.slice(0, sep.index);
+                var bluePart = numbersPart.slice(sep.index + 1);
 
-            var redPart = parts[0].trim();
-            var bluePart = parts[1].trim();
-
-            // 解析红球号码
-            var redNumbers = redPart.match(/\d+/g) || [];
-            // 确保红球号码是两位数格式
-            redNumbers = redNumbers.map(num => String(parseInt(num)).padStart(2, '0'));
-
-            // 解析蓝球号码
-            var blueNumber = String(parseInt(bluePart)).padStart(2, '0');
-
-            // 验证号码数量
-            if (redNumbers.length >= 6) {
-                bets.push({
-                    letter: letterMatch[1],
-                    redBalls: redNumbers.slice(0, 6), // 只取前6个
-                    blueBall: blueNumber
+                /* 红球：先按 token 直读；不足 6 个或有粘连 token 时走升序拆分 */
+                var redTokens = redPart.split(/\s+/).filter(Boolean).map(normNumToken).filter(Boolean);
+                redNumbers = redTokens.filter(function (t) {
+                    return t.length <= 2 && parseInt(t, 10) >= 1 && parseInt(t, 10) <= 33;
                 });
+                if (redNumbers.length !== 6) {
+                    redNumbers = digitsToAscending(redTokens.join(''), 6, 6, 33) || [];
+                    if (!redNumbers.length) continue;
+                } else {
+                    redNumbers = redNumbers.map(function (t) { return String(parseInt(t, 10)).padStart(2, '0'); });
+                }
+
+                var blueDigits = bluePart.split(/\s+/).filter(Boolean).map(normNumToken).filter(Boolean).join('');
+                if (!blueDigits) continue;
+                blueValue = parseInt(blueDigits.slice(0, 2), 10);
+                if (isNaN(blueValue) || blueValue < 1 || blueValue > 16) {
+                    blueValue = parseInt(blueDigits.charAt(0), 10);
+                }
+                if (isNaN(blueValue) || blueValue < 1 || blueValue > 16) continue;
+            } else {
+                /* 分隔符丢失：整段数字串按「6红 + 末尾蓝」联合拆分 */
+                const digits = numbersPart.split(/\s+/).filter(Boolean).map(normNumToken).filter(Boolean).join('');
+                const sols = splitDigitsRedsPlusBlue(digits);
+                if (!sols.length) continue;
+                redNumbers = sols[0].reds.map(function (v) { return String(v).padStart(2, '0'); });
+                blueValue = sols[0].blue;
             }
+
+            bets.push({
+                letter: letterMatch[1],
+                redBalls: redNumbers.slice(0, 6),
+                blueBall: String(blueValue).padStart(2, '0')
+            });
         }
 
         return bets.length > 0 ? bets : null;
@@ -1587,7 +1795,34 @@
             drawDate: ssqData.drawDate
         };
 
-        // 首先尝试解析OCR格式的复式投注 (zw: 和 wm: 格式)
+        /* 解析顺序按「锚点精度」从高到低（2026-10-20 实测调整）：
+           ① 单注行锚点 A./B./C.（结构最强，绝不能让后面的兜底抢跑——
+              否则复式结构化兜底会把多行连读、把 "(1)" 倍数符拼成幻影红球）
+           ② 复式标签锚定（红复/蓝复/zw/wm 可读时）
+           ③ 复式结构化兜底（标签被印章/红框搅乱时）
+           ④ 码串 / 红蓝分离等旧兜底 */
+        var singleBets = parseSingleOCRSpec(text);
+        if (singleBets) {
+            console.log("单注OCR解析结果:", singleBets);
+
+            // 检查每个投注的中奖情况
+            var checkResultS = checkBetCombinations(singleBets, ssqData);
+
+            // 构造最终结果
+            result.noteDtos = checkResultS.noteDtos;
+            if (checkResultS.hasPrize) {
+                result.bonusText = '中奖';
+                result.rewardValue = checkResultS.totalReward.toString();
+            } else {
+                result.bonusText = '无';
+                result.rewardValue = '0';
+            }
+
+            renderResult(result, fileInfo);
+            return;
+        }
+
+        // 然后尝试解析OCR格式的复式投注 (zw: 和 wm: 格式)
         var ocrSpec = parseOCRSpec(text);
         if (ocrSpec) {
             console.log("OCR复式规格解析结果:", ocrSpec);
@@ -1599,30 +1834,10 @@
             // 检查每个组合的中奖情况
             var checkResult = checkBetCombinations(combinations, ssqData);
 
-            // 构造最终结果
+            // 构造最终结果（ocrSpec 供渲染层标注「复式」身份——组合展开后每注是 single 形态，
+            // 不标注的话用户会以为复式票被解析成了单注）
             result.noteDtos = checkResult.noteDtos;
-            if (checkResult.hasPrize) {
-                result.bonusText = '中奖';
-                result.rewardValue = checkResult.totalReward.toString();
-            } else {
-                result.bonusText = '无';
-                result.rewardValue = '0';
-            }
-
-            renderResult(result, fileInfo);
-            return;
-        }
-
-        // 然后尝试解析新的单注OCR格式 (A.06 14 15 19 22 30-03 格式)
-        var singleBets = parseSingleOCRSpec(text);
-        if (singleBets) {
-            console.log("单注OCR解析结果:", singleBets);
-
-            // 检查每个投注的中奖情况
-            var checkResult = checkBetCombinations(singleBets, ssqData);
-
-            // 构造最终结果
-            result.noteDtos = checkResult.noteDtos;
+            result.ocrSpec = ocrSpec;
             if (checkResult.hasPrize) {
                 result.bonusText = '中奖';
                 result.rewardValue = checkResult.totalReward.toString();
@@ -1873,53 +2088,138 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(Math.max(0, dm))) + ' ' + sizes[i];
     }
 
+    /* ===== 图片预处理（替代原先的 Compressor 800px 压缩）=====
+       实测（2026-10-20，3 轮 × 4 张真实票面矩阵实验）：
+       - 压到 800px 会让相邻号码粘连（"3 19"→"319"），是解析失败的头号原因；
+       - 小图（长边 <900）放大到 ~1700 后识别质量大幅提升（232px 缩略图红球 7/7 全对）；
+       - 红色印章/红框抑制（红主导像素→白）不影响黑色数字，能救回被红框粘连的蓝球；
+       - 大图不缩不压，原样进引擎（长边 ≤1700 已在引擎舒适区）。 */
+    async function loadBitmap(file) {
+        if (window.createImageBitmap) {
+            try { return await createImageBitmap(file); } catch (e) { /* 老浏览器兜底 */ }
+        }
+        return await new Promise(function (res, rej) {
+            var im = new Image();
+            var u = URL.createObjectURL(file);
+            im.onload = function () { URL.revokeObjectURL(u); res(im); };
+            im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('图片解码失败')); };
+            im.src = u;
+        });
+    }
+
+    const OCR_TARGET_LONG_SIDE = 1830;   /* 识别梯第一档目标长边：小图放大到此，大图保持原样。
+                                            实测 700px 票 ×2.2、1080px 票 ×1.7 都在最佳区；
+                                            每张票的最佳分辨率不同（×2.9 反而会让某行变糊），
+                                            所以由 handleImage 的识别梯做多档尝试。 */
+    const OCR_MAX_SCALE = 4;             /* 放大上限：232px 缩略图 ×4 足够，再大只添噪 */
+
+    function ocrScaleFor(longSide, targetLong) {
+        if (longSide >= targetLong) return 1;              /* 只放大、不缩小 */
+        return Math.min(OCR_MAX_SCALE, targetLong / longSide);
+    }
+
+    async function prepareImageFromBitmap(bmp, targetLong) {
+        const t0 = window.performance.now();
+        const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+        const long = Math.max(w, h);
+        const scale = ocrScaleFor(long, targetLong);
+        const cw = Math.round(w * scale), ch = Math.round(h * scale);
+        const c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, cw, ch);
+        g.drawImage(bmp, 0, 0, cw, ch);
+        /* 红章/红框抑制 + 灰度化：r 明显压倒 g/b 的像素视为红系（印章、红框、红抬头）→ 置白；
+           其余按亮度转灰度，给引擎稳定的单通道输入。 */
+        const id = g.getImageData(0, 0, cw, ch), d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], gg = d[i + 1], b = d[i + 2];
+            const v = (r > 90 && r > gg * 1.28 && r > b * 1.28) ? 255 : (r * 299 + gg * 587 + b * 114) / 1000;
+            d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+        }
+        g.putImageData(id, 0, 0);
+        const blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
+        return {
+            blob: blob,
+            originalDims: w + '×' + h,
+            prepDims: cw + '×' + ch,
+            prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : '原大',
+            prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒'
+        };
+    }
+
+    /* 解析质量预判：0=不可解析 1=可解析但可能没读全 2=可解析且行数证据齐全。
+       「行数证据」= 票面每注行尾的倍数标记 (1) / x2 —— 单注行数比它少说明还有行没读出来，
+       识别梯应继续尝试（实测 1830 档会把 2026006 的 D/E 两行读丢）。 */
+    function ocrParseQuality(text) {
+        if (!text) return 0;
+        const code = parseCode(text);
+        if (!code || !dataMap[code]) return 0;
+        const markers = (text.match(/\(\s*\d+\s*\)|[xX×]\s*\d+/g) || []).length;
+        const single = parseSingleOCRSpec(text);
+        if (single) {
+            if (!markers || single.length >= markers) return 2;
+            return 1;
+        }
+        if (parseOCRSpec(text)) return 2;
+        const cleanText = text.replace(/[^\w\d\s\-\:\#\*\$\.\,\;]/gi, ' ');
+        return findAllPatterns(cleanText, /[A-E][\d\#\*\$]+/g).length > 0 ? 1 : 0;
+    }
+
+    /* 识别梯：同一张图按「分辨率 × PSM」多档尝试，解析通过即停（2026-10-20 实测定档）。
+       1830 档对多数票一次通过；3000 档专救红框票（1080px 票 ×2.2 才能把 "5 7" 读全）；
+       psm11 稀疏模式专救被印章干扰的「开奖期」行。 */
+    const OCR_LADDER = [
+        { long: 1830, psm: '6' },
+        { long: 1830, psm: '11' },
+        { long: 3000, psm: '6' },
+        { long: 3000, psm: '11' }
+    ];
+
     async function handleImage(file) {
         $('#up-btn').attr('disabled', 'disabled');
-        const t1 = window.performance.now();
         dataContainer.html(loadingHtml);
 
-        /* Compressor 是 async 加载的，可能还没就绪或本地文件缺失；此前不在 try 内，抛错会让按钮永久灰死 */
-        if (typeof Compressor === 'undefined') {
-            showData('<div class="alert err">图片压缩库（Compressor.js）加载失败，请刷新页面重试。</div>');
-            $('#up-btn').removeAttr('disabled');
-            return;
-        }
+        try {
+            const bmp = await loadBitmap(file);
+            var fileInfo = { originalSize: formatFileSize(file.size) };
 
-        new Compressor(file, {
-            quality: 0.9,
-            maxWidth: 800,
-            success: async function (compressedFile) {
-                const t2 = window.performance.now();
-                var fileInfo = {
-                    compressionTime: ((t2 - t1) / 1000).toFixed(3) + '秒',
-                    originalSize: formatFileSize(file.size),
-                    compressedSize: formatFileSize(compressedFile.size),
-                    compressionRatio: (compressedFile.size / file.size * 100).toFixed(2) + '%'
-                };
+            const t3 = window.performance.now();
+            const worker = await initTesseractWorker();
+            await worker.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
 
-                const t3 = window.performance.now();
-
-                try {
-                    // 使用Tesseract.js 7.0的新API
-                    const worker = await initTesseractWorker();
-                    const result = await worker.recognize(compressedFile);
-
-                    fileInfo.recognitionTime = ((window.performance.now() - t3) / 1000).toFixed(3) + '秒';
-                    console.log(fileInfo);
-                    processOCRResult(result.data.text, fileInfo);
-                } catch (error) {
-                    console.error('OCR识别失败:', error);
-                    showData('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
-                    $('#up-btn').removeAttr('disabled');
+            const prepCache = {};
+            let bestText = null, bestPrep = null, bestQuality = 0;
+            for (const step of OCR_LADDER) {
+                if (!prepCache[step.long]) prepCache[step.long] = await prepareImageFromBitmap(bmp, step.long);
+                const prep = prepCache[step.long];
+                await worker.setParameters({ tessedit_pageseg_mode: step.psm });
+                const t0 = window.performance.now();
+                const t = (await worker.recognize(prep.blob)).data.text;
+                const q = ocrParseQuality(t);
+                console.log('识别梯档位:', step.long, 'psm' + step.psm,
+                    '质量' + q, Math.round(window.performance.now() - t0) + 'ms');
+                if (q > bestQuality) {
+                    bestText = t; bestPrep = prep; bestQuality = q;
+                    if (step.psm === '11') fileInfo.ocrPsm = '11'; else delete fileInfo.ocrPsm;
+                    if (step.long !== OCR_LADDER[0].long) fileInfo.ocrLong = step.long; else delete fileInfo.ocrLong;
                 }
-            },
-            error(err) {
-                console.error(err);
-                /* 压缩失败也要清掉加载态，否则按钮永久灰死、转圈永远不停 */
-                showData('<div class="alert err">图片压缩失败: ' + esc(err && err.message ? err.message : String(err)) + '</div>');
-                $('#up-btn').removeAttr('disabled');
+                if (bestQuality >= 2) break;   /* 行数证据齐全，无需继续 */
             }
-        });
+            fileInfo.originalDims = bestPrep.originalDims;
+            fileInfo.prepDims = bestPrep.prepDims;
+            fileInfo.prepScale = bestPrep.prepScale;
+            fileInfo.prepTime = bestPrep.prepTime;
+            fileInfo.recognitionTime = ((window.performance.now() - t3) / 1000).toFixed(3) + '秒';
+            processOCRResult(bestText, fileInfo);
+        } catch (error) {
+            console.error('OCR识别失败:', error);
+            showData('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
+            $('#up-btn').removeAttr('disabled');
+        }
     }
 
     $('#input-img').change(function (e) {
