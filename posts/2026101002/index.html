@@ -12,7 +12,7 @@
   <meta property="og:type" content="article">
   <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2026-10-10T23:30:00+08:00">
-    <meta property="article:modified_time" content="2026-10-10T23:30:00+08:00">
+    <meta property="article:modified_time" content="2026-10-22T10:00:00+08:00">
     <meta property="article:tag" content="SSH">
     <meta property="article:tag" content="Tunnel">
     <meta property="article:tag" content="端口转发">
@@ -44,8 +44,8 @@
                             "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
                             "width":  3200 ,
                             "height":  2048 
-                        }],"genre": "posts","keywords": "SSH, Tunnel, 端口转发, 开源项目, Go, Wails, Vue3, 桌面应用","wordcount":  2321 ,
-        "url": "https:\/\/midaug.100180.xyz\/posts\/2026101002\/","datePublished": "2026-10-10T23:30:00+08:00","dateModified": "2026-10-10T23:30:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+                        }],"genre": "posts","keywords": "SSH, Tunnel, 端口转发, 开源项目, Go, Wails, Vue3, 桌面应用","wordcount":  3817 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/2026101002\/","datePublished": "2026-10-10T23:30:00+08:00","dateModified": "2026-10-22T10:00:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
                 "@type": "Person",
@@ -132,8 +132,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">SSH Tunnel：用图形界面管理多条 SSH 隧道</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/ssh/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>SSH</a>&nbsp;<a href="/categories/%E4%BB%A3%E7%90%86%E8%BD%AC%E5%8F%91/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>代理转发</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;2321 words&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;5 minutes&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-10-10">2026-10-10</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;3817 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;8 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>Contents</span>
@@ -149,10 +149,11 @@
           <ul>
             <li><a href="#1-多隧道管理">1. 多隧道管理</a></li>
             <li><a href="#2-三种转发模式">2. 三种转发模式</a></li>
-            <li><a href="#3-代理中转">3. 代理中转</a></li>
-            <li><a href="#4-自动重连">4. 自动重连</a></li>
-            <li><a href="#5-系统托盘">5. 系统托盘</a></li>
-            <li><a href="#6-导入与导出">6. 导入与导出</a></li>
+            <li><a href="#3-连接监控">3. 连接监控</a></li>
+            <li><a href="#4-代理中转">4. 代理中转</a></li>
+            <li><a href="#5-自动重连">5. 自动重连</a></li>
+            <li><a href="#6-系统托盘">6. 系统托盘</a></li>
+            <li><a href="#7-导入与导出">7. 导入与导出</a></li>
           </ul>
         </li>
       </ul>
@@ -162,10 +163,11 @@
         <li>
           <ul>
             <li><a href="#1-隧道列表">1. 隧道列表</a></li>
-            <li><a href="#2-新建与编辑隧道">2. 新建与编辑隧道</a></li>
-            <li><a href="#3-导入与导出">3. 导入与导出</a></li>
-            <li><a href="#4-设置">4. 设置</a></li>
-            <li><a href="#5-系统托盘-1">5. 系统托盘</a></li>
+            <li><a href="#2-连接监控">2. 连接监控</a></li>
+            <li><a href="#3-新建与编辑隧道">3. 新建与编辑隧道</a></li>
+            <li><a href="#4-导入与导出">4. 导入与导出</a></li>
+            <li><a href="#5-设置">5. 设置</a></li>
+            <li><a href="#6-系统托盘-1">6. 系统托盘</a></li>
           </ul>
         </li>
       </ul>
@@ -182,7 +184,17 @@
     </li>
     <li><a href="#六技术实现">六、技术实现</a></li>
     <li><a href="#七平台支持与系统要求">七、平台支持与系统要求</a></li>
-    <li><a href="#八小结">八、小结</a></li>
+    <li><a href="#八更新日志">八、更新日志</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-v0022026-10-21">1. v0.0.2（2026-10-21）</a></li>
+            <li><a href="#2-v0012026-07-28">2. v0.0.1（2026-07-28）</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#九小结">九、小结</a></li>
   </ul>
 </nav></div>
             </div><div class="content" id="content"><h2 id="一前言">一、前言</h2>
@@ -203,7 +215,7 @@
 <ul>
 <li>项目地址：<a href="https://github.com/midaug/ssh-tunnel" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel</a></li>
 <li>开源协议：MIT</li>
-<li>当前版本：v0.0.1</li>
+<li>当前版本：v0.0.2（2026-10-21）</li>
 </ul>
 <!-- more -->
 <h2 id="二解决什么问题">二、解决什么问题</h2>
@@ -211,18 +223,71 @@
 <p><strong>命令不用记了。</strong> 隧道保存成配置，点一下启停。已经写好的 <code>ssh -L ...</code> 命令可以直接粘贴进来，工具会解析成配置项，不用重新填一遍表单。</p>
 <p><strong>终端可以关了。</strong> 隧道跑在应用自己的进程里，配合系统托盘常驻，关掉主窗口隧道照样跑。macOS 上还能把 Dock 图标藏起来，完全当菜单栏应用用。</p>
 <p><strong>断线不用手动重连。</strong> 内置自动重连，最小退避、最大退避、心跳间隔都能配。</p>
-<p><strong>状态看得见。</strong> 每条隧道的状态实时同步，托盘图标会随整体状态变色：有隧道在跑是蓝色，全部停止自动变灰。</p>
+<p><strong>隧道状态看得见。</strong> 每条隧道的状态实时同步，托盘图标会随整体状态变色：有隧道在跑是蓝色，全部停止自动变灰。</p>
+<p><strong>连接状态也看得见。</strong> 这一条是 v0.0.2 补上的。隧道通了不等于业务通了——连到哪、跑了多少流量、是哪个本机进程发起的，以前只能靠 <code>lsof</code> 或者抓包。现在有独立的连接监控页，这些信息直接列在表格里。</p>
 <h2 id="三主要功能">三、主要功能</h2>
 <h4 id="1-多隧道管理">1. 多隧道管理</h4>
 <p>每条隧道独立启停，状态实时同步，支持一键全部启用 / 全部关闭。</p>
 <h4 id="2-三种转发模式">2. 三种转发模式</h4>
 <p><code>-L</code> 本地转发、<code>-R</code> 远程转发、<code>-D</code> 动态转发都支持。</p>
 <p>动态转发这里做了一点额外的事：同一个监听端口上同时兼容 SOCKS5 和 HTTP 代理，按首字节自动识别协议。HTTP 模式下支持 <code>CONNECT</code> 隧道（可以走 HTTPS 或任意 TCP），也支持普通请求转发，并复用 keep-alive 连接。</p>
-<h4 id="3-代理中转">3. 代理中转</h4>
+<h4 id="3-连接监控">3. 连接监控</h4>
+<p>v0.0.2 新增。把「现在有哪些连接、连到哪、跑了多少流量」直接摆到界面上，不用再开 <code>lsof</code> 或抓包。</p>
+<p>表格里每条连接显示：进程名与 PID、来源地址、目标地址、所属隧道、协议（TCP / SOCKS5 / HTTP / HTTPS）。顶部汇总活跃连接数、累计上下行流量和当前速率。</p>
+<p>排序做得比较细。进程 / 来源、目标 / 隧道、流量、速率、时长这五列都能点表头排序：点一次升序，再点一次降序，第三次取消回到默认顺序。数值列第一次点先给降序，文本列先给升序。每秒刷新数据之后，排序按当前列动态重排，不会跳回默认。</p>
+<p>进程反查是这块的重点。它按本地端口倒推是哪个进程发起的连接，三个平台各用各的办法：</p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td><code>libproc</code> 遍历进程 fd</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>/proc/net/tcp</code> + <code>/proc/&lt;pid&gt;/fd</code> 反查 socket inode</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>GetExtendedTcpTable</code> 一次系统调用拿到全部连接及所属 PID</td>
+</tr>
+</tbody>
+</table>
+<p><code>-R</code> 远程转发的发起方在 SSH 服务器那一侧，本机没有对应进程，所以这类连接只显示来源 IP。</p>
+<p>断开操作支持单条和全部。隧道停止时会一并清理该隧道的连接，不留僵尸记录。已经结束的连接会保留 5 秒（最多 200 条），能看到断开原因：</p>
+<table>
+<thead>
+<tr>
+<th>原因</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>手动断开</td>
+<td>在监控页点了断开</td>
+</tr>
+<tr>
+<td>隧道停止</td>
+<td>所属隧道被停掉</td>
+</tr>
+<tr>
+<td>目标不可达</td>
+<td>连不上目标地址</td>
+</tr>
+</tbody>
+</table>
+<p>开销这块做了控制。只有打开连接监控页面时才以 1Hz 采样并推送，离开页面就停，不看就不花 CPU。连接登记表上限 4096 条，达到上限只是新连接不再显示，转发本身不受影响。</p>
+<h4 id="4-代理中转">4. 代理中转</h4>
 <p>到 SSH 服务器的这一段连接，可以再经由 HTTP / HTTPS / SOCKS5 代理建立，支持代理认证。适用于跳板机本身也要走代理才能访问的场景，连接测试同样走这条链路。</p>
-<h4 id="4-自动重连">4. 自动重连</h4>
+<h4 id="5-自动重连">5. 自动重连</h4>
 <p>断线后自动重试，退避策略可配置。默认最小退避 1000 ms、最大退避 30000 ms，心跳间隔 30 秒（填 0 关闭）。</p>
-<h4 id="5-系统托盘">5. 系统托盘</h4>
+<h4 id="6-系统托盘">6. 系统托盘</h4>
 <p>托盘菜单里可以直接启停隧道、全部启用、全部关闭、显示窗口、退出程序。每条隧道用符号标识状态：</p>
 <table>
 <thead>
@@ -250,7 +315,7 @@
 </tr>
 </tbody>
 </table>
-<h4 id="6-导入与导出">6. 导入与导出</h4>
+<h4 id="7-导入与导出">7. 导入与导出</h4>
 <p>三种方式，覆盖迁移和备份的场景：</p>
 <ul>
 <li><strong>从 SSH 命令导入</strong> —— 粘贴 <code>ssh -L 8080:localhost:80 -i ~/.ssh/id_rsa user@host</code>，自动解析成隧道配置</li>
@@ -268,7 +333,17 @@
         data-sizes="auto"
         alt="/images/post/2026101002/tunnel-list.png"
         title="隧道列表界面" /></p>
-<h4 id="2-新建与编辑隧道">2. 新建与编辑隧道</h4>
+<h4 id="2-连接监控">2. 连接监控</h4>
+<p>实时展示所有进行中的连接：进程、来源、目标、流量与速率。图中按流量降序排列。左侧绿色圆点表示活动连接，灰色是刚结束还在保留期内的，红色表示连接目标失败。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026101002/conn-monitor.png"
+        data-srcset="/images/post/2026101002/conn-monitor.png, /images/post/2026101002/conn-monitor.png 1.5x, /images/post/2026101002/conn-monitor.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026101002/conn-monitor.png"
+        title="连接监控界面" /></p>
+<h4 id="3-新建与编辑隧道">3. 新建与编辑隧道</h4>
 <p>配置 SSH 连接信息、认证方式（密钥或密码）、端口转发规则和高级选项。保存前可以先用「测试连接」验证 SSH 连通性，这一步只测连接，不会真的启动转发。</p>
 <p><img
         class="lazyload"
@@ -278,7 +353,7 @@
         data-sizes="auto"
         alt="/images/post/2026101002/tunnel-edit.png"
         title="新建隧道界面" /></p>
-<h4 id="3-导入与导出">3. 导入与导出</h4>
+<h4 id="4-导入与导出">4. 导入与导出</h4>
 <p>三个页签对应三种方式：从 SSH 命令导入、JSON 导入导出、导出 SSH 命令。</p>
 <p><img
         class="lazyload"
@@ -288,7 +363,7 @@
         data-sizes="auto"
         alt="/images/post/2026101002/import-export.png"
         title="导入导出界面" /></p>
-<h4 id="4-设置">4. 设置</h4>
+<h4 id="5-设置">5. 设置</h4>
 <p>开机自启、窗口行为、Dock 显示这些全局配置都在这里。配置文件路径也会显示出来，可以直接打开所在目录。</p>
 <p><img
         class="lazyload"
@@ -298,7 +373,7 @@
         data-sizes="auto"
         alt="/images/post/2026101002/settings.png"
         title="设置界面" /></p>
-<h4 id="5-系统托盘-1">5. 系统托盘</h4>
+<h4 id="6-系统托盘-1">6. 系统托盘</h4>
 <p>托盘菜单里直接操作隧道，图标颜色反映整体运行状态。</p>
 <p><img
         class="lazyload"
@@ -323,36 +398,37 @@
 <tr>
 <td>macOS</td>
 <td>Apple Silicon</td>
-<td><code>ssh-tunnel-v0.0.1-darwin-arm64.zip</code></td>
+<td><code>ssh-tunnel-v0.0.2-darwin-arm64.zip</code></td>
 </tr>
 <tr>
 <td>macOS</td>
 <td>Intel</td>
-<td><code>ssh-tunnel-v0.0.1-darwin-amd64.zip</code></td>
+<td><code>ssh-tunnel-v0.0.2-darwin-amd64.zip</code></td>
 </tr>
 <tr>
 <td>macOS</td>
 <td>通用（Intel + ARM）</td>
-<td><code>ssh-tunnel-v0.0.1-darwin-universal.zip</code></td>
+<td><code>ssh-tunnel-v0.0.2-darwin-universal.zip</code></td>
 </tr>
 <tr>
 <td>Windows</td>
 <td>x64</td>
-<td><code>ssh-tunnel-v0.0.1-windows-amd64.exe</code>（含安装包）</td>
+<td><code>ssh-tunnel-v0.0.2-windows-amd64.exe</code>（免安装）、<code>ssh-tunnel-v0.0.2-windows-amd64-installer.exe</code>（NSIS 安装包）</td>
 </tr>
 <tr>
 <td>Windows</td>
 <td>x86</td>
-<td><code>ssh-tunnel-v0.0.1-windows-386.exe</code>（免安装）</td>
+<td><code>ssh-tunnel-v0.0.2-windows-386.exe</code>（免安装）</td>
 </tr>
 <tr>
 <td>Linux</td>
 <td>x64</td>
-<td><code>ssh-tunnel-v0.0.1-linux-amd64</code></td>
+<td><code>ssh-tunnel-v0.0.2-linux-amd64</code></td>
 </tr>
 </tbody>
 </table>
-<p>Windows x64 有 NSIS 安装包，其余是免安装的单文件。Linux 只提供 x64，因为 Wails v2 不支持 Linux 386。</p>
+<p>Linux 只提供 x64，因为 Wails v2 不支持 Linux 386。</p>
+<p>顺带说一句 v0.0.1 的遗留问题：那一版的 Windows 安装包因为构建机缺少 <code>makensis</code> 被静默跳过，实际只发布了免安装 exe。v0.0.2 补装了 NSIS，安装包这次是齐的。</p>
 <h4 id="2-从源码构建">2. 从源码构建</h4>
 <p>需要 Go 1.21+、Node.js 16+ 和 Wails CLI v2：</p>
 <div class="highlight"><div class="chroma">
@@ -422,6 +498,10 @@
 <td><a href="https://github.com/fyne-io/systray" target="_blank" rel="noopener noreffer ">fyne.io/systray</a></td>
 </tr>
 <tr>
+<td>进程反查</td>
+<td>macOS <code>libproc</code> / Linux <code>procfs</code> / Windows <code>iphlpapi</code></td>
+</tr>
+<tr>
 <td>macOS Dock 控制</td>
 <td>cgo 调用 <code>NSApp.setActivationPolicy</code></td>
 </tr>
@@ -431,9 +511,53 @@
 </tr>
 </tbody>
 </table>
-<p>选 Wails 而不是 Electron，主要是看中产物体积和内存占用——它用系统自带的 WebView 渲染前端，不用打包一整个 Chromium。构建出来的 macOS ARM 版本压缩后不到 4 MB。</p>
+<p>选 Wails 而不是 Electron，主要是看中产物体积和内存占用——它用系统自带的 WebView 渲染前端，不用打包一整个 Chromium。v0.0.2 的 macOS ARM 版本压缩后 3.8 MB。</p>
 <p>隧道运行时分成三块：<code>manager.go</code> 管多隧道的启停和状态汇总，<code>tunnel.go</code> 管单条隧道的生命周期和自动重连，三种转发模式各自实现在 <code>forward_local.go</code> / <code>forward_remote.go</code> / <code>forward_dynamic.go</code> 里。<code>proxy.go</code> 负责经 HTTP/HTTPS/SOCKS5 代理拨号到 SSH 服务器，隧道拨号和连接测试共用这条路径。</p>
+<p>连接监控是新增的两个包：<code>internal/conn</code> 是连接登记表，负责快照、速率采样和主动断开；<code>internal/proc</code> 按本地端口反查进程，三个平台各一份实现。</p>
 <h2 id="七平台支持与系统要求">七、平台支持与系统要求</h2>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th style="text-align:center">macOS</th>
+<th style="text-align:center">Windows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>系统托盘</td>
+<td style="text-align:center">✅</td>
+<td style="text-align:center">✅</td>
+</tr>
+<tr>
+<td>连接监控（含进程反查）</td>
+<td style="text-align:center">✅</td>
+<td style="text-align:center">✅</td>
+</tr>
+<tr>
+<td>开机自启</td>
+<td style="text-align:center">✅ LaunchAgent</td>
+<td style="text-align:center">✅ 注册表</td>
+</tr>
+<tr>
+<td>隐藏 Dock 图标</td>
+<td style="text-align:center">✅ 菜单栏应用模式</td>
+<td style="text-align:center">—</td>
+</tr>
+<tr>
+<td>启动时不显示窗口</td>
+<td style="text-align:center">✅</td>
+<td style="text-align:center">✅</td>
+</tr>
+<tr>
+<td>关闭窗口最小化到托盘</td>
+<td style="text-align:center">✅</td>
+<td style="text-align:center">✅</td>
+</tr>
+</tbody>
+</table>
+<p>Linux 同样能构建，连接监控和进程反查（走 <code>/proc</code>）也都支持，只是没有 Dock 和托盘的系统级集成。</p>
+<p>系统版本要求：</p>
 <table>
 <thead>
 <tr>
@@ -446,21 +570,16 @@
 <tr>
 <td>macOS</td>
 <td>10.13 High Sierra</td>
-<td>支持菜单栏模式、隐藏 Dock 图标</td>
+<td>—</td>
 </tr>
 <tr>
 <td>Windows</td>
 <td>10 / Server 2016</td>
 <td>需要 WebView2 Runtime（Win10/11 通常已内置）</td>
 </tr>
-<tr>
-<td>Linux</td>
-<td>—</td>
-<td>仅 x64</td>
-</tr>
 </tbody>
 </table>
-<p>Linux 没有 386 版本，Windows 7 也不支持——Wails v2 依赖 WebView2（Edge 内核），而且 Go 1.21+ 本身已经移除了 Win7 支持。</p>
+<p>Windows 7 和 8 不支持——Wails v2 依赖 WebView2（Edge 内核），而且 Go 1.21+ 本身已经移除了 Win7 支持。</p>
 <p>配置文件按平台放在用户配置目录下：</p>
 <table>
 <thead>
@@ -484,9 +603,30 @@
 </tr>
 </tbody>
 </table>
-<h2 id="八小结">八、小结</h2>
-<p>这个工具解决的是我自己的实际问题：隧道多了之后，命令行和终端窗口的方式确实不太够用。如果你也经常要同时维持几条 SSH 隧道，可以试试。</p>
-<p>项目还在早期（v0.0.1），有问题或者想要的功能，欢迎到 GitHub 上提 issue。</p>
+<p>配置写盘在 v0.0.2 改成了原子替换，写到一半崩溃不会把原文件写坏；文件真的损坏了也能自动恢复。</p>
+<h2 id="八更新日志">八、更新日志</h2>
+<h4 id="1-v0022026-10-21">1. v0.0.2（2026-10-21）</h4>
+<p><strong>新增</strong></p>
+<ul>
+<li>连接监控：实时连接列表、流量与速率、五列排序、单条 / 全部断开</li>
+<li>进程反查：macOS <code>libproc</code> / Linux <code>procfs</code> / Windows <code>iphlpapi</code></li>
+<li>三平台 CI：每次提交自动在 macOS / Linux / Windows 上跑测试</li>
+</ul>
+<p><strong>修复</strong></p>
+<ul>
+<li>转发正确性：半关闭未传播导致响应被截断；<code>-R</code> 目标缺端口时拼出非法地址</li>
+<li>连接稳定性：SSH 握手无法中断、keepalive 超时不生效、<code>stopCh</code> 数据竞争</li>
+<li>配置安全：写盘改为原子替换并可从损坏中恢复；修正 IPv6 导出括号与含空格密钥路径</li>
+<li>界面：macOS 上 <code>confirm()</code> / <code>alert()</code> 被 WebView 静默吞掉（表现为「删除点了没反应」）、编辑页覆盖旧隧道、<code>-D</code> 行删除按钮错位；删除隧道补上二次确认</li>
+<li>连接监控：表头与数值列错位；速率改为按实际采样间隔换算（原先把每次采样的增量直接当每秒速率，采样延迟时会虚高）</li>
+<li>托盘与退出：托盘菜单重建时的 goroutine 泄漏、Dock 切换的线程问题、主动退出被「最小化到托盘」拦截</li>
+<li>发布：Windows 产物补上 NSIS 安装包</li>
+</ul>
+<h4 id="2-v0012026-07-28">2. v0.0.1（2026-07-28）</h4>
+<p>首个可用版本：多隧道管理、三种转发模式、系统托盘、导入导出。</p>
+<h2 id="九小结">九、小结</h2>
+<p>这个工具解决的是我自己的实际问题：隧道多了之后，命令行和终端窗口的方式确实不太够用。v0.0.2 把连接层面的可见性补上之后，排查「隧道是通的但服务连不上」这类问题省事了不少。</p>
+<p>项目还在早期，有问题或者想要的功能，欢迎到 GitHub 上提 issue。</p>
 <ul>
 <li>仓库：<a href="https://github.com/midaug/ssh-tunnel" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel</a></li>
 <li>下载：<a href="https://github.com/midaug/ssh-tunnel/releases/latest" target="_blank" rel="noopener noreffer ">https://github.com/midaug/ssh-tunnel/releases/latest</a></li>
@@ -497,7 +637,7 @@
     <div class="post-info">
         <div class="post-info-line">
             <div class="post-info-mod">
-                <span>Updated on 2026-10-10</span>
+                <span>Updated on 2026-10-22</span>
             </div></div>
         <div class="post-info-line">
             <div class="post-info-md"></div>
