@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>乱码修复</title>
+<meta name="theme-color" content="#f6f7f9" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / JSON 格式化 / 日期时间 / 字节与网速」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; color: inherit; text-decoration: none }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  /* 隐私说明：任何宽度都必须可见，窄屏靠 flex 整体换行，绝不 hide、不裁切 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
+
+  button, select, input, textarea {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄（窄屏下 flex 会把中文逐字竖排成一根条）。
+     不要加给 input / textarea —— 它们要靠可收缩占满剩余宽度。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel-2); color: var(--text-2); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea { cursor: text; resize: vertical; }
+
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  /* ★ 内容型工具页不要铺满整屏：卡片收窄居中 */
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; max-width: 900px; margin: 0 auto 12px; min-width: 0;
+  }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  #src { display: block; width: 100%; min-height: 104px; font: 13px/1.6 var(--mono); padding: 9px 11px; }
+  .meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 8px; font-size: 12px; color: var(--text-3);
+  }
+  .meta .right { margin-left: auto; display: flex; gap: 6px; }
+  .meta b { color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ===== 候选行 ===== */
+  .cand {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 11px; margin-bottom: 8px; background: var(--panel-2);
+  }
+  .cand:last-child { margin-bottom: 0; }
+  .cand.best { border-color: var(--accent); background: var(--panel); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .cand-hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .cand-hd .enc { font-size: 12px; font-weight: 600; color: var(--text); }
+  .cand-hd .score { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .cand-hd .right { margin-left: auto; display: flex; gap: 6px; }
+  .tag-best {
+    font-size: 10.5px; padding: 1px 6px; border-radius: 5px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  .tag-warn {
+    font-size: 10.5px; padding: 1px 6px; border-radius: 5px;
+    background: rgba(209,36,47,.1); color: var(--err); font-weight: 600;
+  }
+  .cand-tx {
+    font: 13px/1.65 var(--mono); color: var(--text);
+    white-space: pre-wrap; overflow-wrap: anywhere; max-height: 7.2em; overflow: hidden;
+    padding: 6px 8px; background: var(--panel); border-radius: 6px; border: 1px solid var(--border);
+    user-select: all;
+  }
+  .cand-note { margin-top: 6px; font-size: 11.5px; color: var(--text-3); }
+  .cand-note.bad { color: var(--err); }
+
+  .alert {
+    border-radius: 8px; padding: 9px 11px; font-size: 12.5px; line-height: 1.65;
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--text-2);
+  }
+  .alert.warn { border-color: rgba(209,36,47,.28); background: rgba(209,36,47,.06); color: var(--err); }
+  .alert.ok { border-color: rgba(13,122,82,.26); background: rgba(13,122,82,.06); color: var(--ok); }
+
+  /* ===== 对照表 ===== */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--text-2); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.enc { white-space: nowrap; font-weight: 600; color: var(--text); width: 1%; }
+  td.grp { white-space: nowrap; color: var(--text-3); width: 1%; font-size: 11px; }
+  td.tx { font: 12.5px/1.6 var(--mono); overflow-wrap: anywhere; color: var(--text); }
+  td.tx.no { color: var(--text-3); }
+  td.sc { white-space: nowrap; color: var(--text-3); font-variant-numeric: tabular-nums; width: 1%; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 10px);
+    background: var(--text); color: #fff; font-size: 12px; padding: 7px 14px;
+    border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+    z-index: 50; max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; }
+    .card { padding: 12px; margin-bottom: 10px; }
+    #src { min-height: 88px; }
+    th, td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href=".." title="返回工具首页">Mojibake<span>Fix</span></a>
+  <span class="sep"></span>
+  <span class="stat">编码探测 · <b id="encN">86</b> 种</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">转换全部在本地完成，内容不出浏览器</span>
+  <button class="mini" id="btnClear" title="清空输入与结果">清空</button>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>
+      输入
+      <span class="hint">粘贴即自动分析</span>
+      <span class="right">
+        <select id="mode" title="输入内容的形式">
+          <option value="text">乱码文本</option>
+          <option value="hex">十六进制字节</option>
+        </select>
+      </span>
+    </h2>
+    <textarea id="src" spellcheck="false" autocomplete="off" placeholder="粘贴乱码文本，例如：&#10;浣犲ソ锛屼笘鐣岋紒&#10;ä½&#160;å¥½ï¼Œä¸–ç•Œ&#10;也可以点上面的「示例」自动填入（再点一次换一个）。"></textarea>
+    <div class="meta">
+      <span id="stat">0 字</span>
+      <span id="cap"></span>
+      <span class="right">
+        <button class="mini" id="btnSample" title="填入一个乱码示例">示例</button>
+      </span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>候选还原 <span class="hint" id="candHint">按可能性排序</span></h2>
+    <div id="cands"></div>
+  </section>
+
+  <section class="card">
+    <h2>各编码解码对照 <span class="hint" id="tblHint"></span></h2>
+    <div id="tblBox"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var srcEl = $('src'), modeEl = $('mode'), statEl = $('stat'), capEl = $('cap');
+  var candsEl = $('cands'), candHintEl = $('candHint');
+  var tblBox = $('tblBox'), tblHintEl = $('tblHint');
+  var toastEl = $('toast');
+
+  /* ===== 编码清单（唯一来源）=====
+     ★ 一张表决定三件事：
+       script 该编码「设计上服务的书写系统」—— 打分先验 + 结果分组
+       kind   反推（字符 → 字节）走哪种实现：sbcs 单字节 / dbcs 双字节 / dbcs4 / utf16 / latin1 / legacy
+       src    能否充当「当初被误当成什么编码读过」（反推不了就不能当源）
+
+     ★ 实测（Chromium）TextDecoder 共 38 个可用独立解码器，别名的坑记在这：
+       big5-hkscs = big5、gb2312 = gbk、latin1 / iso-8859-1 / ascii / us-ascii = windows-1252、
+       euc-kr 实为 windows-949、utf-16 / unicode / ucs-2 = utf-16le、iso-8859-8-i 与 iso-8859-8 输出相同。
+       `replacement` 构造直接抛错。
+       **真 Latin-1（0x80-0x9F 是控制字符，不是 €‚ƒ„…）浏览器里拿不到，必须自建**，故单列一条。
+       合计 38 + 1 = **39 种**。
+     ★ 再往下还有两张自建表（LEGACY 43 种表驱动 + ALGO 4 种算法型），最终 **86 种**：
+       39 种浏览器原生 + 47 种自建。 */
+  /* ===== 表驱动遗留编码 =====
+     ★★ 浏览器只认 WHATWG Encoding 标准里的那些编码，**EBCDIC / DOS / 老 Mac / VISCII 一个都不认**
+     （`new TextDecoder('cp437')` 直接抛 RangeError）。可「乱码修复」恰恰最需要它们：
+     银行固定宽文本、DOS 时代档案、老 Mac 文件、大型机导出，至今还在被误读。
+     所以自带映射表 —— 这也是这个工具区别于「编辑器里切一下编码」的地方。
+
+     `map` 是字节到字符的映射：`full:0` 时是 0x80-0xFF 这 128 个字节（0x00-0x7F 按 ASCII），
+     `full:1` 时是全部 256 个（EBCDIC 连 0x00-0x7F 都不是 ASCII）。`\uFFFD` 表示该字节未定义。
+
+     分四批共 43 种：
+       ① EBCDIC 6：CP037 / CP500 / CP273 / CP875（希腊）/ CP1026（土耳其）/ CP1140（欧元）
+       ② DOS 18：CP437 850 852 855 857 858 860 861 862 863 865 869 720 864 737 775 1006 1125
+       ③ 老 Mac 10：Greek / Turkish / CE / Icelandic / Croatian / Romanian / Arabic / Hebrew / Thai / Farsi
+       ④ 其它 9：VISCII / HP Roman-8 / KOI8-T / TIS-620 / ISO-8859-9 / ISO-8859-11 / PTCP154 / KZ-1048 / Palm OS
+
+     ★★ 数据由 **Python codecs + iconv 逐字节生成并交叉校验**（CP437 / CP1006 等抽样逐字节比对一致），
+     不要手改、不要凭记忆补。生成脚本的思路记在 .memory/tools/mojibake.md。
+     ★ 生成时**先按原始字符分组、再逐组转义**：按转义后的字符串长度切行，会把 `\u0080` 从中间切断，
+       整段脚本报 `Invalid Unicode escape sequence`（本轮踩过）。 */
+  var LEGACY = [
+    { id:'cp037', name:'EBCDIC CP037（美/加）', script:'latin', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097' +
+           '\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011' +
+           '\u0012\u0013\u009D\u0085\u0008\u0087\u0018\u0019\u0092' +
+           '\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083' +
+           '\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C' +
+           '\u0005\u0006\u0007\u0090\u0091\u0016\u0093\u0094\u0095' +
+           '\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E' +
+           '\u001A  âäàáãåçñ¢.<(+|&éêëèíîïìß!$*);¬-/ÂÄÀÁÃÅÇÑ¦,%_>?øÉÊË' +
+           'ÈÍÎÏÌ`:#@\'="Øabcdefghi«»ðýþ±°jklmnopqrªºæ¸Æ¤µ~stuvwxyz¡¿Ð' +
+           'ÝÞ®^£¥·©§¶¼½¾[]¯¨´×{ABCDEFGHI­ôöòóõ}JKLMNOPQR¹ûüùúÿ\\÷STUV' +
+           'WXYZ²ÔÖÒÓÕ0123456789³ÛÜÙÚ\u009F' },
+    { id:'cp500', name:'EBCDIC CP500（国际）', script:'latin', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097' +
+           '\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011' +
+           '\u0012\u0013\u009D\u0085\u0008\u0087\u0018\u0019\u0092' +
+           '\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083' +
+           '\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C' +
+           '\u0005\u0006\u0007\u0090\u0091\u0016\u0093\u0094\u0095' +
+           '\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E' +
+           '\u001A  âäàáãåçñ[.<(+!&éêëèíîïìß]$*);^-/ÂÄÀÁÃÅÇÑ¦,%_>?øÉÊË' +
+           'ÈÍÎÏÌ`:#@\'="Øabcdefghi«»ðýþ±°jklmnopqrªºæ¸Æ¤µ~stuvwxyz¡¿Ð' +
+           'ÝÞ®¢£¥·©§¶¼½¾¬|¯¨´×{ABCDEFGHI­ôöòóõ}JKLMNOPQR¹ûüùúÿ\\÷STUV' +
+           'WXYZ²ÔÖÒÓÕ0123456789³ÛÜÙÚ\u009F' },
+    { id:'cp273', name:'EBCDIC CP273（德语）', script:'latin', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097' +
+           '\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011' +
+           '\u0012\u0013\u009D\u0085\u0008\u0087\u0018\u0019\u0092' +
+           '\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083' +
+           '\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C' +
+           '\u0005\u0006\u0007\u0090\u0091\u0016\u0093\u0094\u0095' +
+           '\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E' +
+           '\u001A  â{àáãåçñÄ.<(+!&éêëèíîïì~Ü$*);^-/Â[ÀÁÃÅÇÑö,%_>?øÉÊË' +
+           'ÈÍÎÏÌ`:#§\'="Øabcdefghi«»ðýþ±°jklmnopqrªºæ¸Æ¤µßstuvwxyz¡¿Ð' +
+           'ÝÞ®¢£¥·©@¶¼½¾¬|‾¨´×äABCDEFGHI­ô¦òóõüJKLMNOPQR¹û}ùúÿÖ÷STUVW' +
+           'XYZ²Ô\\ÒÓÕ0123456789³Û]ÙÚ\u009F' },
+    { id:'cp437', name:'CP437（DOS 美国）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp850', name:'CP850（DOS 西欧）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø×ƒáíóúñÑªº¿®¬½¼¡«»░▒▓│┤ÁÂÀ©╣' +
+           '║╗╝¢¥┐└┴┬├─┼ãÃ╚╔╩╦╠═╬¤ðÐÊËÈıÍÎÏ┘┌█▄¦Ì▀ÓßÔÒõÕµþÞÚÛÙýÝ¯´­±‗¾' +
+           '¶§÷¸°¨·¹³²■ ' },
+    { id:'cp852', name:'CP852（DOS 中欧）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäůćçłëŐőîŹÄĆÉĹĺôöĽľŚśÖÜŤťŁ×čáíóúĄąŽžĘę¬źČş«»░▒▓│┤ÁÂĚŞ╣' +
+           '║╗╝Żż┐└┴┬├─┼Ăă╚╔╩╦╠═╬¤đĐĎËďŇÍÎě┘┌█▄ŢŮ▀ÓßÔŃńňŠšŔÚŕŰýÝţ´­˝˛ˇ' +
+           '˘§÷¸°¨˙űŘř■ ' },
+    { id:'cp855', name:'CP855（DOS 西里尔）', script:'cyrillic', group:'DOS', full:0,
+      map:'ђЂѓЃёЁєЄѕЅіІїЇјЈљЉњЊћЋќЌўЎџЏюЮъЪаАбБцЦдДеЕфФгГ«»░▒▓│┤хХиИ╣' +
+           '║╗╝йЙ┐└┴┬├─┼кК╚╔╩╦╠═╬¤лЛмМнНоОп┘┌█▄Пя▀ЯрРсСтТуУжЖвВьЬ№­ыЫз' +
+           'ЗшШэЭщЩчЧ§■ ' },
+    { id:'cp857', name:'CP857（DOS 土耳其）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäàåçêëèïîıÄÅÉæÆôöòûùİÖÜø£ØŞşáíóúñÑĞğ¿®¬½¼¡«»░▒▓│┤ÁÂÀ©╣' +
+           '║╗╝¢¥┐└┴┬├─┼ãÃ╚╔╩╦╠═╬¤ºªÊËÈ�ÍÎÏ┘┌█▄¦Ì▀ÓßÔÒõÕµ�×ÚÛÙìÿ¯´­±�¾' +
+           '¶§÷¸°¨·¹³²■ ' },
+    { id:'cp860', name:'CP860（DOS 葡萄牙）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâãàÁçêÊèÍÔìÃÂÉÀÈôõòÚùÌÕÜ¢£Ù₧ÓáíóúñÑªº¿Ò¬½¼¡«»░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp861', name:'CP861（DOS 冰岛）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäàåçêëèÐðÞÄÅÉæÆôöþûÝýÖÜø£Ø₧ƒáíóúÁÍÓÚ¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp862', name:'CP862（DOS 希伯来）', script:'hebrew', group:'DOS', full:0,
+      map:'אבגדהוזחטיךכלםמןנסעףפץצקרשת¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp863', name:'CP863（DOS 法加）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâÂà¶çêëèïî‗À§ÉÈÊôËÏûù¤ÔÜ¢£ÙÛƒ¦´óú¨¸³¯Î⌐¬½¼¾«»░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp865', name:'CP865（DOS 北欧）', script:'latin', group:'DOS', full:0,
+      map:'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜø£Ø₧ƒáíóúñÑªº¿⌐¬½¼¡«¤░▒▓│┤╡╢╖╕╣' +
+           '║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤' +
+           '⌠⌡÷≈°∙·√ⁿ²■ ' },
+    { id:'cp869', name:'CP869（DOS 希腊）', script:'greek', group:'DOS', full:0,
+      map:'������Ά�·¬¦‘’Έ―ΉΊΪΌ��ΎΫ©Ώ²³ά£έήίϊΐόύΑΒΓΔΕΖΗ½ΘΙ«»░▒▓│┤ΚΛΜΝ╣' +
+           '║╗╝ΞΟ┐└┴┬├─┼ΠΡ╚╔╩╦╠═╬ΣΤΥΦΧΨΩαβγ┘┌█▄δε▀ζηθικλμνξοπρσςτ΄­±υφ' +
+           'χ§ψ΅°¨ωϋΰώ■ ' },
+    { id:'cp1006', name:'CP1006（DOS 乌尔都）', script:'arabic', group:'DOS', full:0,
+      map:'\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088' +
+           '\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091' +
+           '\u0092\u0093\u0094\u0095\u0096\u0097\u0098\u0099\u009A' +
+           '\u009B\u009C\u009D\u009E\u009F ۰۱۲۳۴۵۶۷۸۹،؛­؟ﺁﺍﺎﺎﺏﺑﭖﭘﺓﺕﺗﭦﭨ' +
+           'ﺙﺛﺝﺟﭺﭼﺡﺣﺥﺧﺩﮄﺫﺭﮌﺯﮊﺱﺳﺵﺷﺹﺻﺽﺿﻁﻅﻉﻊﻋﻌﻍﻎﻏﻐﻑﻓﻕﻗﻙﻛﮒﮔﻝﻟﻠﻡﻣﮞﻥﻧﺅﻭﮦﮨﮩﮪﺀ' +
+           'ﺉﺊﺋﻱﻲﻳﮰﮮﹼﹽ' },
+    { id:'mac-greek', name:'Mac Greek', script:'greek', group:'Mac 遗留', full:0,
+      map:'Ä¹²É³ÖÜ΅àâä΄¨çéèêë£™îï•½‰ôö¦€ùûü†ΓΔΘΛΞΠß®©ΣΪ§≠°·Α±≤≥¥ΒΕΖΗΙ' +
+           'ΚΜΦΫΨΩάΝ¬ΟΡ≈Τ«»… ΥΧΆΈœ–―“”‘’÷ΉΊΌΎέήίόΏύαβψδεφγηιξκλμνοπώρσ' +
+           'τθωςχυζϊϋΐΰ­' },
+    { id:'mac-turkish', name:'Mac Turkish', script:'latin', group:'Mac 遗留', full:0,
+      map:'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π' +
+           '∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸĞğİıŞş‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛ' +
+           'Ùˆ˜¯˘˙˚¸˝˛ˇ' },
+    { id:'mac-ce', name:'Mac Central Europe', script:'latin', group:'Mac 遗留', full:0,
+      map:'ÄĀāÉĄÖÜáąČäčĆćéŹźĎíďĒēĖóėôöõúĚěü†°Ę£§•¶ß®©™ę¨≠ģĮįĪ≤≥īĶ∂∑łĻ' +
+           'ļĽľĹĺŅņŃ¬√ńŇ∆«»… ňŐÕőŌ–—“”‘’÷◊ōŔŕŘ‹›řŖŗŠ‚„šŚśÁŤťÍŽžŪÓÔūŮÚů' +
+           'ŰűŲųÝýķŻŁżĢˇ' },
+    { id:'mac-iceland', name:'Mac Icelandic', script:'latin', group:'Mac 遗留', full:0,
+      map:'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûüÝ°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π' +
+           '∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€ÐðÞþý·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛ' +
+           'Ùıˆ˜¯˘˙˚¸˝˛ˇ' },
+    { id:'mac-croatian', name:'Mac Croatian', script:'latin', group:'Mac 遗留', full:0,
+      map:'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®Š™´¨≠ŽØ∞±≤≥∆µ∂∑∏š' +
+           '∫ªºΩžø¿¡¬√ƒ≈Ć«Č… ÀÃÕŒœĐ—“”‘’÷◊©⁄€‹›Æ»–·‚„‰ÂćÁčÈÍÎÏÌÓÔđÒÚÛ' +
+           'Ùıˆ˜¯πË˚¸Êæˇ' },
+    { id:'mac-romanian', name:'Mac Romanian', script:'latin', group:'Mac 遗留', full:0,
+      map:'ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ĂȘ∞±≤≥¥µ∂∑∏π' +
+           '∫ªºΩăș¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›Țț‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛ' +
+           'Ùıˆ˜¯˘˙˚¸˝˛ˇ' },
+    { id:'mac-arabic', name:'Mac Arabic', script:'arabic', group:'Mac 遗留', full:0,
+      map:'Ä ÇÉÑÖÜáàâäں«çéèêëí…îïñó»ôö÷úùûü !"#$٪&\'()*+،-./٠١٢٣٤٥٦٧٨' +
+           '٩:؛<=>؟❊ءآأؤإئابةتثجحخدذرزسشصضطظعغ[\\]^_ـفقكلمنهوىيًٌٍَُِّ' +
+           'ْپٹچەڤگڈڑ{|}ژے' },
+    { id:'mac-hebrew', name:'Mac Hebrew', script:'hebrew', group:'Mac 遗留', full:0,
+      map:'ÄײַÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü !"#$%₪\')(*+,-./012345678' +
+           '9:;<=>?ֹ„ּוֹוּ… ִֵֶַָ–—“”‘’שׁשְֱֲֹֻֿׂֳאבגדהוזחטיךכלםמןנסע' +
+           'ףפץצקרשת}]{[|' },
+    { id:'mac-thai', name:'Mac Thai', script:'thai', group:'Mac 遗留', full:0,
+      map:'«»…่้๊๋์่้๊๋์“”ํ�•ั็ิีึื่้๊๋์‘’� กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธน' +
+           'บปผฝพฟภมยรฤลฦวศษสหฬอฮฯะัาำิีึืฺุู⁠​–—฿เแโใไๅๆ็่้๊๋์ํ™๏๐๑๒๓' +
+           '๔๕๖๗๘๙®©����' },
+    { id:'viscii', name:'VISCII（越南）', script:'vietnamese', group:'其他遗留', full:0,
+      map:'ẠẮẰẶẤẦẨẬẼẸẾỀỂỄỆỐỒỔỖỘỢỚỜỞỊỎỌỈỦŨỤỲÕắằặấầẩậẽẹếềểễệốồổỗỠƠộờởịỰ' +
+           'ỨỪỬơớƯÀÁÂÃẢĂẳẵÈÉÊẺÌÍĨỳĐứÒÓÔạỷừửÙÚỹỵÝỡưàáâãảăữẫèéêẻìíĩỉđựòó' +
+           'ôõỏọụùúũủýợỮ' },
+    { id:'hp-roman8', name:'HP Roman-8（HP-UX）', script:'latin', group:'其他遗留', full:0,
+      map:'\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088' +
+           '\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091' +
+           '\u0092\u0093\u0094\u0095\u0096\u0097\u0098\u0099\u009A' +
+           '\u009B\u009C\u009D\u009E\u009F ÀÂÈÊËÎÏ´ˋˆ¨˜ÙÛ₤¯Ýý°ÇçÑñ¡¿¤£' +
+           '¥§ƒ¢âêôûáéóúàèòùäëöüÅîØÆåíøæÄìÖÜÉïßÔÁÃãÐðÍÌÓÒÕõŠšÚŸÿÞþ·µ¶¾' +
+           '—¼½ªº«■»±�' },
+    { id:'koi8-t', name:'KOI8-T（塔吉克）', script:'cyrillic', group:'其他遗留', full:0,
+      map:'қғ‚Ғ„…†‡�‰ҳ‹ҲҷҶ�Қ‘’“”•–—�™�›�����ӯӮё¤ӣ¦§���«¬­®�°±²Ё�Ӣ¶·�№' +
+           '�»���©юабцдефгхийклмнопярстужвьызшэщчъЮАБЦДЕФГХИЙКЛМНОПЯРС' +
+           'ТУЖВЬЫЗШЭЩЧЪ' },
+    { id:'cp720', name:'CP720（DOS 阿拉伯）', script:'arabic', group:'阿拉伯', full:0,
+      map:'\u0080\u0081éâ\u0084à\u0086çêëèïî\u008D\u008E\u008F\u0090ّْô¤ـûù' +
+           'ءآأؤ£إئابةتثجحخدذرزسشص«»' +
+           '░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟' +
+           '╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀' +
+           'ضطظعغفµقكلمنهوىي≡ًٌٍَُِ≈' +
+           '°∙·√ⁿ²■\u00A0' },
+    { id:'cp864', name:'CP864（DOS 阿拉伯）', script:'arabic', group:'阿拉伯', full:0,
+      map:'°·∙√▒─│┼┤┬├┴┐┌└┘β∞φ±½¼≈«' +
+           '»ﻷﻸ\uFFFD\uFFFDﻻﻼ\uFFFD\u00A0­ﺂ£¤ﺄ\uFFFD\uFFFDﺎﺏﺕﺙ،ﺝﺡﺥ' +
+           '٠١٢٣٤٥٦٧٨٩ﻑ؛ﺱﺵﺹ؟¢ﺀﺁﺃﺅﻊﺋﺍ' +
+           'ﺑﺓﺗﺛﺟﺣﺧﺩﺫﺭﺯﺳﺷﺻﺿﻁﻅﻋﻏ¦¬÷×ﻉ' +
+           'ـﻓﻗﻛﻟﻣﻧﻫﻭﻯﻳﺽﻌﻎﻍﻡﹽّﻥﻩﻬﻰﻲﻐ' +
+           'ﻕﻵﻶﻝﻙﻱ■\uFFFD' },
+    { id:'cp737', name:'CP737（DOS 希腊）', script:'greek', group:'希腊', full:0,
+      map:'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ' +
+           'αβγδεζηθικλμνξοπρσςτυφχψ' +
+           '░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟' +
+           '╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀' +
+           'ωάέήϊίόύϋώΆΈΉΊΌΎΏ±≥≤ΪΫ÷≈' +
+           '°∙·√ⁿ²■\u00A0' },
+    { id:'cp775', name:'CP775（DOS 波罗的海）', script:'latin', group:'中欧北欧', full:0,
+      map:'ĆüéāäģåćłēŖŗīŹÄÅÉæÆōöĢ¢Ś' +
+           'śÖÜø£Ø×¤ĀĪóŻżź”¦©®¬½¼Ł«»' +
+           '░▒▓│┤ĄČĘĖ╣║╗╝ĮŠ┐└┴┬├─┼ŲŪ' +
+           '╚╔╩╦╠═╬Žąčęėįšųūž┘┌█▄▌▐▀' +
+           'ÓßŌŃõÕµńĶķĻļņĒŅ’­±“¾¶§÷„' +
+           '°∙·¹³²■\u00A0' },
+    { id:'cp1125', name:'CP1125（DOS 乌克兰）', script:'cyrillic', group:'西里尔', full:0,
+      map:'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧ' +
+           'ШЩЪЫЬЭЮЯабвгдежзийклмноп' +
+           '░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟' +
+           '╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀' +
+           'рстуфхцчшщъыьэюяЁёҐґЄєІі' +
+           'Її·√№¤■\u00A0' },
+    { id:'cp858', name:'CP858（DOS 西欧·欧元）', script:'latin', group:'西欧', full:0,
+      map:'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûù' +
+           'ÿÖÜø£Ø×ƒáíóúñÑªº¿®¬½¼¡«»' +
+           '░▒▓│┤ÁÂÀ©╣║╗╝¢¥┐└┴┬├─┼ãÃ' +
+           '╚╔╩╦╠═╬¤ðÐÊËÈ€ÍÎÏ┘┌█▄¦Ì▀' +
+           'ÓßÔÒõÕµþÞÚÛÙýÝ¯´­±‗¾¶§÷¸' +
+           '°¨·¹³²■\u00A0' },
+    { id:'cp875', name:'EBCDIC CP875（希腊）', script:'greek', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011\u0012\u0013\u009D\u0085\u0008\u0087' +
+           '\u0018\u0019\u0092\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C\u0005\u0006\u0007' +
+           '\u0090\u0091\u0016\u0093\u0094\u0095\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E\u001A ΑΒΓΔΕΖΗ' +
+           'ΘΙ[.<(+!&ΚΛΜΝΞΟΠΡΣ]$*);^' +
+           '-/ΤΥΦΧΨΩΪΫ|,%_>?¨ΆΈΉ\u00A0ΊΌΎ' +
+           'Ώ`:#@\'="΅abcdefghiαβγδεζ' +
+           '°jklmnopqrηθικλμ´~stuvwx' +
+           'yzνξοπρσ£άέήϊίόύϋώςτυφχψ' +
+           '{ABCDEFGHI­ωΐΰ‘―}JKLMNOP' +
+           'QR±½\u001A·’¦\\\u001ASTUVWXYZ²§\u001A\u001A«¬' +
+           '0123456789³©\u001A\u001A»\u009F' },
+    { id:'cp1026', name:'EBCDIC CP1026（土耳其）', script:'latin', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011\u0012\u0013\u009D\u0085\u0008\u0087' +
+           '\u0018\u0019\u0092\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C\u0005\u0006\u0007' +
+           '\u0090\u0091\u0016\u0093\u0094\u0095\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E\u001A \u00A0âäàáãå' +
+           '{ñÇ.<(+!&éêëèíîïìßĞİ*);^' +
+           '-/ÂÄÀÁÃÅ[Ñş,%_>?øÉÊËÈÍÎÏ' +
+           'Ìı:ÖŞ\'=ÜØabcdefghi«»}`¦±' +
+           '°jklmnopqrªºæ¸Æ¤µöstuvwx' +
+           'yz¡¿]$@®¢£¥·©§¶¼½¾¬|¯¨´×' +
+           'çABCDEFGHI­ô~òóõğJKLMNOP' +
+           'QR¹û\\ùúÿü÷STUVWXYZ²Ô#ÒÓÕ' +
+           '0123456789³Û"ÙÚ\u009F' },
+    { id:'cp1140', name:'EBCDIC CP1140（欧元）', script:'latin', group:'大型机', full:1,
+      map:'\u0000\u0001\u0002\u0003\u009C\u0009\u0086\u007F\u0097\u008D\u008E\u000B\u000C\u000D\u000E\u000F\u0010\u0011\u0012\u0013\u009D\u0085\u0008\u0087' +
+           '\u0018\u0019\u0092\u008F\u001C\u001D\u001E\u001F\u0080\u0081\u0082\u0083\u0084\u000A\u0017\u001B\u0088\u0089\u008A\u008B\u008C\u0005\u0006\u0007' +
+           '\u0090\u0091\u0016\u0093\u0094\u0095\u0096\u0004\u0098\u0099\u009A\u009B\u0014\u0015\u009E\u001A \u00A0âäàáãå' +
+           'çñ¢.<(+|&éêëèíîïìß!$*);¬' +
+           '-/ÂÄÀÁÃÅÇÑ¦,%_>?øÉÊËÈÍÎÏ' +
+           'Ì`:#@\'="Øabcdefghi«»ðýþ±' +
+           '°jklmnopqrªºæ¸Æ€µ~stuvwx' +
+           'yz¡¿ÐÝÞ®^£¥·©§¶¼½¾[]¯¨´×' +
+           '{ABCDEFGHI­ôöòóõ}JKLMNOP' +
+           'QR¹ûüùúÿ\\÷STUVWXYZ²ÔÖÒÓÕ' +
+           '0123456789³ÛÜÙÚ\u009F' },
+    { id:'iso-8859-9', name:'ISO-8859-9（土耳其）', script:'latin', group:'土耳其越南', full:0,
+      map:'\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091\u0092\u0093\u0094\u0095\u0096\u0097' +
+           '\u0098\u0099\u009A\u009B\u009C\u009D\u009E\u009F\u00A0¡¢£¤¥¦§¨©ª«¬­®¯' +
+           '°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇ' +
+           'ÈÉÊËÌÍÎÏĞÑÒÓÔÕÖ×ØÙÚÛÜİŞß' +
+           'àáâãäåæçèéêëìíîïğñòóôõö÷' +
+           'øùúûüışÿ' },
+    { id:'iso-8859-11', name:'ISO-8859-11（泰文）', script:'thai', group:'泰文', full:0,
+      map:'\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091\u0092\u0093\u0094\u0095\u0096\u0097' +
+           '\u0098\u0099\u009A\u009B\u009C\u009D\u009E\u009F\u00A0กขฃคฅฆงจฉชซฌญฎฏ' +
+           'ฐฑฒณดตถทธนบปผฝพฟภมยรฤลฦว' +
+           'ศษสหฬอฮฯะัาำิีึืฺุู\uFFFD\uFFFD\uFFFD\uFFFD฿' +
+           'เแโใไๅๆ็่้๊๋์ํ๎๏๐๑๒๓๔๕๖๗' +
+           '๘๙๚๛\uFFFD\uFFFD\uFFFD\uFFFD' },
+    { id:'tis-620', name:'TIS-620（泰文）', script:'thai', group:'泰文', full:0,
+      map:'\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091\u0092\u0093\u0094\u0095\u0096\u0097' +
+           '\u0098\u0099\u009A\u009B\u009C\u009D\u009E\u009F\uFFFDกขฃคฅฆงจฉชซฌญฎฏ' +
+           'ฐฑฒณดตถทธนบปผฝพฟภมยรฤลฦว' +
+           'ศษสหฬอฮฯะัาำิีึืฺุู\uFFFD\uFFFD\uFFFD\uFFFD฿' +
+           'เแโใไๅๆ็่้๊๋์ํ๎๏๐๑๒๓๔๕๖๗' +
+           '๘๙๚๛\uFFFD\uFFFD\uFFFD\uFFFD' },
+    { id:'ptcp154', name:'PTCP154（西里尔亚洲）', script:'cyrillic', group:'西里尔', full:0,
+      map:'ҖҒӮғ„…ҶҮҲүҠӢҢҚҺҸҗ‘’“”•–—' +
+           'ҳҷҡӣңқһҹ\u00A0ЎўЈӨҘҰ§Ё©Ә«¬ӯ®Ҝ' +
+           '°ұІіҙө¶·ё№ә»јҪҫҝАБВГДЕЖЗ' +
+           'ИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ' +
+           'абвгдежзийклмнопрстуфхцч' +
+           'шщъыьэюя' },
+    { id:'kz1048', name:'KZ-1048（哈萨克）', script:'cyrillic', group:'西里尔', full:0,
+      map:'ЂЃ‚ѓ„…†‡€‰Љ‹ЊҚҺЏђ‘’“”•–—' +
+           '\uFFFD™љ›њқһџ\u00A0ҰұӘ¤Ө¦§Ё©Ғ«¬­®Ү' +
+           '°±Ііөµ¶·ё№ғ»әҢңүАБВГДЕЖЗ' +
+           'ИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ' +
+           'абвгдежзийклмнопрстуфхцч' +
+           'шщъыьэюя' },
+    { id:'mac-farsi', name:'Mac Farsi（波斯）', script:'arabic', group:'Mac 遗留', full:0,
+      map:'Ä\u00A0ÇÉÑÖÜáàâäں«çéèêëí…îïñó' +
+           '»ôö÷úùûü !"#$٪&\'()*+،-./' +
+           '۰۱۲۳۴۵۶۷۸۹:؛<=>؟❊ءآأؤإئا' +
+           'بةتثجحخدذرزسشصضطظعغ[\\]^_' +
+           'ـفقكلمنهوىيًٌٍَُِّْپٹچەڤ' +
+           'گڈڑ{|}ژے' },
+    { id:'palmos', name:'Palm OS（PalmDOC）', script:'latin', group:'西欧', full:0,
+      map:'€\u0081‚ƒ„…†‡ˆ‰Š‹Œ♦♣♥♠‘’“”•–—' +
+           '˜™š›œ\u009D\u009EŸ\u00A0¡¢£¤¥¦§¨©ª«¬­®¯' +
+           '°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇ' +
+           'ÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß' +
+           'àáâãäåæçèéêëìíîïðñòóôõö÷' +
+           'øùúûüýþÿ' },
+  ];
+
+  /* 算法型编码：不是查表，是逐字节算出来的，浏览器同样不支持。
+     ★ utf-7 / hz 既不当「源」也不当「目标」（src:false + tgt:false），只留在「对照表」里
+       供人手动解码。理由有两条：
+       ① 它们本身是 7 位 ASCII 安全编码 —— 被当成别的编码读时字节不变，不会产生乱码，
+          所以永远不会是乱码的**成因**；
+       ② 作为目标它们是 Latin-1 的伪装：除 '+' / '~' 序列外，0x80-0xFF 一律原样输出成
+          U+0080-U+00FF。而 `script:'any'` 又让它们**绕过了目标族剪枝**（「CJK 输入 → 拉丁
+          目标」本来是剪掉的），于是每条真实链路都多复制一份。实测「浣犲ソ…」里它凭空
+          拼出「GBK → UTF-7 后再 UTF-8 → GBK」=「盲陆聽氓楼陆茂录聦…」并抢到第一（3.34 > 3.01）；
+          而「娴ｇ姴銈介…」的正确第一层「GBK → UTF-8」被 4 条 UTF-7/HZ 克隆从第 4 名挤到第 9 名，
+          第二层种子取不到它，双重修复直接失效。
+     而 utf-32 必须双向 —— UTF-32 文件被当 UTF-8 读会得到满屏 \u0000，那才是典型乱码。 */
+  var ALGO = [
+    { id:'utf-32le', name:'UTF-32LE',            script:'any',  kind:'utf32', group:'通用' },
+    { id:'utf-32be', name:'UTF-32BE',            script:'any',  kind:'utf32', group:'通用' },
+    { id:'utf-7',    name:'UTF-7（已废弃）',      script:'any',  kind:'utf7',  group:'遗留', src:false, tgt:false },
+    { id:'hz',       name:'HZ-GB-2312（已废弃）', script:'hans', kind:'hz',    group:'遗留', src:false, tgt:false }
+  ];
+
+  var ENCS = [
+    /* 通用 */
+    { id:'utf-8',        name:'UTF-8',          script:'any',      kind:'utf8',   group:'通用' },
+    { id:'utf-16le',     name:'UTF-16LE',       script:'any',      kind:'utf16',  group:'通用' },
+    { id:'utf-16be',     name:'UTF-16BE',       script:'any',      kind:'utf16',  group:'通用' },
+    /* 中文 */
+    { id:'gbk',          name:'GBK / GB2312',   script:'hans',     kind:'dbcs',   group:'中文' },
+    { id:'gb18030',      name:'GB18030',        script:'hans',     kind:'dbcs4',  group:'中文' },
+    { id:'big5',         name:'Big5 / HKSCS',   script:'hant',     kind:'dbcs',   group:'中文' },
+    /* 日韩 */
+    { id:'shift_jis',    name:'Shift_JIS',      script:'japanese', kind:'dbcs',   group:'日韩' },
+    { id:'euc-jp',       name:'EUC-JP',         script:'japanese', kind:'dbcs',   group:'日韩' },
+    { id:'iso-2022-jp',  name:'ISO-2022-JP',    script:'japanese', kind:'stateful', group:'日韩', src:false },
+    { id:'euc-kr',       name:'EUC-KR / UHC',   script:'korean',   kind:'dbcs',   group:'日韩' },
+    /* 西欧 */
+    { id:'windows-1252', name:'Windows-1252',   script:'latin',    kind:'sbcs',   group:'西欧' },
+    { id:'latin1',       name:'Latin-1（真）',  script:'latin',    kind:'latin1', group:'西欧' },
+    { id:'iso-8859-15',  name:'ISO-8859-15',    script:'latin',    kind:'sbcs',   group:'西欧' },
+    { id:'macintosh',    name:'Mac Roman',      script:'latin',    kind:'sbcs',   group:'西欧' },
+    /* 中欧 / 北欧 / 波罗的海 */
+    { id:'windows-1250', name:'Windows-1250',   script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-2',   name:'ISO-8859-2',     script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-3',   name:'ISO-8859-3',     script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-4',   name:'ISO-8859-4',     script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-10',  name:'ISO-8859-10',    script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-13',  name:'ISO-8859-13',    script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-14',  name:'ISO-8859-14',    script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'iso-8859-16',  name:'ISO-8859-16',    script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    { id:'windows-1257', name:'Windows-1257',   script:'latin',    kind:'sbcs',   group:'中欧北欧' },
+    /* 土耳其 / 越南 */
+    { id:'windows-1254', name:'Windows-1254',   script:'latin',    kind:'sbcs',   group:'土耳其越南' },
+    { id:'windows-1258', name:'Windows-1258',   script:'vietnamese', kind:'sbcs', group:'土耳其越南' },
+    /* 西里尔 */
+    { id:'windows-1251', name:'Windows-1251',   script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    { id:'iso-8859-5',   name:'ISO-8859-5',     script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    { id:'koi8-r',       name:'KOI8-R',         script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    { id:'koi8-u',       name:'KOI8-U',         script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    { id:'ibm866',       name:'IBM866',         script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    { id:'x-mac-cyrillic', name:'Mac Cyrillic', script:'cyrillic', kind:'sbcs',   group:'西里尔' },
+    /* 希腊 */
+    { id:'iso-8859-7',   name:'ISO-8859-7',     script:'greek',    kind:'sbcs',   group:'希腊' },
+    { id:'windows-1253', name:'Windows-1253',   script:'greek',    kind:'sbcs',   group:'希腊' },
+    /* 希伯来 */
+    { id:'iso-8859-8',   name:'ISO-8859-8',     script:'hebrew',   kind:'sbcs',   group:'希伯来' },
+    { id:'windows-1255', name:'Windows-1255',   script:'hebrew',   kind:'sbcs',   group:'希伯来' },
+    /* 阿拉伯 */
+    { id:'iso-8859-6',   name:'ISO-8859-6',     script:'arabic',   kind:'sbcs',   group:'阿拉伯' },
+    { id:'windows-1256', name:'Windows-1256',   script:'arabic',   kind:'sbcs',   group:'阿拉伯' },
+    /* 泰文 */
+    { id:'windows-874',  name:'Windows-874',    script:'thai',     kind:'sbcs',   group:'泰文' },
+    /* 历史遗留 */
+    { id:'x-user-defined', name:'x-user-defined', script:'none',   kind:'legacy', group:'历史遗留' }
+  ];
+
+  /* 源编码 = 所有能反推的（iso-2022-jp 是状态机编码，没有固定字节映射，只能解码不能反推） */
+  /* 把表驱动 / 算法型的编码并进同一张表，后面所有逻辑（扫描、表格、探测）自动覆盖。 */
+  ENCS = ENCS.concat(LEGACY.map(function(e){
+    return { id: e.id, name: e.name, script: e.script, kind: 'table',
+             group: e.group, full: e.full ? 1 : 0, map: e.map };
+  })).concat(ALGO);
+
+  var SOURCES = ENCS.filter(function(e){ return e.kind !== 'stateful' && e.src !== false; });
+
+  var MAX_CHARS = 20000;      /* 超过这个长度只分析前 MAX_CHARS 字，避免卡死 */
+  var PRESCAN   = 1500;       /* 两阶段：先在前 1500 字上跑全部组合，只把 Top N 拿到全文精算 */
+
+  /* ===== 常用汉字表（打分用）=====
+     ★ 判「这段文本像不像正常中文」靠的就是它：真中文的常用字命中率通常 90% 以上，
+     乱码（如「浣犲ソ」）几乎 0%。没有这张表，纯 CJK 占比区分不出乱码和正文。
+     ★★ 数据源：《通用规范汉字表》一级字表，**整 3500 字**（不要手写、不要凭记忆补）。
+     旧表只有约 700 字、对常用字覆盖仅 45%（测 / 试 / 乱 / 码 / 换 / 修 / 复 全缺），
+     正常中文的 freq 被压到接近 0、正确答案只拿 1.2 分，随便一个垃圾候选都能反超 ——
+     用户反馈「示例都解不出正确编码」的根因就在这里。 */
+  /* ★ 高频字表（按词频降序，约 500 字，覆盖真实正文七成以上的字次）。
+     打分时只有命中这张表的字才拿满分；命中下面那张 3500 字表、但不在这里的，只给 0.35。
+     ★★ 两档是必须的：只留这 500 字会把「测试」这类正常词判成 0 分；
+     只留 3500 字又会让 GBK 猜错产生的垃圾中文命中率一起上涨，把韩文 / 俄文的正确答案顶掉。 */
+  var COMMON_HI =
+    '的一是不了人我在有他这中大来上个国到说们为子和你地出道也时年得就那要下以生会自着去之过家学对可她里后小么心多天而能好都然没日于起还发成事只作' +
+    '当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分将外但身些与高意进把法此实回二理美点月明其种声全工己话儿者向情部正名定' +
+    '女问力机给等几很业最间新什打便位因重被走电四第门相次东政海口使教西再平真听世气信北少关并内加化由却代军产入先山五太水万市眼体别处总才场师书比' +
+    '住员九笑性通目华报立马命张活难神数件安表原车白应路期叫死常提感金何更反合放做系计或司利受光王果亲界及今京务制解各任至清物台象记边共风战干接它' +
+    '许八特觉望直服毛林题建南度统色字请交爱让认算论百吃义科怎元社术结六功指思非流每青管夫连远资队跟带花快条院变联言权往展该领传近留红治决周保达办' +
+    '运武半候七必城父强步完革深区即求品士转量空甚众技轻程告江语英基派满式李息写呢识极令黄德收脸钱党倒未持取设始版双历越史商千片容研像找友孩站广改' +
+    '议形委早房音火际则首单据导影失拿网香似斯专石若兵弟谁校读志飞观争究包组造落视济喜离虽坐集编宝谈府拉黑且随格尽剑讲布杀微怕母调局根曾准团段终乐' +
+    '切级克精哪官示冷富约吗病旧';
+  var COMMON =
+    '字一乙二十丁厂七卜八人入儿匕几九刁了刀力乃又三干于亏工土士才下寸大丈与万上小口山巾千乞川亿个夕久么勺凡丸及广亡门丫义之尸己已巳弓子卫也女刃飞' +
+    '习叉马乡丰王开井天夫元无云专丐扎艺木五支厅不犬太区历歹友尤匹车巨牙屯戈比互切瓦止少曰日中贝冈内水见午牛手气毛壬升夭长仁什片仆化仇币仍仅斤爪反' +
+    '介父从仑今凶分乏公仓月氏勿欠风丹匀乌勾凤六文亢方火为斗忆计订户认冗讥心尺引丑巴孔队办以允予邓劝双书幻玉刊未末示击打巧正扑卉扒功扔去甘世艾古节' +
+    '本术可丙左厉石右布夯戊龙平灭轧东卡北占凸卢业旧帅归旦目且叶甲申叮电号田由只叭史央兄叽叼叫叩叨另叹冉皿凹囚四生矢失乍禾丘付仗代仙们仪白仔他斥瓜' +
+    '乎丛令用甩印尔乐句匆册卯犯外处冬鸟务包饥主市立冯玄闪兰半汁汇头汉宁穴它讨写让礼训议必讯记永司尼民弗弘出辽奶奴召加皮边孕发圣对台矛纠母幼丝邦式' +
+    '迂刑戎动扛寺吉扣考托老巩圾执扩扫地场扬耳芋共芒亚芝朽朴机权过臣吏再协西压厌戌在百有存而页匠夸夺灰达列死成夹夷轨邪尧划迈毕至此贞师尘尖劣光当早' +
+    '吁吐吓虫曲团吕同吊吃因吸吗吆屿屹岁帆回岂则刚网肉年朱先丢廷舌竹迁乔迄伟传乒乓休伍伏优臼伐延仲件任伤价伦份华仰仿伙伪自伊血向似后行舟全会杀合兆' +
+    '企众爷伞创肌肋朵杂危旬旨旭负匈名各多争色壮冲妆冰庄庆亦刘齐交衣次产决亥充妄闭问闯羊并关米灯州汗污江汛池汝汤忙兴宇守宅安讲讳军讶许讹论讼农讽设' +
+    '访诀寻那迅尽导异弛孙阵阳收阶阴防奸如妇妃好她妈戏羽观欢买红驮纤驯约级纪驰纫巡寿弄麦玖玛形进戒吞远违韧运扶抚坛技坏抠扰扼拒找批址扯走抄贡汞坝攻' +
+    '赤折抓扳抡扮抢孝坎均抑抛投坟坑抗坊抖护壳志块扭声把报拟却抒劫芙芜苇芽花芹芥芬苍芳严芦芯劳克芭苏杆杠杜材村杖杏杉巫极李杨求甫匣更束吾豆两酉丽医' +
+    '辰励否还尬歼来连轩步卤坚肖旱盯呈时吴助县里呆吱吠呕园旷围呀吨足邮男困吵串员呐听吟吩呛吻吹呜吭吧邑吼囤别吮岖岗帐财针钉牡告我乱利秃秀私每兵估体' +
+    '何佐佑但伸佃作伯伶佣低你住位伴身皂伺佛囱近彻役返余希坐谷妥含邻岔肝肛肚肘肠龟甸免狂犹狈角删条彤卵灸岛刨迎饭饮系言冻状亩况床库庇疗吝应这冷庐序' +
+    '辛弃冶忘闰闲间闷判兑灶灿灼弟汪沐沛汰沥沙汽沃沦汹泛沧没沟沪沈沉沁怀忧忱快完宋宏牢究穷灾良证启评补初社祀识诈诉罕诊词译君灵即层屁尿尾迟局改张忌' +
+    '际陆阿陈阻附坠妓妙妖姊妨妒努忍劲矣鸡纬驱纯纱纲纳驳纵纷纸纹纺驴纽奉玩环武青责现玫表规抹卦坷坯拓拢拔坪拣坦担坤押抽拐拖者拍顶拆拎拥抵拘势抱拄垃' +
+    '拉拦幸拌拧拂拙招坡披拨择抬拇拗其取茉苦昔苛若茂苹苗英苟苑苞范直茁茄茎苔茅枉林枝杯枢柜枚析板松枪枫构杭杰述枕丧或画卧事刺枣雨卖郁矾矿码厕奈奔奇' +
+    '奋态欧殴垄妻轰顷转斩轮软到非叔歧肯齿些卓虎虏肾贤尚旺具味果昆国哎咕昌呵畅明易咙昂迪典固忠呻咒咋咐呼鸣咏呢咄咖岸岩帖罗帜帕岭凯败账贩贬购贮图钓' +
+    '制知迭氛垂牧物乖刮秆和季委秉佳侍岳供使例侠侥版侄侦侣侧凭侨佩货侈依卑的迫质欣征往爬彼径所舍金刹命肴斧爸采觅受乳贪念贫忿肤肺肢肿胀朋股肮肪肥服' +
+    '胁周昏鱼兔狐忽狗狞备饰饱饲变京享庞店夜庙府底疟疙疚剂卒郊庚废净盲放刻育氓闸闹郑券卷单炬炒炊炕炎炉沫浅法泄沽河沾泪沮油泊沿泡注泣泞泻泌泳泥沸沼' +
+    '波泼泽治怔怯怖性怕怜怪怡学宝宗定宠宜审宙官空帘宛实试郎诗肩房诚衬衫视祈话诞诡询该详建肃录隶帚屉居届刷屈弧弥弦承孟陋陌孤陕降函限妹姑姐姓妮始姆' +
+    '迢驾叁参艰线练组绅细驶织驹终驻绊驼绍绎经贯契贰奏春帮玷珍玲珊玻毒型拭挂封持拷拱项垮挎城挟挠政赴赵挡拽哉挺括垢拴拾挑垛指垫挣挤拼挖按挥挪拯某甚' +
+    '荆茸革茬荐巷带草茧茵茶荒茫荡荣荤荧故胡荫荔南药标栈柑枯柄栋相查柏栅柳柱柿栏柠树勃要柬咸威歪研砖厘厚砌砂泵砚砍面耐耍牵鸥残殃轴轻鸦皆韭背战点虐' +
+    '临览竖省削尝昧盹是盼眨哇哄哑显冒映星昨咧昭畏趴胃贵界虹虾蚁思蚂虽品咽骂勋哗咱响哈哆咬咳咪哪哟炭峡罚贱贴贻骨幽钙钝钞钟钢钠钥钦钧钩钮卸缸拜看矩' +
+    '毡氢怎牲选适秒香种秋科重复竿段便俩贷顺修俏保促俄俐侮俭俗俘信皇泉鬼侵禹侯追俊盾待徊衍律很须叙剑逃食盆胚胧胆胜胞胖脉胎勉狭狮独狰狡狱狠贸怨急饵' +
+    '饶蚀饺饼峦弯将奖哀亭亮度迹庭疮疯疫疤咨姿亲音帝施闺闻闽阀阁差养美姜叛送类迷籽娄前首逆兹总炼炸烁炮炫烂剃洼洁洪洒柒浇浊洞测洗活派洽染洛浏济洋洲' +
+    '浑浓津恃恒恢恍恬恤恰恼恨举觉宣宦室宫宪突穿窃客诫冠诬语扁袄祖神祝祠误诱诲说诵垦退既屋昼屏屎费陡逊眉孩陨除险院娃姥姨姻娇姚娜怒架贺盈勇怠癸蚤柔' +
+    '垒绑绒结绕骄绘给绚骆络绝绞骇统耕耘耗耙艳泰秦珠班素匿蚕顽盏匪捞栽捕埂捂振载赶起盐捎捍捏埋捉捆捐损袁捌都哲逝捡挫换挽挚热恐捣壶捅埃挨耻耿耽聂恭' +
+    '莽莱莲莫莉荷获晋恶莹莺真框梆桂桔栖档桐株桥桦栓桃格桩校核样根索哥速逗栗贾酌配翅辱唇夏砸砰砾础破原套逐烈殊殉顾轿较顿毙致柴桌虑监紧党逞晒眠晓哮' +
+    '唠鸭晃哺晌剔晕蚌畔蚣蚊蚪蚓哨哩圃哭哦恩鸯唤唁哼唧啊唉唆罢峭峨峰圆峻贼贿赂赃钱钳钻钾铁铃铅缺氧氨特牺造乘敌秤租积秧秩称秘透笔笑笋债借值倚俺倾倒' +
+    '倘俱倡候赁俯倍倦健臭射躬息倔徒徐殷舰舱般航途拿耸爹舀爱豺豹颁颂翁胰脆脂胸胳脏脐胶脑脓逛狸狼卿逢鸵留鸳皱饿馁凌凄恋桨浆衰衷高郭席准座症病疾斋疹' +
+    '疼疲脊效离紊唐瓷资凉站剖竞部旁旅畜阅羞羔瓶拳粉料益兼烤烘烦烧烛烟烙递涛浙涝浦酒涉消涡浩海涂浴浮涣涤流润涧涕浪浸涨烫涩涌悖悟悄悍悔悯悦害宽家宵' +
+    '宴宾窍窄容宰案请朗诸诺读扇诽袜袖袍被祥课冥谁调冤谅谆谈谊剥恳展剧屑弱陵祟陶陷陪娱娟恕娥娘通能难预桑绢绣验继骏球琐理琉琅捧堵措描域捺掩捷排焉掉' +
+    '捶赦堆推埠掀授捻教掏掐掠掂培接掷控探据掘掺职基聆勘聊娶著菱勒黄菲萌萝菌萎菜萄菊菩萍菠萤营乾萧萨菇械彬梦婪梗梧梢梅检梳梯桶梭救曹副票酝酗厢戚硅' +
+    '硕奢盔爽聋袭盛匾雪辅辆颅虚彪雀堂常眶匙晨睁眯眼悬野啪啦曼晦晚啄啡距趾啃跃略蚯蛀蛇唬累鄂唱患啰唾唯啤啥啸崖崎崭逻崔帷崩崇崛婴圈铐铛铝铜铭铲银矫' +
+    '甜秸梨犁秽移笨笼笛笙符第敏做袋悠偿偶偎偷您售停偏躯兜假衅徘徙得衔盘舶船舵斜盒鸽敛悉欲彩领脚脖脯豚脸脱象够逸猜猪猎猫凰猖猛祭馅馆凑减毫烹庶麻庵' +
+    '痊痒痕廊康庸鹿盗章竟商族旋望率阎阐着羚盖眷粘粗粒断剪兽焊焕清添鸿淋涯淹渠渐淑淌混淮淆渊淫渔淘淳液淤淡淀深涮涵婆梁渗情惜惭悼惧惕惟惊惦悴惋惨惯' +
+    '寇寅寄寂宿窒窑密谋谍谎谐袱祷祸谓谚谜逮敢尉屠弹隋堕随蛋隅隆隐婚婶婉颇颈绩绪续骑绰绳维绵绷绸综绽绿缀巢琴琳琢琼斑替揍款堪塔搭堰揩越趁趋超揽堤提' +
+    '博揭喜彭揣插揪搜煮援搀裁搁搓搂搅壹握搔揉斯期欺联葫散惹葬募葛董葡敬葱蒋蒂落韩朝辜葵棒棱棋椰植森焚椅椒棵棍椎棉棚棕棺榔椭惠惑逼粟棘酣酥厨厦硬硝' +
+    '确硫雁殖裂雄颊雳暂雅翘辈悲紫凿辉敞棠赏掌晴睐暑最晰量鼎喷喳晶喇遇喊遏晾景畴践跋跌跑跛遗蛙蛛蜓蜒蛤喝鹃喂喘喉喻啼喧嵌幅帽赋赌赎赐赔黑铸铺链销锁' +
+    '锄锅锈锋锌锐甥掰短智氮毯氯鹅剩稍程稀税筐等筑策筛筒筏答筋筝傲傅牌堡集焦傍储皓皖粤奥街惩御循艇舒逾番释禽腊脾腋腔腕鲁猩猬猾猴惫然馈馋装蛮就敦斌' +
+    '痘痢痪痛童竣阔善翔羡普粪尊奠道遂曾焰港滞湖湘渣渤渺湿温渴溃溅滑湃渝湾渡游滋渲溉愤慌惰愕愣惶愧愉慨割寒富寓窜窝窖窗窘遍雇裕裤裙禅禄谢谣谤谦犀属' +
+    '屡强粥疏隔隙隘媒絮嫂媚婿登缅缆缉缎缓缔缕骗编骚缘瑟鹉瑞瑰瑙魂肆摄摸填搏塌鼓摆携搬摇搞塘摊聘斟蒜勤靴靶鹊蓝墓幕蓬蓄蒲蓉蒙蒸献椿禁楚楷榄想槐榆楼' +
+    '概赖酪酬感碍碘碑碎碰碗碌尴雷零雾雹辐辑输督频龄鉴睛睹睦瞄睫睡睬嗜鄙嗦愚暖盟歇暗暇照畸跨跷跳跺跪路跤跟遣蜈蜗蛾蜂蜕嗅嗡嗓署置罪罩蜀幌错锚锡锣锤' +
+    '锥锦键锯锰矮辞稚稠颓愁筹签简筷毁舅鼠催傻像躲魁衙微愈遥腻腰腥腮腹腺鹏腾腿鲍猿颖触解煞雏馍馏酱禀痹廓痴痰廉靖新韵意誊粮数煎塑慈煤煌满漠滇源滤滥' +
+    '滔溪溜漓滚溢溯滨溶溺粱滩慎誉塞寞窥窟寝谨褂裸福谬群殿辟障媳嫉嫌嫁叠缚缝缠缤剿静碧璃赘熬墙墟嘉摧赫截誓境摘摔撇聚慕暮摹蔓蔑蔡蔗蔽蔼熙蔚兢模槛榴' +
+    '榜榨榕歌遭酵酷酿酸碟碱碳磁愿需辖辗雌裳颗瞅墅嗽踊蜻蜡蝇蜘蝉嘛嘀赚锹锻镀舞舔稳熏箕算箩管箫舆僚僧鼻魄魅貌膜膊膀鲜疑孵馒裹敲豪膏遮腐瘩瘟瘦辣彰竭' +
+    '端旗精粹歉弊熄熔煽潇漆漱漂漫滴漾演漏慢慷寨赛寡察蜜寥谭肇褐褪谱隧嫩翠熊凳骡缩慧撵撕撒撩趣趟撑撮撬播擒墩撞撤增撰聪鞋鞍蕉蕊蔬蕴横槽樱橡樟橄敷豌' +
+    '飘醋醇醉磕磊磅碾震霄霉瞒题暴瞎嘻嘶嘲嘹影踢踏踩踪蝶蝴蝠蝎蝌蝗蝙嘿嘱幢墨镇镐镑靠稽稻黎稿稼箱篓箭篇僵躺僻德艘膝膛鲤鲫熟摩褒瘪瘤瘫凛颜毅糊遵憋潜' +
+    '澎潮潭鲨澳潘澈澜澄懂憔懊憎额翩褥谴鹤憨慰劈履豫缭撼擂操擅燕蕾薯薛薇擎薪薄颠翰噩橱橙橘整融瓢醒霍霎辙冀餐嘴踱蹄蹂蟆螃器噪鹦赠默黔镜赞穆篮篡篷篱' +
+    '儒邀衡膨雕鲸磨瘾瘸凝辨辩糙糖糕燃濒澡激懒憾懈窿壁避缰缴戴擦藉鞠藏藐檬檐檀礁磷霜霞瞭瞧瞬瞳瞩瞪曙蹋蹈螺蟋蟀嚎赡穗魏簧簇繁徽爵朦臊鳄癌辫赢糟糠燥' +
+    '懦豁臀臂翼骤藕鞭藤覆瞻蹦嚣镰翻鳍鹰瀑襟璧戳孽警蘑藻攀曝蹲蹭蹬巅簸簿蟹颤靡癣瓣羹鳖爆疆鬓壤馨耀躁蠕嚼嚷巍籍鳞魔糯灌譬蠢霸露霹躏黯髓赣囊镶瓤罐矗';
+  /* ★ 繁体常用字：常用字表原本只有简体，Big5 解出的繁体正文 common/n 只有 0.1~0.4，
+     会被「伪西里尔」反超。这张表是简体表里高频字的繁体写法，两表合并查。 */
+  var COMMON_T = '這們來時說國會對為於過還學後進種樣現點麼開關實業產動員經頭問間發見覺讓認識語讀寫聽買賣錢車馬鳥魚龍門東長興舊萬與專兩並條級給結網線組織變聯權該領傳紅決達辦運強區眾輕滿黃臉黨設雙歷廣議單據導觀爭組視濟離編寶談盡講殺調準團終樂精舊書師華報馬點聲風戰聽關係總處場條萬邊記務製解種統請愛讓認論義術結遠資隊帶條變聯傳紅決辦運強區轉量眾輕程語滿寫識黃黨設雙歷廣議單據導觀爭組視濟離編寶談盡講殺調準團終樂';
+
+  var COMMON_SET = null;
+  var COMMON_HI_SET = null;
+  function commonSet(){
+    if (!COMMON_SET){
+      COMMON_SET = Object.create(null);
+      var i;
+      for (i = 0; i < COMMON.length; i++) COMMON_SET[COMMON.charAt(i)] = 1;
+      for (i = 0; i < COMMON_T.length; i++) COMMON_SET[COMMON_T.charAt(i)] = 1;
+    }
+    return COMMON_SET;
+  }
+
+  /* 高频子集：3500 字里按词频排前 700 的，外加繁体常用字（繁体正文里它们同样是高频）。 */
+  function commonHiSet(){
+    if (!COMMON_HI_SET){
+      COMMON_HI_SET = Object.create(null);
+      var i;
+      for (i = 0; i < COMMON_HI.length; i++) COMMON_HI_SET[COMMON_HI.charAt(i)] = 1;
+      for (i = 0; i < COMMON_T.length; i++) COMMON_HI_SET[COMMON_T.charAt(i)] = 1;
+    }
+    return COMMON_HI_SET;
+  }
+
+  /* ===== 编解码原语 ===== */
+
+  var revCache = Object.create(null);
+
+  function dec(label, fatal){
+    try { return new TextDecoder(label, { fatal: !!fatal }); }
+    catch (e) { return null; }
+  }
+
+  /* 把「某种编码的字节 → 字符」的映射反过来，得到「字符 → 字节」。
+     ★ 平台只提供 TextDecoder，没有 TextEncoder 的多编码版本，所以必须自己建反表。
+     ★★ 两个性能要点（实测 15ms → 4.4ms，快 3.4 倍）：
+       ① **复用同一个 Uint8Array**，只改里面的字节值。每次 new 一个 2 字节数组看似无害，
+          但在 2.4 万次循环里分配开销比 decode 本身还大。
+       ② 用 `fatal:false` + 判 U+FFFD，不要 `try/catch` —— 异常开销高一个量级。
+     ★ 值用数字而不是数组：单字节存 b（≤0xFF），双字节存 (i<<8)|b（≥0x8140），
+       两者不会冲突，省掉 2.4 万个数组对象。 */
+  function revMap(label, multi){
+    if (label in revCache) return revCache[label];
+    var d = dec(label, false);
+    if (!d){ revCache[label] = null; return null; }
+    var map = new Map(), i, b, ch;
+    var buf1 = new Uint8Array(1), buf2 = new Uint8Array(2);
+    for (b = 0; b < 0x100; b++){
+      buf1[0] = b;
+      ch = d.decode(buf1);
+      if (ch.length === 1 && ch !== '\uFFFD') map.set(ch, b);
+    }
+    if (multi){
+      for (i = 0x81; i <= 0xFE; i++){
+        buf2[0] = i;
+        for (b = 0x40; b <= 0xFE; b++){
+          buf2[1] = b;
+          ch = d.decode(buf2);
+          if (ch.length === 1 && ch.charCodeAt(0) !== 0xFFFD && !map.has(ch)) map.set(ch, (i << 8) | b);
+        }
+      }
+    }
+    revCache[label] = map;
+    return map;
+  }
+
+  /* Latin-1 必须自己实现：浏览器里 TextDecoder('iso-8859-1') 实际是 windows-1252，
+     0x80-0x9F 区间会把字节映射成 €‚ƒ„… 这些字符，反推回去就对不上了。 */
+  function latin1Encode(s, allowDrop){
+    var out = [], dropped = 0, i, c;
+    for (i = 0; i < s.length; i++){
+      c = s.charCodeAt(i);
+      if (c > 0xFF){
+        if (allowDrop && c === 0xFFFD){ dropped++; continue; }
+        return null;
+      }
+      out.push(c);
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+  function latin1Decode(u8){
+    var parts = [], CH = 0x8000;
+    for (var i = 0; i < u8.length; i += CH){
+      parts.push(String.fromCharCode.apply(null, u8.subarray(i, i + CH)));
+    }
+    return parts.join('');
+  }
+
+  /* UTF-16 反推：JS 字符串本来就是 UTF-16，逐 code unit 拆字节即可。
+     代理对不用特殊处理 —— charCodeAt 拿到的就是代理单元，原样拆出去正好是合法 UTF-16。 */
+  function utf16Encode(s, le, allowDrop){
+    var out = [], dropped = 0, i, c;
+    for (i = 0; i < s.length; i++){
+      c = s.charCodeAt(i);
+      if (c === 0xFFFD && allowDrop){ dropped++; continue; }
+      if (le) out.push(c & 0xFF, (c >> 8) & 0xFF);
+      else    out.push((c >> 8) & 0xFF, c & 0xFF);
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+
+  /* x-user-defined：0x00-0x7F 原样，0x80-0xFF 映射到 U+F780-U+F7FF（Firefox 的历史遗留编码） */
+  function xUserEncode(s, allowDrop){
+    var out = [], dropped = 0, i, c;
+    for (i = 0; i < s.length; i++){
+      c = s.charCodeAt(i);
+      if (c === 0xFFFD && allowDrop){ dropped++; continue; }
+      if (c < 0x80){ out.push(c); continue; }
+      if (c >= 0xF780 && c <= 0xF7FF){ out.push(c - 0xF780 + 0x80); continue; }
+      return null;
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+
+  var ENC_BY_ID = Object.create(null);
+  ENCS.forEach(function(e){ ENC_BY_ID[e.id] = e; });
+
+  /* 把字符串反推回「某种编码的字节」。
+     ★ allowDrop 只放行 U+FFFD 一种字符，不放行任意不可映射字符 ——
+     任意字符映射不到就说明「源编码猜错了」，必须整条否掉，不能硬凑。
+     为什么要放行 U+FFFD：UTF-8 中文是 3 字节/字，被 GBK（2 字节/字）读时长度常为奇数，
+     末尾会剩一个孤字节被替换成 �，这是最常见的形态。丢掉它还能还原前面的全部内容。 */
+  function encodeAs(id, s, allowDrop){
+    var e = ENC_BY_ID[id];
+    if (!e) return null;
+    if (e.kind === 'utf8'){
+      try { return { bytes: new TextEncoder().encode(s), dropped: 0 }; } catch (err) { return null; }
+    }
+    if (e.kind === 'latin1') return latin1Encode(s, allowDrop);
+    if (e.kind === 'utf16')  return utf16Encode(s, id === 'utf-16le', allowDrop);
+    if (e.kind === 'legacy') return xUserEncode(s, allowDrop);
+    if (e.kind === 'table')  return tableEncode(e, s, allowDrop);
+    if (e.kind === 'utf32')  return utf32Encode(s, id === 'utf-32le', allowDrop);
+    /* utf-7 / hz 是 7 位 ASCII，被误读也不会变形，不做反推（ENCS 里 src:false） */
+    if (e.kind === 'utf7' || e.kind === 'hz') return null;
+
+    /* dbcs / dbcs4 / sbcs 都靠反表。
+       ★ gb18030 的 4 字节区（0x81-0xFE × 0x30-0x39 × 0x81-0xFE × 0x30-0x39）共 158 万组合，
+         建表不可行；但它的 2 字节区与 GBK 完全一致，日常文本 99.9% 落在 2 字节区，
+         所以直接复用 GBK 的反表 —— 只有 GBK 表里没有的生僻字会反推失败，可接受。 */
+    var multi = (e.kind === 'dbcs' || e.kind === 'dbcs4');
+    var map = revMap(id === 'gb18030' ? 'gbk' : id, multi);
+    if (!map) return null;
+    var out = [], i, v, dropped = 0, ch;
+    for (i = 0; i < s.length; i++){
+      ch = s.charAt(i);
+      v = map.get(ch);
+      /* ★ 必须判 undefined，不能判 falsy —— 字节值 0x00 是合法映射，falsy 判断会把它当失败 */
+      if (v === undefined){
+        if (allowDrop && ch === '\uFFFD'){ dropped++; continue; }
+        return null;
+      }
+      if (v <= 0xFF) out.push(v);
+      else { out.push(v >> 8, v & 0xFF); }
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+
+  /* ===== 表驱动 / 算法型编解码 =====
+     这四个函数是「浏览器不支持的那些编码」的全部实现。契约与 decodeAs 一致：
+     返回字符串，fatal 且遇到非法字节时返回 null。 */
+
+  /* 单字节查表。full:1 查全部 256 字节；否则 0x00-0x7F 走 ASCII，只查 0x80-0xFF。 */
+  function tableDecode(e, u8, fatal){
+    var map = e.map, full = e.full, n = u8.length, out = '', i, b, ch, bad = false;
+    for (i = 0; i < n; i++){
+      b = u8[i];
+      if (!full && b < 0x80){ out += String.fromCharCode(b); continue; }
+      ch = map.charAt(full ? b : b - 0x80);
+      if (!ch || ch === '\uFFFD'){ bad = true; out += '\uFFFD'; continue; }
+      out += ch;
+    }
+    if (bad && fatal) return null;
+    return out;
+  }
+
+  /* 反向表：字符 → 字节。按字节升序建，**重复字符取最小字节** ——
+     mac-arabic / cp1006 这类表里有多个字节映射到空格或 NBSP，
+     不按升序取最小的话，「空格」会被反推成 0xA0 而不是 0x20，整条反推全错。 */
+  function tableRev(e){
+    if (e.rev) return e.rev;
+    var m = new Map(), full = e.full, i, ch;
+    if (!full){ for (i = 0; i < 0x80; i++) m.set(String.fromCharCode(i), i); }
+    for (i = full ? 0 : 0x80; i < 0x100; i++){
+      ch = e.map.charAt(full ? i : i - 0x80);
+      if (ch && ch !== '\uFFFD' && !m.has(ch)) m.set(ch, i);
+    }
+    e.rev = m;
+    return m;
+  }
+
+  function tableEncode(e, s, allowDrop){
+    var m = tableRev(e), out = [], i, v, ch, dropped = 0;
+    for (i = 0; i < s.length; i++){
+      ch = s.charAt(i);
+      v = m.get(ch);
+      /* 判 undefined，不能判 falsy —— 字节 0x00 是合法映射 */
+      if (v === undefined){
+        if (allowDrop && ch === '\uFFFD'){ dropped++; continue; }
+        return null;
+      }
+      out.push(v);
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+
+  /* UTF-32：定长 4 字节。★ 注意 0xD800-0xDFFF 是代理区，单独出现是非法的，
+     必须判掉 —— 否则 String.fromCodePoint 会抛 RangeError，整个扫描中断。 */
+  function utf32Decode(u8, le, fatal){
+    var n = u8.length, m = n >>> 2, out = '', i, o, cp, bad = false;
+    for (i = 0; i < m; i++){
+      o = i << 2;
+      cp = le
+        ? (u8[o] | (u8[o+1] << 8) | (u8[o+2] << 16) | (u8[o+3] << 24))
+        : ((u8[o] << 24) | (u8[o+1] << 16) | (u8[o+2] << 8) | u8[o+3]);
+      cp >>>= 0;
+      if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)){ bad = true; out += '\uFFFD'; continue; }
+      out += String.fromCodePoint(cp);
+    }
+    if (n & 3){ bad = true; out += '\uFFFD'; }
+    if (bad && fatal) return null;
+    return out;
+  }
+
+  function utf32Encode(s, le, allowDrop){
+    var out = [], i, cp, ch, lo, dropped = 0;
+    for (i = 0; i < s.length; i++){
+      ch = s.charCodeAt(i);
+      if (ch >= 0xD800 && ch <= 0xDBFF && i + 1 < s.length){
+        lo = s.charCodeAt(i + 1);
+        if (lo >= 0xDC00 && lo <= 0xDFFF){ cp = 0x10000 + ((ch - 0xD800) << 10) + (lo - 0xDC00); i++; }
+        else if (allowDrop && ch === 0xFFFD){ dropped++; continue; }
+        else return null;
+      } else if (ch >= 0xD800 && ch <= 0xDFFF){
+        if (allowDrop && ch === 0xFFFD){ dropped++; continue; }
+        return null;
+      } else cp = ch;
+      if (le) out.push(cp & 0xFF, (cp >>> 8) & 0xFF, (cp >>> 16) & 0xFF, (cp >>> 24) & 0xFF);
+      else    out.push((cp >>> 24) & 0xFF, (cp >>> 16) & 0xFF, (cp >>> 8) & 0xFF, cp & 0xFF);
+    }
+    return { bytes: new Uint8Array(out), dropped: dropped };
+  }
+
+  /* UTF-7（RFC 2152，已废弃）：7 位 ASCII 为主，'+' 开启一段 Modified Base64，
+     内容按 UTF-16BE 的码元打包；'+' 后紧跟 '-' 表示字面加号。 */
+  var B64C = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  var B64V = (function(){ var m = Object.create(null), i; for (i = 0; i < 64; i++) m[B64C.charAt(i)] = i; return m; })();
+
+  function utf7Decode(u8, fatal){
+    var n = u8.length, i = 0, out = '', bits = 0, acc = 0, units = [], inB64 = false, bad = false, b, v;
+    function flush(){
+      /* 残余位凑不满一个 16 位码元 → 这一段是坏的。
+         ★ 非 fatal 模式也必须吐一个 U+FFFD：静默返回空串会让结果「看起来干净」，
+           打分会把它当成有效还原。合法的残余只有 0/2/4 位（3 或 6 个 base64 字符）。 */
+      for (var k = 0; k < units.length; k++) out += String.fromCharCode(units[k]);
+      if (bits >= 6){ bad = true; out += '\uFFFD'; }
+      units = []; bits = 0; acc = 0;
+    }
+    while (i < n){
+      b = u8[i];
+      if (!inB64){
+        if (b === 0x2B){
+          i++;
+          if (i < n && u8[i] === 0x2D){ out += '+'; i++; }
+          else { inB64 = true; bits = 0; acc = 0; units = []; }
+        } else { out += String.fromCharCode(b); i++; }
+      } else if (b === 0x2D){
+        flush(); inB64 = false; i++;
+      } else {
+        v = B64V[String.fromCharCode(b)];
+        if (v === undefined){ flush(); inB64 = false; }   /* 非法 base64：结束段，不吞字节 */
+        else {
+          acc = ((acc << 6) | v) & 0xFFFFFF; bits += 6;
+          if (bits >= 16){ bits -= 16; units.push((acc >>> bits) & 0xFFFF); }
+          i++;
+        }
+      }
+    }
+    if (inB64) flush();
+    if (bad && fatal) return null;
+    return out;
+  }
+
+  /* HZ-GB-2312（已废弃）：7 位中文编码。'~{' 进 GB 区，'~}' 回 ASCII，'~~' 是字面 ~，
+     '~\\n' 是软换行。GB 区里两字节一个汉字，直接攒起来一次性交给 GBK 解码器。
+     ★ GB 区是「去掉高位的 GB2312」—— '你' 的 GB 码 C4 E3 在 HZ 里写作 44 63。
+       解码必须把 0x80 加回去，否则整段中文会被当成 ASCII 原样输出。这个坑很隐蔽：
+       输出看着「干净」其实全是乱码，打分会把它误判成有效结果。 */
+  function hzDecode(u8, fatal){
+    var n = u8.length, i = 0, out = '', gb = [], inGb = false, bad = false, b, nx;
+    function flushGb(){
+      if (!gb.length) return;
+      var d = dec('gbk', false), t;
+      try { t = d.decode(new Uint8Array(gb)); } catch (err) { t = '\uFFFD'; }
+      if (t.indexOf('\uFFFD') >= 0) bad = true;
+      out += t; gb = [];
+    }
+    while (i < n){
+      b = u8[i];
+      if (b === 0x7E && i + 1 < n){
+        nx = u8[i + 1];
+        if (nx === 0x7B){ flushGb(); inGb = true; i += 2; continue; }
+        if (nx === 0x7D){ flushGb(); inGb = false; i += 2; continue; }
+        if (nx === 0x7E){ out += '~'; i += 2; continue; }
+        if (nx === 0x0A){ i += 2; continue; }
+      }
+      if (inGb){
+        if (b < 0x21 || b > 0x7E){ bad = true; out += '\uFFFD'; i++; continue; }
+        if (i + 1 < n){ gb.push(b | 0x80, u8[i + 1] | 0x80); i += 2; }
+        else { bad = true; out += '\uFFFD'; i++; }
+      } else { out += String.fromCharCode(b); i++; }
+    }
+    flushGb();
+    if (bad && fatal) return null;
+    return out;
+  }
+
+  function decodeAs(u8, id, fatal){
+    if (id === 'latin1') return latin1Decode(u8);
+    var e = ENC_BY_ID[id];
+    if (e){
+      if (e.kind === 'table') return tableDecode(e, u8, fatal);
+      if (e.kind === 'utf32') return utf32Decode(u8, id === 'utf-32le', fatal);
+      if (e.kind === 'utf7')  return utf7Decode(u8, fatal);
+      if (e.kind === 'hz')    return hzDecode(u8, fatal);
+    }
+    var d = dec(id, fatal);
+    if (!d) return null;
+    try { return d.decode(u8); } catch (err) { return null; }
+  }
+
+  /* ===== 书写系统判定 =====
+     ★ 补到 86 种编码后，只认「中文常用字」的打分会把俄文 / 希腊文 / 阿拉伯文的**正确结果**
+     全判成垃圾。但光加「纯度」也不够 —— 纯脚本的垃圾同样能拿满分：实测「UTF-8 → Shift_JIS」
+     把中文乱码解成「豬｣迥ｲ繧ｽ髞帛ｱｼ」也拿到 2.9 分，反超正确答案 1.3 分。
+     真正能分「真话」和「乱码」的是**每种书写系统的字频分布**：真俄文里 о/е/а/и 占一半，
+     乱码西里尔则均匀铺满整个字母表。所以每种书写系统都配一张高频字表（见 SCRIPT_FREQ）。 */
+  function charScript(c){
+    if (c < 0x20) return 0;
+    if (c >= 0x41 && c <= 0x5A) return 12;        /* A-Z 并入拉丁 —— 纯英文文本也要能被判为正常 */
+    if (c >= 0x61 && c <= 0x7A) return 12;        /* a-z */
+    if (c < 0x7F) return 1;                       /* 数字、半角标点、空格：中性 */
+    if (c === 0xFFFD) return 19;                  /* 替换符，单独算 */
+    if (c >= 0x4E00 && c <= 0x9FFF) return 2;     /* 汉字 */
+    if (c >= 0x3400 && c <= 0x4DBF) return 3;     /* 汉字扩展 A */
+    if (c >= 0x3040 && c <= 0x30FF) return 4;     /* 假名 */
+    if (c >= 0xFF66 && c <= 0xFF9D) return 4;     /* 半角片假名 —— 必须算假名，否则会被当成中性标点，
+                                                      Shift_JIS 乱码的纯度会虚高到 1.0 */
+    if (c >= 0xAC00 && c <= 0xD7AF) return 5;     /* 谚文 */
+    if (c >= 0x0400 && c <= 0x04FF) return 6;     /* 西里尔 */
+    if (c >= 0x0370 && c <= 0x03FF) return 7;     /* 希腊 */
+    if (c >= 0x0590 && c <= 0x05FF) return 8;     /* 希伯来 */
+    if (c >= 0x0600 && c <= 0x06FF) return 9;     /* 阿拉伯 */
+    if (c >= 0x0E00 && c <= 0x0E7F) return 10;    /* 泰文 */
+    if (c >= 0x1EA0 && c <= 0x1EFF) return 12;    /* 越南语拉丁扩展 → 并入拉丁 */
+    if (c >= 0xC0   && c <= 0x24F)  return 12;    /* 带附加符号的拉丁字母 */
+    if (c >= 0xA0   && c <= 0xBF)   return 13;    /* 拉丁标点 / 符号 —— 乱码重灾区 */
+    /* ★ C1 控制符（0x80-0x9F）按**控制字符**处理，不按「拉丁符号」。
+       真 Latin-1 里它们确实是控制字符，任何正常文本都不会含它们；
+       而 CP437 / CP850 这类 DOS 编码的乱码被当 Latin-1 读时，0x80-0x9F 会整片变成 C1。
+       按拉丁符号只扣 1.4 分，「原样」因此在「Caf\x82 cr\x8Ame」上拿到 3.55 分压住正确答案；
+       按控制字符扣 5.0 分后它自己就沉下去了。 */
+    if (c >= 0x80   && c <= 0x9F)   return 0;     /* C1 控制符 */
+    if (c >= 0x3000 && c <= 0x303F) return 15;    /* 中文标点 */
+    if (c >= 0xFF00 && c <= 0xFFEF) return 16;    /* 全角形式 */
+    if (c >= 0xE000 && c <= 0xF8FF) return 17;    /* 私用区 */
+    return 18;                                     /* 其它 */
+  }
+
+  /* 编码设计上服务的书写系统 → charScript 下标（japanese 特殊：假名 + 汉字都算） */
+  var SCRIPT_IDX = {
+    hans:2, hant:2, japanese:4, korean:5, cyrillic:6, greek:7,
+    hebrew:8, arabic:9, thai:10, vietnamese:12, latin:12
+  };
+
+  /* ★ 各书写系统的高频字（按大致频率排序，取 40~60 个，覆盖真实文本 60%~80%）。
+     汉字不用这张表，走 COMMON / COMMON_T（约 700 个常用汉字）。
+     ★ 建 Set 时**同时放进大小写两种形态**，查表时不必再 toLowerCase() ——
+     打分要对上千个候选各扫一遍全文，每字符一次函数调用会明显拖慢。 */
+  var SCRIPT_FREQ = {
+    4:  'のにるたはをでしとがてなれいかすまあこおうきくけそつえみよさわらりひへもゆろせねむぶべぼぱ',
+    5:  '이다는을의에가하로기지사자리어나해도수정서대시구아보주장면성일전화말국내했습니드그있되',
+    6:  'оеаинтсрвлкмдпуяыьгзбчйхжшюцщэфъё',
+    7:  'αεοτινρσληκμςπυγδωθχφβξζηψάέήίόύώϊϋΐΰ',
+    8:  'יוהלרבתמאשנכדקחפעסזגטצףךםןץ',
+    9:  'اليمونرتبكفعسهدجقحخصضطظذثغشز',
+    10: 'านรอเาทกมยงดลสปบคหจพใไำ',
+    12: 'etaoinshrdlucmfwypvbgkjqxzàáâãäåçèéêëìíîïñòóôõöøùúûüýÿß'
+  };
+  var FREQ_SETS = Object.create(null);
+  function freqSet(idx){
+    if (idx in FREQ_SETS) return FREQ_SETS[idx];
+    var s = SCRIPT_FREQ[idx], set = null, i, ch;
+    if (s){
+      set = Object.create(null);
+      for (i = 0; i < s.length; i++){
+        ch = s.charAt(i);
+        set[ch] = 1;
+        set[ch.toUpperCase()] = 1;
+        set[ch.toLowerCase()] = 1;
+      }
+    }
+    FREQ_SETS[idx] = set;
+    return set;
+  }
+
+  /* 大写判定（不走 toLowerCase，理由同上） */
+  function isUpper(c){
+    if (c >= 0x41 && c <= 0x5A) return true;                    /* A-Z */
+    if (c >= 0xC0 && c <= 0xDE && c !== 0xD7) return true;      /* À-Þ */
+    if (c >= 0x400 && c <= 0x42F) return true;                  /* 西里尔 А-Я */
+    if (c >= 0x391 && c <= 0x3A9 && c !== 0x3A2) return true;   /* 希腊 Α-Ω */
+    return false;
+  }
+
+  /* 书写系统下标 → 族。族内混排（汉字 + 假名）是正常文本，跨族混排基本是猜错了编码。 */
+  function idxFamily(i){
+    if (i === 2 || i === 3 || i === 4) return 'han';
+    if (i === 5) return 'korean';
+    if (i === 6) return 'cyrillic';
+    if (i === 7) return 'greek';
+    if (i === 8) return 'hebrew';
+    if (i === 9) return 'arabic';
+    if (i === 10) return 'thai';
+    if (i === 12) return 'latin';
+    return null;
+  }
+
+  /* ===== 统计一遍文本：scoreText 与 looksNormal 共用 =====
+     ★ 高频字表的查表放在循环里做（freqHits[s]++），不要另起一趟 ——
+     两趟扫描在 1482 个候选 × 1500 字的预扫里会翻倍。 */
+  function countText(t){
+    var n = t.length, i, c, s, ch, fs;
+    var ascii = 0, fffd = 0, ctrl = 0, common = 0, upper = 0;
+    var latinSym = 0, latinLet = 0, pua = 0, other = 0, neutral = 0;
+    var hits = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    var freqHits = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    var FS = [null,null,null,null,null,null,null,null,null,null,null,null,null];
+    for (i = 2; i <= 12; i++) FS[i] = freqSet(i);
+    var cs = commonSet(), csHi = commonHiSet();
+    for (i = 0; i < n; i++){
+      c = t.charCodeAt(i);
+      s = charScript(c);
+      if (s === 0){ if (c !== 9 && c !== 10 && c !== 13) ctrl++; continue; }
+      if (s === 19){ fffd++; continue; }
+      if (s === 1){ ascii++; continue; }
+      if (s === 13 || s === 14){ latinSym++; continue; }
+      if (s === 15 || s === 16){ neutral++; continue; }
+      if (s === 17){ pua++; continue; }
+      if (s === 18){ other++; continue; }
+      hits[s]++;
+      if (s === 12) latinLet++;
+      if (isUpper(c)) upper++;
+      ch = t.charAt(i);
+      /* ★ 两档字频：命中高频字表记 1 分，只命中 3500 常用字记 0.35 分。
+         真中文 freq 落在 0.85 上下，猜错编码拼出的「汉字」只有 0.1 左右 —— 这才是能分开
+         「真文本」和「乱码汉字」的信号；只用一张大表两者会挤在一起。 */
+      if (s === 2 || s === 3){
+        if (csHi[ch]){ common++; freqHits[2] += 1; }
+        else if (cs[ch]){ common++; freqHits[2] += 0.35; }
+      }
+      else if (FS[s] && FS[s][ch]) freqHits[s]++;
+    }
+    /* ★ best 是「最大计数」，bestIdx 才是「下标」—— 两者必须分开存。
+       混用会让 freq 永远取到 freqHits[10]（=0），整个语言合理性信号失效。 */
+    var letters = 0, best = 0, bestIdx = 0;
+    for (i = 2; i <= 12; i++){ letters += hits[i]; if (hits[i] > best){ best = hits[i]; bestIdx = i; } }
+    /* ★ freq 的分母只算**同族**的字，不跨族。
+       同族内部混排是正常的（汉字 + 假名、汉字 + 拉丁术语），跨族混排基本只出现在猜错编码的
+       垃圾里 —— 实测「ÄãºÃ」被「Mac Roman → UTF-16LE」解成「讀첼」（汉字 + 谚文），
+       若按 hits[bestIdx] 做分母，freq 会拿到满分 1.0，整个信号失效。 */
+    var fam = idxFamily(bestIdx), famHits = 0;
+    if (fam){
+      for (i = 2; i <= 12; i++){ if (idxFamily(i) === fam) famHits += hits[i]; }
+    }
+    /* 纯度分母：非 ASCII / 非替换符 / 非控制符 / 非中英标点。
+       ★ 拉丁符号 €‚ƒ„… 必须**留在**分母里，否则「ÐŸÑ€Ð¸Ð²ÐµÑ‚」纯度仍有 0.63，压不下去。 */
+    var denom = n - ascii - fffd - ctrl - neutral;
+    return {
+      n: n, ascii: ascii, fffd: fffd, ctrl: ctrl, common: common, upper: upper,
+      latinSym: latinSym, latinLet: latinLet, pua: pua, other: other, neutral: neutral,
+      hits: hits, letters: letters, best: best, bestIdx: bestIdx,
+      coherence: denom > 0 ? best / denom : 0,
+      freq: (bestIdx && famHits) ? freqHits[bestIdx] / famHits : 0
+    };
+  }
+
+  /* ===== 打分：越高越像「正常文本」 =====
+     ★ 两个主信号，缺一不可：
+     ① **语言合理性（freq，权重 2.4）** —— 各书写系统的高频字覆盖率。
+        这是唯一能分开「真俄文」和「乱码西里尔」的信号：真俄文 о/е/а/и 占一半，
+        乱码西里尔均匀铺满整个字母表；汉字走 COMMON / COMMON_T。
+     ② **书写系统纯度（coherence，权重 1.2）** —— 正确结果通常由单一书写系统构成。
+        但它**单独用会出错**：纯脚本的垃圾也是 1.0。实测「UTF-8 → Shift_JIS」把中文乱码
+        解成「豬｣迥ｲ繧ｽ髞帛ｱｼ」拿到 2.9 分，反超正确答案的 1.3 分。
+     ③ 替换符惩罚封顶 min(...,0.5)：短样本里一个 � 就占 25%，不封顶会把部分还原压成负分。
+     ④ 0xA0-0xBF 的拉丁标点重罚（1.4）—— UTF-8 被当单字节读时这些字节变成 €‚ƒ„… 符号，
+        真实文本里极少见；0xC0-0x24F 的拉丁字母只轻罚（0.35），café / Müller 是正常文本。
+     ⑤ 大小写分布：自然文本大写 < 15%，乱码西里尔常有 50%+（实测「мХИлЕХнХШмДЄмЪФ」67%）。 */
+  function scoreText(t, script){
+    return scoreDetail(t, script).score;
+  }
+
+  /* scoreText 的完整版：把统计分量一并返回，调用方可以顺手做「控制字符否决」之类的判断，
+     不必再跑一趟 countText（2 万字下多跑一趟就是白白翻倍）。 */
+  function scoreDetail(t, script){
+    if (!t) return { score: -99, ctrl: 0, fffd: 0 };
+    var d = countText(t), n = d.n;
+
+    var expect = 0;
+    if (d.letters && script && script !== 'any' && script !== 'none'){
+      var idx = SCRIPT_IDX[script];
+      var hit = idx ? d.hits[idx] : 0;
+      if (script === 'japanese') hit += d.hits[2];
+      expect = hit / d.letters;
+    }
+    var upperRatio = d.letters ? d.upper / d.letters : 0;
+    var casePenalty = upperRatio > 0.25 ? 1.5 * Math.min((upperRatio - 0.25) / 0.5, 1) : 0;
+
+    return { score: 0.5 * (d.ascii / n)
+         + 1.2 * d.coherence
+         + 2.4 * d.freq
+         + 0.4 * expect
+         - 1.4 * (d.latinSym / n)
+         - 0.35 * (d.latinLet / n)
+         - 2.2 * Math.min(d.fffd / n, 0.5)
+         - 5.0 * (d.ctrl / n)
+         - 2.0 * (d.pua / n)
+         - 0.9 * (d.other / n)
+         - casePenalty,
+      ctrl: d.ctrl, fffd: d.fffd, hits: d.hits, letters: d.letters };
+  }
+
+  /* 判「输入本身是不是正常文本」。
+     ★ 不能只看总分：纯汉字乱码（「浣犲ソ」）的纯度也是 1.0。
+     ★ 判据统一成两条：**高频字覆盖率**（是不是某种真语言）与**纯度**（有没有混杂书写系统）。
+       中文「浣犲ソ」freq≈0；英文 "Hello world" freq≈0.9；「ÐŸÑ€Ð¸Ð²ÐµÑ‚」freq=0 —— 全部判对。
+     ★ 非中文也必须判：UTF-8 被当单字节读时满屏 €‚ƒ„… 这类标点，真实文本里极少见。 */
+  function looksNormal(t){
+    if (!t) return true;
+    var d = countText(t);
+    if (d.fffd || d.ctrl || d.pua) return false;
+    if (d.freq < 0.3) return false;
+    if (d.coherence < 0.7) return false;
+    return true;
+  }
+
+  /* ===== 场景说明（人话） =====
+     86 种编码 × 85 个源 ≈ 7310 种组合，不可能每条都手写。
+     常见组合走 SPECIFIC 精确文案，其余按「源语言 → 目标语言」拼一句通用说明。 */
+  var SCRIPT_CN = {
+    hans:'简体中文', hant:'繁体中文', japanese:'日文', korean:'韩文',
+    cyrillic:'西里尔字母（俄文等）', greek:'希腊文', hebrew:'希伯来文',
+    arabic:'阿拉伯文', thai:'泰文', vietnamese:'越南文', latin:'西欧文字',
+    any:'通用', none:'未知'
+  };
+  var SPECIFIC = {
+    'windows-1252>utf-8': 'UTF-8 字节被当成 Windows-1252 读过 —— 邮件、HTTP 头、MySQL latin1 列的经典症状。',
+    'latin1>utf-8':       'UTF-8 字节被当成 Latin-1 逐字节读过 —— 常见于老系统导出、日志管道。',
+    'gbk>utf-8':          'UTF-8 字节被当成 GBK 读过 —— 常见于旧数据库、Windows 程序互相传数据。',
+    'big5>utf-8':         'UTF-8 字节被当成 Big5 读过。',
+    'gb18030>utf-8':      'UTF-8 字节被当成 GB18030 读过。',
+    'utf-16le>utf-8':     'UTF-8 字节被当成 UTF-16LE 读过 —— 每个字节都被凑成一个双字节字符，结果里常夹着 \\u0000。',
+    'utf-16be>utf-8':     'UTF-8 字节被当成 UTF-16BE 读过。',
+    'windows-1252>gbk':   'GBK 字节被当成 Windows-1252 读过。',
+    'latin1>gbk':         'GBK 字节被当成 Latin-1 逐字节读过 —— 中文 Windows 与 Unix 之间传文件常见。',
+    'windows-1252>big5':  'Big5 字节被当成 Windows-1252 读过。',
+    'latin1>big5':        'Big5 字节被当成 Latin-1 读过。',
+    'gbk>big5':           'Big5 字节被当成 GBK 读过 —— 两岸数据互转时常见。',
+    'big5>gbk':           'GBK 字节被当成 Big5 读过。',
+    'gbk>shift_jis':      'Shift_JIS 字节被当成 GBK 读过。',
+    'big5>shift_jis':     'Shift_JIS 字节被当成 Big5 读过。',
+    'windows-1252>shift_jis': 'Shift_JIS 字节被当成 Windows-1252 读过。',
+    'latin1>shift_jis':   'Shift_JIS 字节被当成 Latin-1 读过。',
+    'gbk>euc-kr':         'EUC-KR 字节被当成 GBK 读过。',
+    'big5>euc-kr':        'EUC-KR 字节被当成 Big5 读过。',
+    'windows-1252>euc-kr':'EUC-KR 字节被当成 Windows-1252 读过。',
+    'latin1>euc-kr':      'EUC-KR 字节被当成 Latin-1 读过。',
+    'windows-1251>utf-8': 'UTF-8 的西里尔字母字节被当成 Windows-1251 读过 —— 俄文站点的经典乱码。',
+    'koi8-r>utf-8':       'UTF-8 的西里尔字母字节被当成 KOI8-R 读过。',
+    'iso-8859-7>utf-8':   'UTF-8 的希腊文字节被当成 ISO-8859-7 读过。',
+    'windows-874>utf-8':  'UTF-8 的泰文字节被当成 Windows-874 读过。',
+    'utf-8>windows-1251': 'Windows-1251 的俄文字节被当成 UTF-8 读过。',
+    'utf-8>windows-874':  'Windows-874 的泰文字节被当成 UTF-8 读过。'
+  };
+
+  function scenario(src, tgt){
+    var hit = SPECIFIC[src.id + '>' + tgt.id];
+    if (hit) return hit;
+    var a = SCRIPT_CN[src.script] || src.script;
+    var b = SCRIPT_CN[tgt.script] || tgt.script;
+    if (src.script === 'any') return tgt.name + ' 的字节被当成 ' + src.name + ' 逐字节读过。';
+    if (tgt.script === 'any') return '按 ' + src.name + '（' + a + '）取回字节，再用 ' + tgt.name + ' 重新解码。';
+    return tgt.name + '（' + b + '）的字节被当成 ' + src.name + '（' + a + '）读过。';
+  }
+
+  /* 非 fatal 解码永远能解出「东西」，必须挡掉垃圾。
+     两种合法形态：① 输入里本来就有 �（字节中段丢过），允许 � 出现在任意位置；
+     ② 输入没有 �，只是尾部字节被截断 —— 那么 � 只能出现在**末尾 2 个字符内**且不超过 2 个。
+     其余情况（中段冒出 �）说明这个目标编码猜错了。 */
+  function partialOk(txt, hadFFFD){
+    var n = txt.length, f = 0, last = -1, i, c;
+    if (!n) return false;
+    for (i = 0; i < n; i++){
+      c = txt.charCodeAt(i);
+      if (c === 0xFFFD){ f++; last = i; }
+    }
+    if (!f) return true;
+    if (hadFFFD) return f / n <= 0.34;
+    return f <= 2 && last >= n - 2;
+  }
+
+  /* ===== 脚本族剪枝 =====
+     ★ 86 种编码 × 85 个源 ≈ 7310 个组合，绝大多数在现实中不可能发生。
+     实测不做剪枝时「GBK → IBM866」会把中文乱码解成一串西里尔字母 + 制表符，
+     靠字频还能拿到 3.3 分，把正确答案「GBK → UTF-8」的 3.0 顶下去。
+     ★ 剪枝依据：**乱码的书写系统在错误的解码里通常不会变族**。
+       · 源编码必须能「产出」输入里那种文字（中文乱码的源不可能是西里尔编码）；
+       · 目标编码要么是通用编码（UTF-8 / UTF-16），要么和输入 / 源同族。
+     ★ windows-1252 / Latin-1 / x-user-defined 是例外：它们是「默认的错误猜测」，
+       任何族的内容被当成它们读都会得到高位字符，所以不参与族限制。 */
+  var SCRIPT_FAMILY = {
+    hans:'han', hant:'han', japanese:'han',
+    latin:'latin', vietnamese:'latin',
+    cyrillic:'cyrillic', greek:'greek', hebrew:'hebrew',
+    arabic:'arabic', thai:'thai', korean:'korean', none:'none'
+  };
+  var UNIVERSAL_SRC = { 'windows-1252':1, 'latin1':1, 'x-user-defined':1 };
+
+  /* 输入文本的「书写系统族」：取占比最大的那个。没有字母（纯符号/数字）时返回 null，不限制。 */
+  function inputFamily(s){
+    var d = countText(s);
+    if (!d.bestIdx) return null;
+    var i = d.bestIdx;
+    if (i === 2 || i === 3 || i === 4) return 'han';   /* 汉字 / 汉字扩展 / 假名 */
+    if (i === 5) return 'korean';
+    if (i === 6) return 'cyrillic';
+    if (i === 7) return 'greek';
+    if (i === 8) return 'hebrew';
+    if (i === 9) return 'arabic';
+    if (i === 10) return 'thai';
+    if (i === 12) return 'latin';
+    return null;
+  }
+
+  /* 修完之后跟原文**几乎一样**的，不叫修复，叫原地打转。
+     ★ 实测「这是一段正常的中文，没有任何乱码。」会被「GBK → Big5 后再 Big5 → GBK」
+     改成「这是一段正**恗**的中文…」—— 只错一个字，却因为结构型编码的严格解码加分
+     反超「原样」基线（4.32 > 3.78），把一句正常中文报成乱码。
+     ★ 但相似度只算**非 ASCII 位置**。单字节编码（CP437 / CP850 / Mac Roman…）的乱码修复
+     本来就只有那几个高位字符在变：「Caf\x82 cr\x8Ame \x85 la carte」→「Café crème à la carte」
+     整串相似度 0.87，按整串算会被误判成「几乎没改」，27 种遗留编码里有 10 种因此全军覆没。
+     而中文乱码是整段都在变，只算非 ASCII 位置对它没有任何影响（汉字本来全是非 ASCII）。 */
+  function samey(a, b){
+    var n = Math.min(a.length, b.length), same = 0, cnt = 0, i, ca, cb;
+    if (n < 2) return false;
+    for (i = 0; i < n; i++){
+      ca = a.charCodeAt(i); cb = b.charCodeAt(i);
+      if (ca < 0x80 && cb < 0x80) continue;      /* 两边都是纯 ASCII：不携带「修没修」的信息 */
+      cnt++;
+      if (ca === cb) same++;
+    }
+    if (!cnt) return false;
+    return same / cnt >= 0.75;
+  }
+
+  /* ===== 单轮扫描：对每个 (源编码, 目标编码) 组合尝试还原 =====
+     onlyKeys 用于两阶段的第二阶段：只在全文上重算第一阶段的赢家，不必重跑 1482 个组合。 */
+  function scanText(s, onlyKeys){
+    var out = [];
+    var inFam = inputFamily(s);
+    /* 输入里非 ASCII 字符的占比。用来给下面的「结构性严格解码加分」定权 —— 见用法处。 */
+    var sHi = 0, si;
+    for (si = 0; si < s.length; si++){ if (s.charCodeAt(si) >= 0x80) sHi++; }
+    var sHiRatio = s.length ? sHi / s.length : 0;
+    /* ★ Windows-1252 把 0x80-0x9F 渲染成 €‚ƒ„…†‡ˆ‰Š‹ŒŽ''""•–—˜™š›œžŸ 这些排印符号。
+       真实文本里它们只是零星标点，但**UTF-8 字节被当 Windows-1252 读**时，汉字的续字节
+       几乎整片落进这一区 —— 实测韩文乱码 48 个非 ASCII 字符里有 22 个是排印符号。
+       这是「这份字节其实是 UTF-8」的强证据：此时任何单字节→单字节的映射都只是把排印符号
+       换成带附加符号的字母，看着「更干净」实则仍是垃圾（韩文正确答案 2.72 分，
+       被「Windows-1252 → CP857」的 3.38 分顶掉）。所以这种输入只留 UTF-8 目标。 */
+    var TYPO = '\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D' +
+               '\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178';
+    var sTypo = 0, sj;
+    for (sj = 0; sj < s.length; sj++){ if (TYPO.indexOf(s.charAt(sj)) >= 0) sTypo++; }
+    /* 阈值 0.10 + 至少 3 个：UTF-8 的续字节有一半落在 0x80-0x9F，真实 UTF-8 文本随便几十字
+       就能凑够（实测泰文 9 个、阿拉伯 6 个）；而单字节编码的正常文本里这些只是零星标点，
+       不会同时满足两个条件（一个 • 号不算数）。 */
+    var typoOnly = sHi > 0 && sTypo >= 3 && sTypo / sHi >= 0.10;
+    SOURCES.forEach(function(src){
+      var srcFam = SCRIPT_FAMILY[src.script] || null;
+      var srcUni = (src.script === 'any') || UNIVERSAL_SRC[src.id];
+      /* 源必须能产出输入里的那种文字 */
+      if (inFam && !srcUni && srcFam !== inFam) return;
+
+      /* 先严格反推；失败再允许丢掉 U+FFFD 重试（最常见的「末尾孤字节」形态）。
+         丢过字节的结果只能非 fatal 解码 —— 尾部可能本来就不完整。 */
+      var enc = encodeAs(src.id, s, false);
+      if (!enc) enc = encodeAs(src.id, s, true);
+      if (!enc || !enc.bytes.length) return;
+
+      ENCS.forEach(function(tgt){
+        if (tgt.id === src.id) return;
+        /* ★ 7 位 ASCII 安全编码（UTF-7 / HZ）不当目标，只留在对照表里手动解 —— 见 ALGO 处的说明 */
+        if (tgt.tgt === false) return;
+        /* 排印符号占主导的输入只可能是「UTF-8 被误读」，见 scanText 开头 TYPO 处的说明 */
+        if (typoOnly && tgt.kind !== 'utf8') return;
+        var key = src.id + '>' + tgt.id;
+        if (onlyKeys && !onlyKeys[key]) return;
+        /* 目标要么通用，要么和输入 / 源同族。
+           ★ 拉丁输入单独处理：高位拉丁字符是**双字节编码被单字节读错**时的共同外观
+           （「ÄãºÃ」= GBK 的「你好」，「ì•ˆë…•í•˜」= UTF-8 的「안녕하」），
+           此时「拉丁」这个族名不携带信息，必须允许汉字 / 韩文目标 ——
+           否则 `Windows-1252 → GBK` 会被剪掉，顶上来的是「Mac Roman → UTF-16LE」这类垃圾。
+           ★ 现在**全族放开**：拉丁外观也是 CP869（希腊）/ CP862（希伯来）/ CP1006（乌尔都）/
+             Mac Thai / KOI8-T 这些遗留编码被当 Latin-1 读时的样子，剪掉它们等于这 9 种编码
+             永远解不出来。原先「西里尔/希腊/阿拉伯要剪」的理由是「UTF-8 → IBM866 会把韩文
+             乱码解成西里尔 + 制表符抢第一」，而那个场景现在被上面的 `typoOnly` 拦住了
+             （韩文乱码里 46% 的非 ASCII 字符是 Windows-1252 排印符号，只留 UTF-8 目标）。 */
+        var tf = tgt.script === 'any' ? null : SCRIPT_FAMILY[tgt.script];
+        if (tgt.script !== 'any'){
+          if (inFam !== 'latin' && !(inFam && tf === inFam) && tf !== srcFam) return;
+        }
+        /* 先严格解码；失败再用非 fatal 试一次 ——
+           丢过字节 / 末尾不完整的流只有非 fatal 能解，结果是「部分还原」。 */
+        var txt = decodeAs(enc.bytes, tgt.id, true);
+        var partial = false;
+        if (txt == null){
+          txt = decodeAs(enc.bytes, tgt.id, false);
+          if (txt == null) return;
+          partial = true;
+          if (!partialOk(txt, enc.dropped > 0)) return;
+        }
+        if (samey(txt, s)) return;
+        var lossy = enc.dropped > 0 || partial;
+        var note = scenario(src, tgt);
+        if (lossy){
+          note += ' 原始字节不完整（' + (enc.dropped > 0 ? '输入里有 ' + enc.dropped + ' 个 �' : '末尾字节被截断') + '），这是部分还原，末尾可能缺字。';
+        }
+        /* ★ 还原结果里出现控制字符（U+0000-001F，不含 \t \n \r）说明编码猜错了 ——
+           文本里不会凭空冒出 U+001B。实测「UTF-16LE → Shift_JIS」把中文乱码解成
+           「cmｲrｽ0\033怖\\…」还能拿 3.4 分：freq 只看「常用字占比」，而拉丁字母几乎
+           个个都算常用，这个信号对纯 ASCII 垃圾毫无分辨力；靠调权重压不住，直接否决才干净。 */
+        var det = scoreDetail(txt, tgt.script);
+        if (det.ctrl) return;
+        /* ★ 拉丁外观的输入 → 汉字 / 韩文目标：结果必须**真的以那种文字为主**。
+           「ÄãºÃ」按 GBK 解得「你好」，汉字占全部字母的 100%；
+           而「Pý¡liç §luou」按 GBK 只能拼出「P媒隆li莽 搂lu聹ou聼」、按 EUC-KR 拼出
+           「P첵징li챌 짠lu혵ou혺」，目标文字只占三成 —— 这是「凑出来的」，
+           真实文本不会长这样。实测 cp852（捷克）/ mac-ce / viscii 的乱码全被这类
+           「半拉丁半汉字」的垃圾顶掉。 */
+        if (inFam === 'latin' && (tf === 'han' || tf === 'korean')){
+          var tIdx = SCRIPT_IDX[tgt.script];
+          var tHit = tIdx ? det.hits[tIdx] : 0;
+          if (tgt.script === 'japanese') tHit += det.hits[2];
+          if (det.letters && tHit / det.letters < 0.5) return;
+        }
+        var sc = det.score - (lossy ? 0.15 : 0);
+        /* ★ 严格解码成功是强证据：字节流在**结构型**编码（UTF-8 / GBK / Big5 / 日韩双字节）里
+           严格合法，随机字节几乎做不到；而单字节编码对任何字节都合法，没有信息量，所以不加分。
+           没有这条，泰文/阿拉伯文的乱码会被「用错编码但同样纯泰文/纯阿拉伯文」的结果顶掉。
+           ★ 但这个加分要按输入的**非 ASCII 占比**缩放。ASCII 字节在任何 DBCS 编码里都合法，
+           所以「一个 86% 是 ASCII 的串按 GBK 解码成功」几乎不携带信息。不缩放的话，
+           27 种遗留编码的端到端还原会被「UTF-8 → GBK」白拿 0.8 分顶掉：
+           「Café crème à la carte」3.81 分，输给「Caf聜 cr聤me 聟 la carte」4.12 分。 */
+        if (!partial && (tgt.kind === 'utf8' || tgt.kind === 'dbcs' || tgt.kind === 'dbcs4')){
+          sc += 0.8 * Math.min(1, sHiRatio / 0.75);
+        }
+        out.push({
+          key: key,
+          label: src.name + ' → ' + tgt.name,
+          note: note,
+          text: txt,
+          score: sc,
+          kind: 'conv',
+          lossy: lossy,
+          bytes: enc.bytes,
+          srcName: src.name
+        });
+      });
+    });
+    return out;
+  }
+
+  function sortByScore(a, b){ return b.score - a.score; }
+
+  function dedupe(list){
+    var seen = Object.create(null), out = [];
+    list.sort(sortByScore);
+    list.forEach(function(c){
+      var k = c.text;
+      if (seen[k]) return;
+      seen[k] = 1;
+      out.push(c);
+    });
+    return out;
+  }
+
+  /* ★ 两阶段扫描：86 目标 × 85 源 ≈ 7310 组合，直接拿全文跑在 2 万字下要 900ms 以上。
+     改成先在头 1500 字上跑全部组合（约 35ms），只把 Top 15 的 key 拿到全文精算（约 6ms）。
+     排序在短样本和全文上是一致的 —— 乱码特征在 1500 字内早已稳定。 */
+  function scanAny(s){
+    if (s.length <= PRESCAN) return scanText(s);
+    var rough = scanText(s.slice(0, PRESCAN)).sort(sortByScore).slice(0, 15);
+    var keys = Object.create(null);
+    rough.forEach(function(c){ keys[c.key] = 1; });
+    return scanText(s, keys);
+  }
+
+  function candidatesFromText(s){
+    var list = scanAny(s);
+
+    /* 双重乱码：只在**第一层还没修好**时才做第二层。
+       ★ 门槛是 looksNormal（不是分数）：第一层已经解出正常文本时再往下修，
+       只会把正确结果糟蹋成更「像」的垃圾 —— 实测「你好，世�」会被二次修成「雿惩末嚗銝」。
+       ★ 种子取前 5 名：短样本里第一层猜错是常事。实测「娴ｇ姴銈介敍灞肩瑯閻ｏ拷」的正确第一层
+       「GBK → UTF-8」只排第 4（前面被 UTF-16LE / UTF-8 的假链路占着），只取前 3 会让
+       正确链路永远拿不到第二层机会。 */
+    var seeds = list.slice().sort(sortByScore).slice(0, 5);
+    var globalBest = seeds.length ? seeds[0].score : -99;
+    var needSecond = seeds.length && !looksNormal(seeds[0].text);
+    if (needSecond){
+      seeds.forEach(function(seed){
+        /* ★ 按**每个种子**判，不是只判第一名：第一层已经解出正常文本的种子不该再修第二遍。
+           实测「浣犲ソ锛屼笘鐣」里正确种子「GBK → UTF-8」已给出「你好，世�」，
+           再修一轮会把它改成更「像」的垃圾（「你好，世」→「ｧAｦn｡A･@」），
+           而且因为严格解码加分反而排到第一位。
+           ★ 判之前先剥掉**尾部**的 �：那只是「末尾字节被截断」，原文已经还原出来了；
+           中段的 � 才是真丢了字节、后续序列全被打断，那种才值得再修一轮。 */
+        if (looksNormal(seed.text.replace(/\uFFFD+$/, ''))) return;
+        scanAny(seed.text).forEach(function(c){
+          /* ★ 第二层必须真的改动文本。否则「GBK → UTF-8 后再 GBK → GB18030」这种
+             **原地往返**（GBK 的字节在 GB18030 里是同一批字）会得到与第一层完全相同的文本，
+             却因为结构型编码的严格解码加分多拿 0.8，反过来把第一层顶下去。
+             实测「浣犲ソ锛屼笘鐣�」的第一名因此变成了一串毫无意义的双重修复。 */
+          if (c.text === seed.text || samey(c.text, s)) return;
+          /* ★ 第二层的结果自己也得像正常文本，否则只是「猜得更花哨的垃圾」。
+             实测韩文乱码 `ì•ˆë…•í•˜…` 的第一层已经正确解出韩文（2.72 分），
+             却被「Windows-1252 → Latin-1 后再 UTF-8 → GBK」拼出的中文垃圾顶掉 ——
+             因为韩文的字频表只有几十个音节，正确结果 freq 只有 0.25，
+             looksNormal 判为「没修好」，于是白白多跑一轮。 */
+          if (!looksNormal(c.text.replace(/\uFFFD+$/, ''))) return;
+          if (c.score < globalBest + 0.2) return;
+          c.key = seed.key + '>>' + c.key;
+          c.label = seed.label + ' 后再 ' + c.label;
+          c.note = '双重乱码：先按「' + seed.label + '」还原，再修一轮。';
+          c.depth = 2;
+          list.push(c);
+        });
+      });
+    }
+
+    /* 原样作为基线也放进来，用来判断「本来就没乱码」。
+       ★ 给它 +0.5 的先验：**「不需要转换」是默认假设**，主张乱码的一方要拿出证据。
+       没有这 0.5，纯 ASCII 的英文正文（freq 高但 coherence 分母为 0）会被
+       「UTF-16 往返」这类产出伪西里尔的转换反超（实测 1.8 > 0.5）。 */
+    list.push({
+      key: '__id__', label: '原样（未转换）', text: s,
+      score: scoreText(s, 'any') + 0.5, kind: 'id',
+      note: '不做任何转换，仅作为对照。'
+    });
+
+    return dedupe(list).slice(0, 8);
+  }
+
+  /* ===== 十六进制字节输入 ===== */
+  function parseHex(raw){
+    var s = raw.replace(/0x/gi, '').replace(/[\s,:;\-_]/g, '');
+    if (!s || /[^0-9a-fA-F]/.test(s)) return null;
+    if (s.length % 2) return null;
+    var out = new Uint8Array(s.length / 2);
+    for (var i = 0; i < out.length; i++){
+      out[i] = parseInt(s.substr(i * 2, 2), 16);
+    }
+    return out;
+  }
+
+  /* 十六进制模式下：直接用全部 86 种编码去解同一份字节（不需要反推） */
+  function candidatesFromBytes(u8){
+    var list = [];
+    ENCS.forEach(function(e){
+      var txt = decodeAs(u8, e.id, true);
+      if (txt == null || !txt) return;
+      list.push({
+        key: 'bytes>' + e.id,
+        label: '按 ' + e.name + ' 解码',
+        note: e.kind === 'sbcs' || e.kind === 'latin1'
+          ? '单字节编码对任何字节都能解出东西，只能用来确认字节内容，不代表编码正确。' : '',
+        text: txt,
+        score: scoreText(txt, e.script),
+        kind: 'conv',
+        bytes: u8,
+        srcName: e.name
+      });
+    });
+    return dedupe(list).slice(0, 8);
+  }
+
+  function tableFromBytes(u8){
+    var rows = [];
+    ENCS.forEach(function(e){
+      var txt = decodeAs(u8, e.id, true);
+      rows.push({
+        name: e.name,
+        group: e.group,
+        text: txt,
+        ok: txt != null,
+        score: txt != null ? scoreText(txt, e.script) : null
+      });
+    });
+    rows.sort(function(a, b){
+      if (a.ok !== b.ok) return a.ok ? -1 : 1;
+      return (b.score || -99) - (a.score || -99);
+    });
+    return rows;
+  }
+
+  /* ===== 渲染 ===== */
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('on'); }, 1600);
+  }
+
+  function preview(t){
+    var max = 240;
+    if (t.length <= max) return t;
+    return t.slice(0, max) + ' …（共 ' + t.length + ' 字）';
+  }
+
+  function emptyBox(text, cls){
+    var d = document.createElement('div');
+    d.className = 'alert' + (cls ? ' ' + cls : '');
+    d.textContent = text;
+    return d;
+  }
+
+  function renderCands(list, fffdN, fffdMid){
+    candsEl.textContent = '';
+
+    if (fffdN){
+      candsEl.appendChild(emptyBox('输入里有 ' + fffdN + ' 个替换符 �（U+FFFD）：这些位置的原始字节在之前的解码中已经丢失，还原结果可能缺字。想要完整结果，请改用「十六进制字节」模式粘贴原始字节。', 'warn'));
+    }
+
+    if (!list.length){
+      candsEl.appendChild(emptyBox('粘贴乱码文本后，这里会列出能还原它的方案。'));
+      candHintEl.textContent = '按可能性排序';
+      return;
+    }
+
+    var top = list[0];
+    var showList = list;
+
+    if (top.kind === 'id' && looksNormal(top.text)){
+      candsEl.appendChild(emptyBox('输入看起来已经是正常文本，没有检测到乱码特征。下面是其他编码尝试的结果，仅供对照。', 'ok'));
+      candHintEl.textContent = '未检测到乱码';
+      showList = list.filter(function(c){ return c.kind !== 'id'; });
+    } else if (top.kind === 'id' && !looksNormal(top.text)){
+      candsEl.appendChild(emptyBox('没找到可信的还原方案 —— 这段文本看着不像正常中文，但也反推不出原始字节。多半是原始字节在之前的某次转换里就已经丢失了。', 'warn'));
+      candHintEl.textContent = '无可信结果';
+      showList = list.filter(function(c){ return c.kind !== 'id'; });
+    } else if (top.score < 1.0){
+      candsEl.appendChild(emptyBox('没有找到可信的还原方案 —— 原始字节可能已经丢失，或者这段文本本来就不是乱码。', 'warn'));
+      candHintEl.textContent = '无可信结果';
+      showList = list.filter(function(c){ return c.kind !== 'id'; });
+    } else if (fffdMid){
+      /* ★ 输入里**中段**有 � 时不许说「最可能」 —— 那几个字节是真的没了，
+         后面的 UTF-8 序列也全被打断，再叠一层猜测等于编数据。
+         只在末尾有 � 属「奇数长度截断」的常见形态，仍可高置信。 */
+      candHintEl.textContent = '字节已部分丢失，以下只是猜测';
+    } else {
+      candHintEl.textContent = '最可能是「' + top.label + '」';
+    }
+
+    showList.forEach(function(c, i){
+      /* ★ 中段有 � 时不打「最接近」高亮：那时所有链路都只是猜，
+         实测「UTF-8 日文被当 Shift_JIS 读」丢了 4 个字节后，得分最高的反而是
+         「EUC-JP → Windows-874」这种纯泰文垃圾 —— 高亮它比不高亮更误导。 */
+      var isBest = (!fffdMid && i === 0 && c === top && c.kind === 'conv');
+      var row = document.createElement('div');
+      row.className = 'cand' + (isBest ? ' best' : '');
+
+      var hd = document.createElement('div');
+      hd.className = 'cand-hd';
+
+      var enc = document.createElement('span');
+      enc.className = 'enc';
+      enc.textContent = c.label;
+      hd.appendChild(enc);
+
+      if (isBest){
+        var tag = document.createElement('span');
+        tag.className = 'tag-best';
+        tag.textContent = fffdMid ? '最接近' : '最可能';
+        hd.appendChild(tag);
+      }
+      if (c.depth === 2){
+        var t2 = document.createElement('span');
+        t2.className = 'tag-best';
+        t2.textContent = '双重修复';
+        hd.appendChild(t2);
+      }
+      if (c.lossy){
+        var t3 = document.createElement('span');
+        t3.className = 'tag-warn';
+        t3.textContent = '部分还原';
+        hd.appendChild(t3);
+      }
+
+      var sc = document.createElement('span');
+      sc.className = 'score';
+      sc.textContent = '得分 ' + c.score.toFixed(1);
+      hd.appendChild(sc);
+
+      var right = document.createElement('span');
+      right.className = 'right';
+
+      if (c.kind !== 'id'){
+        var apply = document.createElement('button');
+        apply.type = 'button';
+        apply.className = 'mini';
+        apply.textContent = '用作输入';
+        apply.title = '把这段结果填回输入框，方便继续修';
+        apply.addEventListener('click', function(){
+          srcEl.value = c.text;
+          analyze();
+          toast('已填回输入框');
+        });
+        right.appendChild(apply);
+      }
+
+      var copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'mini';
+      copy.textContent = '复制';
+      copy.addEventListener('click', function(){ copyText(c.text); });
+      right.appendChild(copy);
+
+      hd.appendChild(right);
+      row.appendChild(hd);
+
+      var tx = document.createElement('div');
+      tx.className = 'cand-tx';
+      tx.textContent = preview(c.text);
+      row.appendChild(tx);
+
+      if (c.note){
+        var note = document.createElement('div');
+        note.className = 'cand-note';
+        note.textContent = c.note;
+        row.appendChild(note);
+      }
+
+      candsEl.appendChild(row);
+    });
+  }
+
+  /* 86 种编码全列出来太长（86 行 × 30px ≈ 2580px），默认只显示前 12 名，可展开全部 */
+  var tblRows = [], tblHintTxt = '', tblLimit = 12;
+
+  function renderTable(rows, hint){
+    tblRows = rows;
+    tblHintTxt = hint || '';
+    tblLimit = 12;
+    paintTable();
+  }
+
+  function paintTable(){
+    tblBox.textContent = '';
+    tblHintEl.textContent = tblHintTxt;
+    if (!tblRows.length){
+      tblBox.appendChild(emptyBox('没有可分析的字节序列。'));
+      return;
+    }
+    var show = tblRows.slice(0, tblLimit);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'tbl-wrap';
+    var tb = document.createElement('table');
+
+    var thead = document.createElement('thead');
+    var htr = document.createElement('tr');
+    ['编码', '语言', '解码结果', '得分'].forEach(function(h){
+      var th = document.createElement('th');
+      th.textContent = h;
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    tb.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    show.forEach(function(r){
+      var tr = document.createElement('tr');
+
+      var td1 = document.createElement('td');
+      td1.className = 'enc';
+      td1.textContent = r.name;
+      tr.appendChild(td1);
+
+      var tdg = document.createElement('td');
+      tdg.className = 'grp';
+      tdg.textContent = r.group || '';
+      tr.appendChild(tdg);
+
+      var td2 = document.createElement('td');
+      td2.className = 'tx' + (r.ok ? '' : ' no');
+      td2.textContent = r.ok ? preview(r.text || '（空）') : '不是合法的 ' + r.name + ' 字节序列';
+      tr.appendChild(td2);
+
+      var td3 = document.createElement('td');
+      td3.className = 'sc';
+      td3.textContent = r.ok ? r.score.toFixed(1) : '—';
+      tr.appendChild(td3);
+
+      tbody.appendChild(tr);
+    });
+    tb.appendChild(tbody);
+    wrap.appendChild(tb);
+    tblBox.appendChild(wrap);
+
+    if (tblRows.length > 12){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mini';
+      btn.style.marginTop = '8px';
+      btn.textContent = tblLimit >= tblRows.length
+        ? '只看前 12 种'
+        : '显示全部 ' + tblRows.length + ' 种';
+      btn.addEventListener('click', function(){
+        tblLimit = (tblLimit >= tblRows.length) ? 12 : tblRows.length;
+        paintTable();
+      });
+      tblBox.appendChild(btn);
+    }
+  }
+
+  /* ===== 复制 ===== */
+  function copyText(t){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toast('已复制'); }, function(){ fallbackCopy(t); });
+    } else {
+      fallbackCopy(t);
+    }
+  }
+  function fallbackCopy(t){
+    var ta = document.createElement('textarea');
+    ta.value = t;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    toast(ok ? '已复制' : '复制失败，请手动选择');
+  }
+
+  /* ===== 主流程 ===== */
+  function analyze(){
+    var raw = srcEl.value;
+    var mode = modeEl.value;
+    var n = raw.length;
+
+    if (!raw.trim()){
+      statEl.textContent = '0 字';
+      capEl.textContent = '';
+      candsEl.textContent = '';
+      candsEl.appendChild(emptyBox('粘贴乱码文本后，这里会列出能还原它的方案。'));
+      candHintEl.textContent = '按可能性排序';
+      renderTable([], '');
+      return;
+    }
+
+    if (mode === 'hex'){
+      var bytes = parseHex(raw);
+      if (!bytes){
+        statEl.textContent = n + ' 字符';
+        capEl.textContent = '';
+        candsEl.textContent = '';
+        candsEl.appendChild(emptyBox('十六进制格式不对：需要偶数个十六进制字符，可以带空格、逗号、冒号或 0x 前缀。', 'warn'));
+        candHintEl.textContent = '格式错误';
+        renderTable([], '');
+        return;
+      }
+      statEl.textContent = bytes.length + ' 字节';
+      capEl.textContent = '';
+      var cl = candidatesFromBytes(bytes);
+      renderCands(cl, 0);
+      renderTable(tableFromBytes(bytes), '同一份字节按各编码解码的结果');
+      return;
+    }
+
+    /* 文本模式 */
+    var truncated = n > MAX_CHARS;
+    var work = truncated ? raw.slice(0, MAX_CHARS) : raw;
+    statEl.textContent = n + ' 字';
+    capEl.textContent = truncated ? '超过 ' + MAX_CHARS + ' 字，只分析前 ' + MAX_CHARS + ' 字' : '';
+
+    /* 含替换符：少量且只在末尾属「末尾孤字节」的常见形态，仍可高置信部分还原；
+       出现在**中段**说明字节是真的丢过（后续 UTF-8 序列全被打断），只能给猜测；
+       大量（超过 40%）说明整段都丢过，再猜就是造数据了，直接明说。 */
+    var fffdN = 0, fffdMid = 0, fi;
+    for (fi = 0; fi < work.length; fi++){
+      if (work.charCodeAt(fi) === 0xFFFD){
+        fffdN++;
+        if (fi < work.length - 2) fffdMid++;
+      }
+    }
+    if (fffdN && fffdN / work.length > 0.4){
+      candsEl.textContent = '';
+      candsEl.appendChild(emptyBox('输入里有 ' + fffdN + ' 个替换符 �（U+FFFD），占全文 ' + Math.round(fffdN / work.length * 100) + '%：绝大部分原始字节已经在解码时丢失，任何算法都还原不了。请改用「十六进制字节」模式粘贴原始字节，或回到源头用正确编码重新导出。', 'warn'));
+      candHintEl.textContent = '原始字节已丢失';
+      renderTable([], '');
+      return;
+    }
+
+    var list = candidatesFromText(work);
+    renderCands(list, fffdN, fffdMid);
+
+    var topConv = list.filter(function(c){ return c.kind === 'conv'; }).sort(sortByScore)[0];
+    if (topConv && topConv.bytes){
+      renderTable(tableFromBytes(topConv.bytes), '按「' + topConv.srcName + '」取回的字节，各编码解码对照');
+    } else {
+      renderTable([], '没有可用的字节序列');
+    }
+  }
+
+  var timer = null;
+  function schedule(){
+    clearTimeout(timer);
+    timer = setTimeout(analyze, 160);
+  }
+
+  /* ===== 示例样本 =====
+     ★★ 这几条必须是**真乱码**：拿原文的真实字节按另一种编码解出来的结果，不能手敲。
+     之前这里手敲成 `ä½ å¥½`（中间是普通空格 U+0020），而正确的字节是 0xA0（NBSP），
+     于是 E4 BD 20 E5 A5 BD 根本不是合法 UTF-8 —— 示例自己就解不出来。
+     以后要加样本，用 `new TextDecoder(enc).decode(new TextEncoder().encode(原文))` 现生成。
+     这几条都选**字节长度能整除、无损**的，点下去就能看到干净的完整还原。 */
+  var SAMPLE_TEXT = [
+    '浣犲ソ锛屼笘鐣岋紒',                        /* 你好，世界！ UTF-8 被当 GBK 读 */
+    'ä½\u00A0å¥½ï¼Œä¸–ç•Œ',                     /* 你好，世界  UTF-8 被当 Windows-1252 读 */
+    'cafÃ© crÃ¨me'                               /* café crème 西文最常见的乱码形态 */
+  ];
+  var SAMPLE_HEX = [
+    'E4BDA0E5A5BD EFBC8C E4B896E7958C',        /* 你好，世界（UTF-8） */
+    'C4E3BAC3'                                   /* 你好（GBK） */
+  ];
+  var sampleIdx = 0;
+
+  /* ===== 事件 ===== */
+  srcEl.addEventListener('input', schedule);
+  modeEl.addEventListener('change', function(){
+    srcEl.placeholder = modeEl.value === 'hex'
+      ? '粘贴十六进制字节，例如：E4BDA0E5A5BD 或 e4 bd a0 e5 a5 bd'
+      : '粘贴乱码文本，例如：\n浣犲ソ锛屼笘鐣岋紒\nä½\u00A0å¥½ï¼Œä¸–ç•Œ';
+    analyze();
+    srcEl.focus();
+  });
+
+  $('btnClear').addEventListener('click', function(){
+    srcEl.value = '';
+    analyze();
+    srcEl.focus();
+  });
+
+  $('btnSample').addEventListener('click', function(){
+    var list = modeEl.value === 'hex' ? SAMPLE_HEX : SAMPLE_TEXT;
+    srcEl.value = list[sampleIdx % list.length];
+    sampleIdx++;
+    analyze();
+    toast('已填入示例，再点一次换一个');
+  });
+
+  /* ===== 能力探测：某些浏览器可能缺某个解码器，缺了就不该出现在结果里 ===== */
+  (function(){
+    var ok = ENCS.filter(function(e){ return decodeAs(new Uint8Array([0x41]), e.id, false) != null; });
+    $('encN').textContent = String(ok.length);
+    if (ok.length < ENCS.length){
+      var miss = ENCS.filter(function(e){ return ok.indexOf(e) < 0; }).map(function(e){ return e.name; });
+      capEl.textContent = '当前浏览器不支持：' + miss.join('、');
+    }
+  })();
+
+  analyze();
+
+  /* 调试钩子：/tmp/verify-*.js 回归脚本依赖（byId / enc / dec / cand）。
+     不参与页面任何逻辑，删掉它只会让四套验证脚本跑不起来。 */
+  window.__dbg = { byId: ENC_BY_ID, enc: encodeAs, dec: decodeAs, cand: candidatesFromText };
+})();
+</script>
+</body>
+</html>
