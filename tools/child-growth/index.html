@@ -39,6 +39,10 @@
     --band-out: rgba(178,94,9,.20);
     --band-in: rgba(13,122,82,.13);
     --band-mid: rgba(13,122,82,.30);
+    /* 生长曲线的参考线（P50 主线 / P3·P97 虚线 / P25·P75 辅助线），与百分位带同色系 */
+    --gc-ref: rgba(13,122,82,.85);
+    --gc-ref-2: rgba(13,122,82,.55);
+    --gc-ref-3: rgba(13,122,82,.25);
     /* 性别领域色：选中态区分男孩/女孩（同 ssq 的 ball-red/ball-blue，只在这里定义） */
     --sex-male: #4f6bed;      --sex-male-soft: rgba(79,107,237,.11);
     --sex-female: #c2317f;    --sex-female-soft: rgba(194,49,127,.10);
@@ -173,6 +177,62 @@
   .interp.t-alert{background:var(--t-alert-bg);border-color:var(--t-alert);color:var(--t-alert)}
   .na{font-size:12.5px;color:var(--text-2);background:var(--panel-2);border-radius:8px;padding:10px 12px}
 
+  /* ===== 生长曲线 ===== */
+  .gc-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+  .gc-tabs button{
+    font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;
+    border:1px solid var(--border-2);background:var(--panel-2);color:var(--text-2);
+    cursor:pointer;font-family:inherit;transition:.15s;
+  }
+  .gc-tabs button:hover{border-color:var(--accent);color:var(--accent)}
+  .gc-tabs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .gc-svg{display:block;width:100%;height:auto;margin-top:2px}
+  .gc-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text-3);margin-top:8px}
+  .gc-legend span{display:flex;align-items:center;gap:5px}
+  .gc-legend i{display:inline-block;width:14px;height:3px;border-radius:2px}
+  .gc-legend i.dot{width:8px;height:8px;border-radius:50%}
+  .gc-note{font-size:11.5px;color:var(--text-3);margin-top:8px;line-height:1.55}
+  .gc-tools .clear{margin-left:0;font-size:11.5px;color:var(--err);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:inherit;border-radius:6px;white-space:nowrap}
+  .gc-tools .clear.armed{color:#fff;background:var(--err)}
+  .gc-tools .clear:disabled{opacity:.38;cursor:not-allowed}
+  .gc-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 6px;border-radius:6px;cursor:pointer}
+  .gc-row:hover{background:var(--hover)}
+  .gc-row .d{color:var(--text-2);font-variant-numeric:tabular-nums;min-width:86px}
+  .gc-row .v{color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .gc-row .v em{font-style:normal;color:var(--text-3);font-size:11px;margin-right:2px}
+  .gc-row .del{margin-left:auto;border:none;background:none;color:var(--text-3);cursor:pointer;font-family:inherit;font-size:11.5px;padding:2px 5px}
+  .gc-row .del:hover{color:var(--err)}
+  .gc-empty{font-size:12px;color:var(--text-3);padding:4px 2px}
+
+  /* 历史工具栏：快速输入 / 导入 / 导出 / 清空 */
+  .gc-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 0 6px}
+  .gc-tool{
+    font-size:11.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border-2);
+    background:var(--panel);color:var(--text-2);cursor:pointer;font-family:inherit;white-space:nowrap;
+  }
+  .gc-tool:hover{border-color:var(--accent);color:var(--accent)}
+  .gc-tool.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .gc-tool:disabled{opacity:.38;cursor:not-allowed;border-color:var(--border-2);color:var(--text-3)}
+  .gc-tool:disabled:hover{border-color:var(--border-2);color:var(--text-3)}
+  .gc-quick{display:none;margin:9px 0 3px}
+  .gc-quick.on{display:block}
+  .gc-quick textarea{
+    width:100%;min-height:86px;font:12px/1.65 var(--mono);padding:9px 10px;border-radius:8px;
+    border:1px solid var(--border-2);background:var(--panel-2);color:var(--text);resize:vertical;
+  }
+  .gc-quick textarea:focus{outline:none;border-color:var(--accent);background:var(--panel);box-shadow:0 0 0 3px var(--accent-soft)}
+  .gc-quick .row{display:flex;gap:8px;align-items:center;margin-top:7px;flex-wrap:wrap}
+  .gc-quick .row .hint{margin:0}
+  .gc-quick .go{
+    font-size:12px;font-weight:700;padding:6px 14px;border-radius:8px;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;
+  }
+  .gc-msg{font-size:11.5px;color:var(--text-3);margin:2px 0 4px}
+  .gc-msg:empty{display:none}
+  .gc-msg.ok{color:var(--ok)}
+  .gc-msg.err{color:var(--err)}
+  .gc-hint2{font-size:11px;color:var(--text-3);margin-top:7px;line-height:1.55}
+
   /* ===== 页脚 ===== */
   footer.foot{font-size:11.5px;color:var(--text-3);line-height:1.65;padding-bottom:2px}
   footer.foot .src{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;color:var(--text-2)}
@@ -263,7 +323,7 @@
       <label class="lbl" for="headc">头围（cm）· <span style="color:var(--accent)">选填</span>，仅 0–3 岁适用</label>
       <input type="number" id="headc" inputmode="decimal" step="0.1" min="25" max="60" placeholder="选填，如 46.5">
     </div>
-    <div class="hint">📏 未满 2 岁量卧位<b>身长</b>，2 岁及以上量立位<b>身高</b>；头围选填（0–3 岁）；测量日期默认今天。<br>性别与出生日期会记在本机浏览器里，下次打开自动填好；身高、体重、头围每次都需重新输入。</div>
+    <div class="hint">📏 未满 2 岁量卧位<b>身长</b>，2 岁及以上量立位<b>身高</b>；头围选填（0–3 岁）；测量日期默认今天。<br>性别与出生日期会记在本机浏览器里，下次打开自动填好；点<b>「开始评价」</b>会把这次测量存进本机历史，用来画生长曲线。</div>
     <button class="btn" id="go">开始评价</button>
     <div class="err" id="err"></div>
   </section>
@@ -292,6 +352,9 @@
     <div id="warnHolder"></div>
     <div id="cards"></div>
   </div>
+
+  <!-- 历史记录独立成卡：不放在 #results 里，否则新设备（表单还空着）就点不到「导入」 -->
+  <div id="histHold"></div>
 
   <footer class="foot">
     <div class="src">
@@ -448,12 +511,20 @@ function metricCard(cfg){
 
 /* ---------- main compute ---------- */
 let SEX=null;
-function compute(){
+let CURRENT=null;                 /* 本次表单里的测量值：画曲线时与历史合并（同一天以表单为准） */
+function compute(persist, quiet){
+  persist = persist !== false;    /* 默认存历史；内部重绘（切指标/删记录）传 false，避免把刚删的记录又存回去 */
+  if(quiet===undefined) quiet = !persist;   /* 只有「开始评价」才弹红色校验提示，边打字边重绘时静默 */
   const err=document.getElementById('err'); err.style.display='none';
   const bV=document.getElementById('birth').value, mV=document.getElementById('meas').value;
   const H=parseFloat(document.getElementById('height').value);
   const W=parseFloat(document.getElementById('weight').value);
-  function fail(m){ err.textContent=m; err.style.display='block'; document.getElementById('results').style.display='none'; }
+  /* 表单不完整时结果区会藏起来，但历史卡（含导入/备份提示）要照样更新 */
+  function fail(m){
+    if(!quiet){ err.textContent=m; err.style.display='block'; }
+    document.getElementById('results').style.display='none';
+    renderHistory();
+  }
   if(!SEX) return fail('请选择性别。');
   if(!bV) return fail('请填写出生日期。');
   if(!mV) return fail('请填写测量日期。');
@@ -546,8 +617,13 @@ function compute(){
       pctRow:pctRefRow(A.headCirc[SEX],agesHC,mo)}));
   })();
 
+  /* 本次测量：先记到本机历史（同一天覆盖），再画生长曲线 */
+  CURRENT={ d:mV, h:Math.round(H*10)/10, w:Math.round(W*100)/100, hc:HC>0?Math.round(HC*10)/10:0 };
+  if(persist) cgHist.save(CURRENT);
+  cards.push(growthCurveCard());
   document.getElementById('cards').innerHTML = cards.join('');
   document.getElementById('results').style.display='block';
+  renderHistory();          /* 历史卡在 #results 之外，保存之后单独刷新 */
 }
 
 /* ---------- 记住性别与出生日期（仅本地缓存，不上传） ---------- */
@@ -557,19 +633,495 @@ const cgPrefs={
   write(patch){ try{ const cur=cgPrefs.read()||{}; Object.assign(cur,patch); localStorage.setItem(CG_PREF_KEY,JSON.stringify(cur)); }catch(e){ /* 无痕模式等场景静默降级 */ } }
 };
 
+/* ---------- 生长曲线 ---------- */
+const GC_METRICS = [
+  { id:'h',   name:'身高 / 身长', unit:'cm',    dp:1, table:'heightForAge', maxAge:84,
+    get:r=> (r.h>0 ? r.h : null) },
+  { id:'w',   name:'体重',        unit:'kg',    dp:2, table:'weightForAge', maxAge:84,
+    get:r=> (r.w>0 ? r.w : null) },
+  { id:'bmi', name:'BMI',         unit:'kg/m²', dp:1, table:'bmiForAge',    maxAge:84,
+    get:r=> (r.h>0 && r.w>0 ? r.w/Math.pow(r.h/100,2) : null) },
+  { id:'hc',  name:'头围',        unit:'cm',    dp:1, table:'headCirc',     maxAge:36,
+    get:r=> (r.hc>0 ? r.hc : null) }
+];
+let GC_ACTIVE='h';
+let gcClearArmed=false, gcClearTimer=null;
+
+/* 历史记录：按「出生日期|性别」隔离，只存本机。同一天只保留一条（以最后一次评价为准）。 */
+const CG_HIST_KEY='child-growth:hist:v1';
+const cgHist={
+  all(){ try{ return JSON.parse(localStorage.getItem(CG_HIST_KEY))||{}; }catch(e){ return {}; } },
+  childKey(){ return (document.getElementById('birth').value||'')+'|'+(SEX||''); },
+  list(){
+    const rows=this.all()[this.childKey()]||[];
+    return rows.slice().sort((a,b)=> a.d<b.d?-1:1);
+  },
+  save(rec){
+    try{
+      const all=this.all(), k=this.childKey();
+      const rows=(all[k]||[]).filter(r=>r.d!==rec.d);
+      rows.push(rec); rows.sort((a,b)=> a.d<b.d?-1:1);
+      all[k]=rows.slice(-120);                 /* 单个孩子最多留 120 条（10 年月度记录也够） */
+      localStorage.setItem(CG_HIST_KEY, JSON.stringify(all));
+    }catch(e){ /* 无痕模式等场景静默降级 */ }
+  },
+  remove(d){
+    try{
+      const all=this.all(), k=this.childKey();
+      all[k]=(all[k]||[]).filter(r=>r.d!==d);
+      localStorage.setItem(CG_HIST_KEY, JSON.stringify(all));
+    }catch(e){}
+  },
+  clear(){
+    try{ const all=this.all(), k=this.childKey(); delete all[k]; localStorage.setItem(CG_HIST_KEY, JSON.stringify(all)); }catch(e){}
+  },
+  replace(rows){
+    try{ const all=this.all(), k=this.childKey(); all[k]=rows.slice(-120); localStorage.setItem(CG_HIST_KEY, JSON.stringify(all)); }catch(e){}
+  }
+};
+
+/* ---------- 导入 / 导出 / 快速输入 ---------- */
+let gcQuickOpen=false, gcQuickText='';
+let gcFlash={t:'',cls:''}, gcFlashTimer=null;
+function gcMsg(t,cls){
+  gcFlash={t:t,cls:cls||''};
+  clearTimeout(gcFlashTimer);
+  gcFlashTimer=setTimeout(function(){
+    gcFlash={t:'',cls:''};
+    /* 正在快速输入框里打字时不要重绘，否则光标会跳 */
+    if(document.activeElement&&document.activeElement.id==='gcQuickTa') return;
+    renderHistory();
+  }, 5000);
+}
+function gcParseDate(s){
+  s=String(s||'').trim();
+  let m=s.match(/^(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
+  if(m) return m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  return null;
+}
+function gcValidRec(r){
+  if(!r.d) return false;
+  if(gcAgeOf(r.d)==null) return false;            /* 早于出生日期 / 非法日期 */
+  if(r.h && (r.h<30||r.h>150)) return false;
+  if(r.w && (r.w<1||r.w>60)) return false;
+  if(r.hc && (r.hc<25||r.hc>60)) return false;
+  return !!(r.h||r.w||r.hc);
+}
+function gcNum(v){ v=String(v==null?'':v).trim().replace(/^["']|["']$/g,''); if(!v||v==='-'||v==='—') return 0; const n=parseFloat(v); return isFinite(n)?n:0; }
+/* 通用行解析：CSV 与快速输入共用。每行「日期 身高 体重 头围」，分隔符任意 */
+function gcParseRows(text){
+  const out=[];
+  String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/).forEach(function(line){
+    line=line.trim(); if(!line) return;
+    const p=line.split(/[\s,，;；\t]+/)
+      .map(function(x){ return x.replace(/^["']+|["']+$/g,''); })   /* 去掉 Excel 导出常带的引号 */
+      .filter(function(x){ return x!==''; });
+    if(!p.length) return;
+    /* 跳过表头。注意要在去引号之后判断：Excel 存出来是 "日期","身高(cm)"；
+       也不能用 \b —— 汉字与空格在正则里都不是 \w，\b 不成立 */
+    if(/^(日期|date)$/i.test(p[0])) return;
+    out.push({ d:gcParseDate(p[0]), h:gcNum(p[1]), w:gcNum(p[2]), hc:gcNum(p[3]) });
+  });
+  return out;
+}
+function gcMerge(inRecs){
+  let bad=0;
+  const clean=[];
+  (inRecs||[]).forEach(function(r){
+    const rec={ d:gcParseDate(r.d||r.date||''), h:gcNum(r.h), w:gcNum(r.w), hc:gcNum(r.hc) };
+    if(gcValidRec(rec)) clean.push(rec); else bad++;
+  });
+  const map=Object.create(null);
+  cgHist.list().forEach(function(r){ map[r.d]=r; });
+  let added=0, updated=0;
+  clean.forEach(function(r){ if(map[r.d]) updated++; else added++; map[r.d]=r; });
+  const rows=Object.keys(map).sort().map(function(k){ return map[k]; }).slice(-120);
+  cgHist.replace(rows);
+  return { added:added, updated:updated, bad:bad, total:rows.length };
+}
+function gcDownload(name, text, mime){
+  const blob=new Blob([text],{type:mime||'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  /* 移动端 Safari 立刻 revoke 会把下载掐掉，留几秒 */
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },4000);
+}
+function gcStamp(){ const d=new Date(),p=function(n){return String(n).padStart(2,'0');}; return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
+function gcExportCsv(){
+  const list=cgHist.list();
+  if(!list.length){ gcMsg('还没有可导出的记录','err'); renderHistory(); return; }
+  const rows=[['日期','身高(cm)','体重(kg)','头围(cm)']];
+  list.forEach(function(r){ rows.push([r.d, r.h||'', r.w||'', r.hc||'']); });
+  /* BOM：让 Excel 直接按 UTF-8 打开，中文表头不乱码 */
+  gcDownload('child-growth-'+gcStamp()+'.csv', '\uFEFF'+rows.map(function(r){return r.join(',');}).join('\r\n'), 'text/csv;charset=utf-8');
+  gcMsg('已导出 '+list.length+' 条 CSV','ok'); renderHistory();
+}
+function gcExportJson(){
+  const list=cgHist.list();
+  if(!list.length){ gcMsg('还没有可备份的记录','err'); renderHistory(); return; }
+  const obj={ app:'child-growth', version:1,
+    child:{ birth:document.getElementById('birth').value, sex:SEX },
+    exportedAt:new Date().toISOString(), records:list };
+  gcDownload('child-growth-backup-'+gcStamp()+'.json', JSON.stringify(obj,null,2), 'application/json;charset=utf-8');
+  gcMsg('已备份 '+list.length+' 条（含出生日期与性别）','ok'); renderHistory();
+}
+async function gcImportFile(file){
+  try{
+    const text=(await file.text()).replace(/^\uFEFF/,'');   /* Excel 另存的 CSV 带 BOM */
+    let recs=[], child=null;
+    if(/\.json$/i.test(file.name)||/^\s*[\[{]/.test(text)){
+      const obj=JSON.parse(text);
+      if(Array.isArray(obj)) recs=obj;
+      else { recs=obj.records||obj.data||[]; child=obj.child||null; }
+    }else{
+      recs=gcParseRows(text);
+    }
+    /* 备份文件自带孩子身份：换设备恢复时直接切过去 */
+    if(child&&child.birth){
+      document.getElementById('birth').value=child.birth;
+      cgPrefs.write({birth:child.birth});
+    }
+    if(child&&(child.sex==='male'||child.sex==='female')){
+      SEX=child.sex; cgPrefs.write({sex:SEX});
+      document.querySelectorAll('#sexSeg button').forEach(function(b){ b.classList.toggle('on',b.dataset.sex===SEX); });
+    }
+    if(!document.getElementById('birth').value){
+      gcMsg('请先填出生日期再导入——CSV 里没有出生日期，JSON 备份会自动带回来','err');
+      renderHistory(); return;
+    }
+    const res=gcMerge(recs);
+    if(!res.added&&!res.updated){
+      gcMsg(res.bad?('这些记录都没能识别：日期要在出生日期之后，数值要在合理范围内'):'文件里没有可识别的记录','err');
+      renderHistory(); return;
+    }
+    let m='已导入 '+res.added+' 条';
+    if(res.updated) m+='，覆盖 '+res.updated+' 条';
+    if(res.bad) m+='，跳过 '+res.bad+' 行（日期或数值不对）';
+    gcMsg(m,'ok');
+    gcMaybeLoadLatest();
+    compute(false);
+  }catch(e){ gcMsg('导入失败：文件格式不认识','err'); renderHistory(); }
+}
+/* 换设备恢复后表单是空的：把最新一条载入，曲线立刻可见 */
+function gcMaybeLoadLatest(){
+  const hV=parseFloat(document.getElementById('height').value);
+  const wV=parseFloat(document.getElementById('weight').value);
+  if(hV>0&&wV>0) return;
+  const list=cgHist.list(); if(!list.length) return;
+  const last=list[list.length-1];
+  document.getElementById('meas').value=last.d;
+  if(last.h>0) document.getElementById('height').value=last.h;
+  if(last.w>0) document.getElementById('weight').value=last.w;
+  document.getElementById('headc').value=last.hc>0?last.hc:'';
+}
+/* 快速输入：贴几行文本批量入库 */
+function gcApplyQuick(){
+  const ta=document.getElementById('gcQuickTa');
+  if(ta) gcQuickText=ta.value;
+  if(!document.getElementById('birth').value){
+    gcMsg('请先在上面填好出生日期——记录要按年龄才能画到曲线图上','err'); renderHistory(); return;
+  }
+  if(!gcQuickText.trim()){ gcMsg('先贴上几行记录，或点「开始评价」逐条录','err'); renderHistory(); return; }
+  const res=gcMerge(gcParseRows(gcQuickText));
+  if(!res.added&&!res.updated){
+    gcMsg(res.bad?('这 '+res.bad+' 行都没认出来：日期要在出生日期之后，写法如 2024-06-15'):'没有可识别的记录','err');
+    renderHistory(); return;
+  }
+  let m='已导入 '+res.added+' 条';
+  if(res.updated) m+='，覆盖 '+res.updated+' 条';
+  if(res.bad) m+='，跳过 '+res.bad+' 行（日期或数值不对）';
+  gcQuickText=''; gcQuickOpen=false;      /* 成功后收起，避免同一批被重复提交 */
+  gcMaybeLoadLatest();
+  gcMsg(m,'ok');
+  compute(false);
+}
+
+function gcEsc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function gcAgeOf(dateStr){
+  const b=document.getElementById('birth').value;
+  if(!b||!dateStr) return null;
+  const d=new Date(b+'T00:00:00'), m=new Date(dateStr+'T00:00:00');
+  if(isNaN(d)||isNaN(m)||m<d) return null;
+  return ageMonths(d,m);
+}
+function gcNiceStep(span, target){
+  const raw=span/Math.max(1,target);
+  const p=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10));
+  const n=raw/p;
+  return (n<1.5?1:n<3?2:n<7?5:10)*p;
+}
+
+/* 当前指标的点位：历史 + 表单里的本次测量（同日以表单为准） */
+function gcPoints(m){
+  const recs=cgHist.list().filter(r=>r.d!==(CURRENT&&CURRENT.d));
+  if(CURRENT) recs.push(CURRENT);
+  const pts=[]; let clamped=false;
+  recs.forEach(function(rec){
+    const v=m.get(rec);
+    if(!(v>0)) return;
+    let a=gcAgeOf(rec.d);
+    if(a==null) return;
+    if(a>m.maxAge){ a=m.maxAge; clamped=true; }
+    pts.push({a:a, v:v, d:rec.d});
+  });
+  pts.sort((x,y)=> x.a-y.a);
+  return {pts, clamped};
+}
+
+function gcChartSvg(m){
+  const axis = m.id==='hc' ? DATA.ageMonthsHC : DATA.ageMonths;
+  const rows = DATA.pct[m.table][SEX];
+  const maxAge = m.maxAge;
+  const ref=[];
+  for(let i=0;i<axis.length;i++) if(axis[i]<=maxAge) ref.push({a:axis[i], r:rows[i]});
+  const end=ref[ref.length-1];
+
+  const got=gcPoints(m), pts=got.pts;
+
+  let lo=Infinity, hi=-Infinity;
+  ref.forEach(p=>{ lo=Math.min(lo,p.r[0]); hi=Math.max(hi,p.r[6]); });
+  pts.forEach(p=>{ lo=Math.min(lo,p.v); hi=Math.max(hi,p.v); });
+  if(!isFinite(lo)){ lo=0; hi=1; }
+  const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+
+  const W=680,H=250,ml=42,mr=20,mt=12,mb=32;
+  const x=a=> ml+(a/maxAge)*(W-ml-mr);
+  const y=v=> mt+(1-(v-lo)/(hi-lo))*(H-mt-mb);
+
+  /* 网格与刻度 */
+  const ystep=gcNiceStep(hi-lo,5);
+  let grid='', ylab='';
+  for(let v=Math.ceil(lo/ystep)*ystep; v<=hi+1e-9; v+=ystep){
+    const yy=y(v).toFixed(1);
+    grid+=`<line x1="${ml}" y1="${yy}" x2="${W-mr}" y2="${yy}" style="stroke:var(--border)" stroke-width="1"/>`;
+    ylab+=`<text x="${ml-7}" y="${(+yy+3.4).toFixed(1)}" text-anchor="end" font-size="10" style="fill:var(--text-3)">${+v.toFixed(2)}</text>`;
+  }
+  let xgrid='', xlab='';
+  const stepA = maxAge<=36?6:12;
+  for(let a=0;a<=maxAge;a+=stepA){
+    const xx=x(a).toFixed(1);
+    xgrid+=`<line x1="${xx}" y1="${mt}" x2="${xx}" y2="${H-mb}" style="stroke:var(--border)" stroke-width="1" opacity=".5"/>`;
+    const t = maxAge<=36 ? (a===0?'0':(a%12===0?(a/12)+'岁':a+'月')) : (a===0?'0':(a/12)+'岁');
+    xlab+=`<text x="${xx}" y="${H-mb+15}" text-anchor="middle" font-size="10" style="fill:var(--text-3)">${t}</text>`;
+  }
+
+  /* 百分位带：P3–P97 外层、P25–P75 内层 */
+  function band(i0,i1){
+    let top='', bot='';
+    ref.forEach(p=>{ top+=x(p.a).toFixed(1)+','+y(p.r[i1]).toFixed(1)+' '; });
+    for(let k=ref.length-1;k>=0;k--) bot+=x(ref[k].a).toFixed(1)+','+y(ref[k].r[i0]).toFixed(1)+' ';
+    return top+bot;
+  }
+  function refline(i, stroke, dash, w){
+    let d='';
+    ref.forEach((p,k)=>{ d+=(k?'L':'M')+x(p.a).toFixed(1)+','+y(p.r[i]).toFixed(1); });
+    return `<path d="${d}" fill="none" style="stroke:${stroke}" stroke-width="${w}" ${dash?'stroke-dasharray="5 4"':''} stroke-linejoin="round"/>`;
+  }
+
+  /* 孩子的点与趋势线 */
+  let child='';
+  if(pts.length){
+    if(pts.length>1){
+      let d='';
+      pts.forEach((p,k)=>{ d+=(k?'L':'M')+x(p.a).toFixed(1)+','+y(p.v).toFixed(1); });
+      child+=`<path d="${d}" fill="none" style="stroke:var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    pts.forEach(p=>{
+      child+=`<circle cx="${x(p.a).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3.8" style="fill:var(--accent);stroke:var(--panel)" stroke-width="1.6"><title>${gcEsc(p.d)} · ${p.v.toFixed(m.dp)} ${m.unit}</title></circle>`;
+    });
+    const last=pts[pts.length-1];
+    const right=x(last.a)>W-140;
+    const tx=(right? x(last.a)-9 : x(last.a)+9).toFixed(1);
+    const ty=Math.max(mt+11, y(last.v)-9).toFixed(1);
+    child+=`<text x="${tx}" y="${ty}" text-anchor="${right?'end':'start'}" font-size="11" font-weight="700" style="fill:var(--accent)">${last.v.toFixed(m.dp)} ${m.unit}</text>`;
+  }
+
+  /* 参考线右端标签：压在线上，加一圈底色描边（paint-order）才看得清 */
+  const labAt=(i,t)=>`<text x="${(x(end.a)-2).toFixed(1)}" y="${(y(end.r[i])+3.2).toFixed(1)}" text-anchor="end" font-size="9.5" style="fill:var(--gc-ref-2);paint-order:stroke;stroke:var(--panel);stroke-width:2.6;stroke-linejoin:round">${t}</text>`;
+
+  return `<svg class="gc-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.name}生长曲线">
+    <polygon points="${band(0,6)}" style="fill:var(--band-in)"/>
+    <polygon points="${band(2,4)}" style="fill:var(--band-mid)"/>
+    ${xgrid}${grid}${ylab}${xlab}
+    ${refline(0,'var(--gc-ref-2)',true,1.2)}
+    ${refline(2,'var(--gc-ref-3)',false,1)}
+    ${refline(3,'var(--gc-ref)',false,1.6)}
+    ${refline(4,'var(--gc-ref-3)',false,1)}
+    ${refline(6,'var(--gc-ref-2)',true,1.2)}
+    ${labAt(6,'P97')}${labAt(3,'P50')}${labAt(0,'P3')}
+    ${child}
+  </svg>`;
+}
+
+function growthCurveCard(){
+  const m=GC_METRICS.find(x=>x.id===GC_ACTIVE)||GC_METRICS[0];
+  const got=gcPoints(m);          /* 历史 + 本次测量（同日以表单为准） */
+  const has=got.pts.length>0;
+
+  const tabs=GC_METRICS.map(x=>`<button type="button" data-gc-m="${x.id}" class="${x.id===m.id?'on':''}">${x.name}</button>`).join('');
+
+  let note='参考曲线为同性别、同年龄儿童的 P3–P97 百分位（WS/T 423—2022），数据覆盖 0～6 岁 9 个月。';
+  if(m.id==='hc') note='头围参考曲线仅适用 0–3 岁（WS/T 423—2022）。';
+  if(got.clamped) note+=' 有记录超出图表年龄范围，已按边界显示。';
+
+  return `<div class="card metric" id="gcCard">
+    <div class="m-head"><span class="m-name">生长曲线</span><span class="hint">孩子的趋势 vs 同龄人 · 点「开始评价」保存本次</span></div>
+    <div class="gc-tabs">${tabs}</div>
+    ${has? gcChartSvg(m) : `<div class="na">当前还没有${m.name}的记录，填入测量值后即可看到曲线。</div>`}
+    <div class="gc-legend">
+      <span><i style="background:var(--band-in)"></i>P3–P97</span>
+      <span><i style="background:var(--band-mid)"></i>P25–P75</span>
+      <span><i style="background:var(--gc-ref)"></i>P50 中位</span>
+      <span><i class="dot" style="background:var(--accent)"></i>孩子测量值</span>
+    </div>
+    <div class="gc-note">${note}</div>
+  </div>`;
+}
+
+/* 历史记录 + 数据管理：独立成卡，永远可见（新设备也能导入） */
+function historyCard(){
+  const stored=cgHist.list();
+  const rows=stored.slice().reverse().map(function(r){
+    const vs=[];
+    if(r.h>0) vs.push(`<span class="v"><em>高</em>${Number(r.h).toFixed(1)}</span>`);
+    if(r.w>0) vs.push(`<span class="v"><em>重</em>${Number(r.w).toFixed(2)}</span>`);
+    if(r.hc>0) vs.push(`<span class="v"><em>头</em>${Number(r.hc).toFixed(1)}</span>`);
+    return `<div class="gc-row" data-hist-load="${gcEsc(r.d)}" title="点击载入这一天">
+      <span class="d">${gcEsc(r.d)}</span>${vs.join('')}
+      <button type="button" class="del" data-hist-del="${gcEsc(r.d)}">删除</button></div>`;
+  }).join('');
+  const hist = stored.length
+    ? `${rows}`
+    : `<div class="gc-empty">还没有保存的记录。点「开始评价」会把当前这次测量存下来；也可以直接用上面的「快速输入」一次贴入多天，或「导入」以前备份的文件。</div>`;
+
+  return `<div class="card metric" id="histCard">
+    <div class="m-head"><span class="m-name">历史记录</span><span class="hint">${stored.length} 条 · 只存在这台设备</span></div>
+    <div class="gc-tools">
+      <button type="button" class="gc-tool${gcQuickOpen?' on':''}" data-gc-quick aria-expanded="${gcQuickOpen?'true':'false'}">快速输入</button>
+      <button type="button" class="gc-tool" data-gc-import>导入</button>
+      <button type="button" class="gc-tool" data-gc-csv${stored.length?'':' disabled'}>导出 CSV</button>
+      <button type="button" class="gc-tool" data-gc-json${stored.length?'':' disabled'}>备份 JSON</button>
+      <button type="button" class="clear${gcClearArmed?' armed':''}" data-hist-clear${stored.length?'':' disabled'}>${gcClearArmed?'确认清空':'清空'}</button>
+    </div>
+    <div class="gc-msg ${gcFlash.cls}">${gcEsc(gcFlash.t)}</div>
+    <div class="gc-quick${gcQuickOpen?' on':''}">
+      <textarea id="gcQuickTa" spellcheck="false" autocomplete="off" aria-label="快速输入：每行一条记录，日期 身高 体重 头围" placeholder="每行一条：日期 身高 体重 头围&#10;2024-06-15 105.2 17.1 50.5&#10;2024/9/15 108 18.3&#10;20240915 108 18.3 50.8">${gcEsc(gcQuickText)}</textarea>
+      <div class="row">
+        <button type="button" class="go" data-gc-quick-apply>导入这些记录</button>
+        <span class="hint">空格或逗号分隔，缺的项可以留空（如只有身高体重就写两个数）· ⌘/Ctrl+Enter 直接提交</span>
+      </div>
+    </div>
+    ${hist}
+    ${stored.length?`<div class="gc-hint2">这些记录只存在这台设备的浏览器里——清缓存、换设备或换浏览器都会丢。建议每隔一段时间点「备份 JSON」存一份到网盘/微信收藏；换设备时在新设备上点「导入」选中那个文件即可恢复，出生日期和性别也会一起带过来。</div>`:''}
+  </div>`;
+}
+function renderHistory(){
+  const el=document.getElementById('histHold');
+  if(el) el.innerHTML=historyCard();
+}
+/* 历史卡上的操作（删记录/清空/展开面板）后刷新：结果区开着就连曲线一起重画，
+   没开就只刷历史卡 —— 不调用 compute()，免得表单还空着时弹出「请填写…」的校验提示 */
+function gcRefresh(){
+  if(document.getElementById('results').style.display==='block') compute(false);
+  else renderHistory();
+}
+
 /* ---------- wire up ---------- */
 document.querySelectorAll('#sexSeg button').forEach(b=>{
   b.addEventListener('click',()=>{
     SEX=b.dataset.sex;
     document.querySelectorAll('#sexSeg button').forEach(x=>x.classList.toggle('on',x===b));
     cgPrefs.write({sex:SEX});
-    if(document.getElementById('results').style.display==='block') compute();
+    if(document.getElementById('results').style.display==='block') compute(false);
+  });
+});document.getElementById('go').addEventListener('click',()=>{ compute();
+  const r=document.getElementById('results'); if(r.style.display==='block') r.scrollIntoView({behavior:'smooth',block:'start'}); });
+
+/* 导入用的 file input 只建一次：卡片整块重绘不会影响它，选同一个文件也能再触发 */
+const gcFileInput=document.createElement('input');
+gcFileInput.type='file';
+gcFileInput.accept='.csv,.json,.txt,text/csv,application/json,text/plain';
+gcFileInput.style.display='none';
+document.body.appendChild(gcFileInput);
+gcFileInput.addEventListener('change',function(){
+  const f=gcFileInput.files&&gcFileInput.files[0];
+  if(f) gcImportFile(f);
+  gcFileInput.value='';       /* 清掉值，才能再选同一个文件 */
+});
+
+/* 生长曲线/历史卡的事件委托：卡片（#cards 与 #histHold）都是整块重绘的，所以挂在 document 上 */
+document.addEventListener('click', e=>{
+  const tab=e.target.closest('[data-gc-m]');
+  if(tab){ GC_ACTIVE=tab.dataset.gcM; compute(false); return; }
+
+  const qk=e.target.closest('[data-gc-quick]');
+  if(qk){
+    gcQuickOpen=!gcQuickOpen;
+    gcRefresh();
+    if(gcQuickOpen){ const ta=document.getElementById('gcQuickTa'); if(ta) ta.focus(); }
+    return;
+  }
+
+  const qa=e.target.closest('[data-gc-quick-apply]');
+  if(qa){ gcApplyQuick(); return; }
+
+  const im=e.target.closest('[data-gc-import]');
+  if(im){ gcFileInput.click(); return; }
+
+  const cv=e.target.closest('[data-gc-csv]');
+  if(cv){ gcExportCsv(); return; }
+
+  const js=e.target.closest('[data-gc-json]');
+  if(js){ gcExportJson(); return; }
+
+  const del=e.target.closest('[data-hist-del]');
+  if(del){ cgHist.remove(del.dataset.histDel); gcRefresh(); return; }
+
+  const clr=e.target.closest('[data-hist-clear]');
+  if(clr){
+    clearTimeout(gcClearTimer);
+    if(gcClearArmed){
+      gcClearArmed=false; cgHist.clear(); gcRefresh();
+    }else{
+      gcClearArmed=true;
+      gcClearTimer=setTimeout(()=>{ gcClearArmed=false; gcRefresh(); }, 3000);  /* 3 秒内再点一次才真清空 */
+      gcRefresh();
+    }
+    return;
+  }
+
+  const row=e.target.closest('[data-hist-load]');
+  if(row){
+    const d=row.dataset.histLoad, rec=cgHist.list().find(r=>r.d===d);
+    if(!rec) return;
+    document.getElementById('meas').value=d;
+    if(rec.h>0) document.getElementById('height').value=rec.h;
+    if(rec.w>0) document.getElementById('weight').value=rec.w;
+    document.getElementById('headc').value=rec.hc>0?rec.hc:'';
+    compute(false);   /* 只是载入查看，不改存储；要更新就再点「开始评价」 */
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+});
+['height','weight','headc','birth','meas'].forEach(id=>{
+  /* 输入过程中只实时重绘曲线，不落历史 —— 保存只发生在点「开始评价」时。
+     （不在 blur/change 时保存：那会在点击按钮的瞬间重绘整卡，把按钮换掉导致第一次点击丢失） */
+  const el=document.getElementById(id);
+  el.addEventListener('input',()=>{
+    /* 用户一动手，上一次提交留下的红色提示就过期了 */
+    const err=document.getElementById('err'); if(err) err.style.display='none';
+    if(document.getElementById('results').style.display==='block') compute(false);
   });
 });
-document.getElementById('go').addEventListener('click',()=>{ compute();
-  const r=document.getElementById('results'); if(r.style.display==='block') r.scrollIntoView({behavior:'smooth',block:'start'}); });
-['height','weight','headc','birth','meas'].forEach(id=>{
-  document.getElementById(id).addEventListener('input',()=>{ if(document.getElementById('results').style.display==='block') compute(); });
+
+/* 快速输入框：边打边存草稿（不重绘，光标不会跳）；Ctrl/⌘+Enter 直接提交 */
+document.addEventListener('input', e=>{
+  if(e.target&&e.target.id==='gcQuickTa') gcQuickText=e.target.value;
+});
+document.addEventListener('keydown', e=>{
+  if(e.target&&e.target.id==='gcQuickTa'&&e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); gcApplyQuick(); }
 });
 // 出生日期变更即写入缓存（date 输入的 value 只会是空串或完整日期，不会存半成品）
 document.getElementById('birth').addEventListener('input',()=>{ cgPrefs.write({birth:document.getElementById('birth').value}); });
@@ -592,6 +1144,9 @@ document.getElementById('birth').addEventListener('input',()=>{ cgPrefs.write({b
   const t=new Date(); const p=n=>String(n).padStart(2,'0');
   document.getElementById('meas').value=`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
 })();
+
+/* 历史卡不依赖「开始评价」：一进来就把已有记录和导入入口渲染出来（表单仍留空，由用户决定要不要载入） */
+renderHistory();
 </script>
 </body>
 </html>
