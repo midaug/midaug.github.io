@@ -45,6 +45,16 @@
     --ins-line: #e8f2ef;   /* 整行新增 */
     --del-mark: #f6c9cc;   /* 行内被删的字符 / 词（比整行底色深一档才看得出边界） */
     --ins-mark: #bfdccf;   /* 行内新增的字符 / 词 */
+    /* 「当前差异」的加强档：整行底色再压深一档，行内标记也要跟着深，
+       否则整行底色一深、行内标记就糊在底纹里分不出来了。 */
+    --del-act: #f7ced3;
+    --ins-act: #c9e3d7;
+    --del-mark-act: #eea9b0;
+    --ins-mark-act: #9cc9b3;
+    /* 外框描边：比 --*-act 底色再深一档，但明显浅于正文，
+       作用是给「这一段到哪儿结束」画一条硬边界，不抢文字的注意力。 */
+    --del-edge: #e29aa5;
+    --ins-edge: #8dbfa9;
     --del-fg: #b31d29;
     --ins-fg: #0a6644;
 
@@ -264,8 +274,40 @@
   .bl i { font-style: normal; border-radius: 2px; }
   .bl i.dm { background: var(--del-mark); }
   .bl i.im { background: var(--ins-mark); }
-  /* 当前导航到的差异行 */
-  .bl.cur { outline: 2px solid var(--accent); outline-offset: -2px; }
+  /* ===== 「当前差异」只有一种高亮 =====
+     鼠标停到某一处、或用 ↑↓ 导航到某一处，**是同一个状态**：写的是同一个
+     navIdx，所以顶部计数、两侧高亮、窄屏胶囊永远同步，不存在两套逻辑。
+     造型分两层：整段底色压深一档（下面四条），外加一个闭合外框（.actfr）。 */
+  .bl.c-del.act { background: var(--del-act); }
+  .bl.c-ins.act { background: var(--ins-act); }
+  /* 行内标记跟着深一档：整行底色一深，原来的 --del-mark 就糊在底纹里了 */
+  .bl.act i.dm { background: var(--del-mark-act); }
+  .bl.act i.im { background: var(--ins-mark-act); }
+  /* ===== 「当前差异」的外框 =====
+     只加深底色时，一整段连续行在视觉上没有硬边界 —— 用户看不出「高亮到
+     哪一行结束」，这正是加框的理由。
+
+     ★ 框是一个**独立浮层**，不是给行元素加 border：行上挂 border 会改行宽
+       → 改折行位置 → 把高亮层和 textarea 顶开（这个方案唯一的命门）。
+       浮层绝对定位在 .ed-hl-in 里，位置按行位置表 lineTop/lineHt 算，
+       于是它天然跟着那一层的 translate 一起滚动，滚动时零额外开销。
+
+     ★ 造型必须**四边闭合 + 圆角**。上一版被否掉的原因是「括号感」：只要
+       出现「一侧竖线 + 上下两道短横 + 另一侧开口」这个组合，不管颜色多淡、
+       圆角多大，人眼一律读成 [ 或 ]。四边闭合的圆角矩形则是另一套语汇 ——
+       读作「这一块被选中了」。所以这里 border 四边同宽同色，缺一不可。 */
+  .actfr {
+    position: absolute; left: 3px; right: 3px;
+    box-sizing: border-box;
+    border: 1.5px solid transparent;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 3;          /* 压在行元素之上（行是 position: relative） */
+    display: none;
+  }
+  .actfr.on { display: block; }
+  .actfr.d { border-color: var(--del-edge); }
+  .actfr.i { border-color: var(--ins-edge); }
 
   .ed textarea {
     position: absolute; inset: 0; display: block;
@@ -295,7 +337,7 @@
      #gutIn 与高亮层用同一套办法跟随滚动：只做 translateY，所以 .hk 的
      top 写的是「内容坐标」（高亮层里那一行的 offsetTop），滚动时不必重算。 */
   #gut {
-    flex: 0 0 42px; position: relative; overflow: hidden;
+    flex: 0 0 54px; position: relative; overflow: hidden;
     background: var(--panel-2);
     border-left: 1px solid var(--border); border-right: 1px solid var(--border);
   }
@@ -306,7 +348,8 @@
   /* 一处差异 = 一条「连接带」：左边缘贴着左侧那几行、右边缘贴着右侧那几行，
      中间用两条三次曲线接起来（path 的 d 由 JS 按实测行高算）。
      两侧行数不等时带子自然收成楔形 —— 滚动时一眼就能看出左右两段差异
-     是怎么对应的，光靠两条各画各的矩形是看不出来的。 */
+     是怎么对应的，光靠两条各画各的矩形是看不出来的。
+     ★ 但两侧各留一段「垂直平台」，不是从头弯到尾 —— 理由见 gutPath()。 */
   #gutDefs { position: absolute; width: 0; height: 0; }
   .gut-g0 { stop-color: var(--del-mark); }
   .gut-g1 { stop-color: var(--ins-mark); }
@@ -315,10 +358,15 @@
      transform 只影响绘制，而且同一帧内多次写不会互相打断。
      height 仍要写（带子的高度 = 这处差异覆盖的行范围），但 .hk 是绝对定位、
      不参与父级布局，改它不会波及兄弟节点。 */
-  .hk { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
+  /* .hk 自己必须吃鼠标事件，否则「鼠标移到连接带上」这个动作根本没有目标 ——
+     接缝栏除了这两个按钮没有别的东西可点（点击是委托到 #gutIn 的，
+     处理函数只认 .hk-btn），所以放开不会挡住任何东西。 */
+  .hk { position: absolute; left: 0; right: 0; top: 0; pointer-events: auto; }
   .hk-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
   .hk-svg path { fill: url(#gutGrad); }
-  /* 按钮贴顶、左右各一个（不是居中）：长块居中后按钮会飘到离视线很远的地方。 */
+  /* 左右各一个。纵向位置由 JS 算：在各自那一侧的连接带里上下居中
+     （比一屏还高的块退回贴顶，否则按钮会飘到十几屏之外点不到）。
+     top 的初值只用于窄屏之前的首帧，paintGut 会立刻覆盖。 */
   .hk-btn {
     position: absolute; top: 0; width: 17px; height: 16px; padding: 0;
     display: flex; align-items: center; justify-content: center;
@@ -365,7 +413,9 @@
     #gutIn { position: static; top: auto; transform: none !important; }
     .hk { position: static; left: auto; right: auto; top: auto !important;
           height: auto !important; display: none; }
-    .hk.on { display: flex; gap: 2px; }
+    /* 胶囊里两颗按钮之间留 6px：28px 的触控目标本来就偏小，
+       再挤到 2px 就会点错（和桌面端接缝按钮留空档是同一个理由）。 */
+    .hk.on { display: flex; gap: 6px; }
     .hk-svg { display: none; }   /* 上下叠了就没有「连接」可言 */
     .hk-btn { position: static; width: 28px; height: 28px; }
     .hk-l { left: auto; }
@@ -974,8 +1024,15 @@
      ============================================================ */
 
   var lastA = [], lastB = [];
+  /* navIdx 是**唯一**的「当前差异」下标（-1 = 没有）。点 ↑↓ 和鼠标悬停
+     写的都是它，所以顶部计数、两侧高亮、窄屏胶囊天然同步。 */
   var navs = [], navIdx = -1;
+  /* 行号 → 这行属于哪一处差异（-1 = 普通行）。悬停时 O(1) 反查。
+     不在 navs 上做二分：纯增 / 纯删块的起点行会重合（delN 或 insN 为 0），
+     二分落到哪一处是不确定的，查表就没这个问题。 */
+  var hunkAt = { L: null, R: null };
   var ROW_H = 18;
+  var HK_BTN_H = 16;        /* 接缝按钮高度，与 CSS 里 .hk-btn 的 height 一致 */
   var CHAR_W = 7.8;         /* 等宽字符宽度，启动时实测一次，用于算行号列宽 */
   var HL_MAX_LINES = 20000; /* 超过这个行数就不再画高亮（只对比、不铺底色） */
 
@@ -1170,6 +1227,7 @@
          内联样式刚被清空，缓存值不能留（留着就会「值没变、跳过写入」，
          高度和 path 就再也回不来了）。 */
       hs[i].__on = -1; hs[i].__h = -1; hs[i].__t = -1; hs[i].__d = null;
+      hs[i].__bl = -1; hs[i].__br = -1;
     }
     layoutGut();
   }
@@ -1219,14 +1277,36 @@
     };
   }
 
-  /* 连接带的 path：上边从 (0, yl) 弯到 (w, yr)，下边从 (w, ybr) 弯回 (0, ybl)。
-     控制点取 42% / 58%，曲线短、收得干净；两侧范围一样高时自然退化成矩形。 */
+  /* 连接带的 path。**两侧各留一段垂直平台，中间才是 S 弯** —— 这是为了保证
+     按钮永远落在带子里，不是审美选择。
+
+     早先是从 (0,yl) 一路弯到 (w,yr)：错位一大（「极限扯动」），带子在按钮
+     所在高度只剩十几像素宽，17px 的按钮必然戳出去。用户第二次报的就是这个。
+
+     改成三段后是几何恒等式，不再是「错位小的时候刚好够」：
+       · 左平台 x ∈ [0, PAD] 在 y ∈ [yl, ybl] 上是满的；
+       · 按钮的 y 本来就被夹在 [yl, ybl] 里（见 paintGut 的 clamp），
+         x 固定在 [2, 19]，只要 PAD ≥ 19 就必然完全落在平台内；
+       · 右平台对称，绿按钮同理。
+     任何错位量都成立，与 lt / rt 差多少无关。
+
+     PAD 取 20（按钮 17 + 左边距 2 + 1 余量）。gutter 相应从 42px 加到 54px，
+     顺带把两个箭头之间的空档从 2px 拉到 14px —— 原来贴得太近，很容易点错。
+     两侧一样高时平台与弯道都是水平线，整条带子退化成矩形，与旧版一致。 */
+  var GUT_PAD = 20;
   function gutPath(w, r) {
-    var c1 = w * 0.42, c2 = w * 0.58;
+    var p = Math.min(GUT_PAD, w / 2 - 1);   /* 平台宽 */
+    var t = w - p;                          /* 右平台起点 */
+    var mid = t - p;                        /* 过渡区宽度 */
+    var c1 = p + mid * 0.42, c2 = t - mid * 0.42;
     return "M0 " + r.yl +
-      "C" + c1 + " " + r.yl + " " + c2 + " " + r.yr + " " + w + " " + r.yr +
+      "L" + p + " " + r.yl +
+      "C" + c1 + " " + r.yl + " " + c2 + " " + r.yr + " " + t + " " + r.yr +
+      "L" + w + " " + r.yr +
       "L" + w + " " + r.ybr +
-      "C" + c2 + " " + r.ybr + " " + c1 + " " + r.ybl + " 0 " + r.ybl + "Z";
+      "L" + t + " " + r.ybr +
+      "C" + c2 + " " + r.ybr + " " + c1 + " " + r.ybl + " " + p + " " + r.ybl +
+      "L0 " + r.ybl + "Z";
   }
 
   function buildGut() {
@@ -1266,6 +1346,119 @@
     }
   }
 
+  /* ---- 「当前差异」：一个状态，两个入口 ----
+     鼠标停到某一处、或用 ↑↓ 导航到某一处，**写的是同一个 navIdx** ——
+     顶部计数、两侧高亮、窄屏胶囊因此永远同步，不存在两套逻辑。
+
+     入口 ①：接缝栏的连接带（.hk 直接吃鼠标事件）；
+     入口 ②：正文 —— 鼠标事件全被 textarea 收走（高亮层在它下面），
+             只能拿 y 反查行号：y 相对高亮层取，lineAt() 在位置表上二分，
+             hunkAt 再 O(1) 查表。**全程不读 offsetTop**。
+
+     悬停**只改当前项、不滚动**（滚动是 jumpTo 的事）；鼠标移到普通行上
+     也不清场 —— 当前项保持不动，否则鼠标一扫过页面高亮就闪没了。
+
+     开销：只有「换了一处」才会动 DOM，在同一处里移动只花一次 rect 读 + 一次二分。
+     一处差异几千行时逐行加 class 会是几毫秒，但换一处不是每帧都发生的动作。 */
+  function buildHunkAt() {
+    var nL = lastA.length, nR = lastB.length;
+    var mL = nL ? new Int32Array(nL) : null;
+    var mR = nR ? new Int32Array(nR) : null;
+    if (mL) mL.fill(-1);
+    if (mR) mR.fill(-1);
+    for (var i = 0; i < navs.length; i++) {
+      var nv = navs[i], k;
+      if (mL) for (k = nv.ai; k < nv.ai + nv.delN && k < nL; k++) mL[k] = i;
+      if (mR) for (k = nv.bi; k < nv.bi + nv.insN && k < nR; k++) mR[k] = i;
+    }
+    hunkAt.L = mL; hunkAt.R = mR;
+  }
+
+  /* 把某一侧 [from, from+n) 这几行打上 / 摘掉 .act。 */
+  function markRange(list, from, n, on) {
+    if (!list || n <= 0) return;
+    var end = Math.min(from + n, list.length);
+    for (var k = from; k < end; k++) {
+      if (on) list[k].classList.add("act");
+      else list[k].classList.remove("act");
+    }
+  }
+
+  /* ---- 「当前差异」的外框（每侧一个） ----
+     浮层是 .ed-hl-in 的子元素，所以 renderPane 里那句 innerHTML = 会把它
+     一起冲掉 —— 每次定位都先确保它在，不在就现建一个接到末尾。
+     位置直接用 lineTop / lineHt：那张表存的是**内容坐标**（未滚动的绝对
+     位置），而 applyWindow 把上 padding 设成 top[lo] 正好补掉被移走的行高，
+     所以窗口开不开，表里的值都是有效的绝对位置，不必再管 padding。 */
+  function frameOf(side) {
+    var id = side === "L" ? "actfrL" : "actfrR";
+    var box = hlIn(side), el = $(id);
+    if (el && el.parentNode === box) return el;
+    if (el) el.parentNode.removeChild(el);
+    el = document.createElement("div");
+    el.id = id;
+    el.className = "actfr " + (side === "L" ? "d" : "i");
+    box.appendChild(el);
+    return el;
+  }
+
+  function paintFrame(side, from, n) {
+    var top = lineTop[side], ht = lineHt[side];
+    if (!top || n <= 0 || from < 0 || from >= top.length) {
+      var old = $(side === "L" ? "actfrL" : "actfrR");
+      if (old) old.classList.remove("on");
+      return;
+    }
+    var last = Math.min(from + n, top.length) - 1;
+    var t = top[from], b = top[last] + ht[last];
+    var el = frameOf(side);
+    el.style.top = t + "px";
+    el.style.height = Math.max(0, b - t) + "px";
+    el.classList.add("on");
+  }
+
+  /* 按 navIdx 重画一遍：先按 class 反查清干净（不依赖 blList / navs 是否还对得上），
+     再给两侧各自的行范围打上 .act，最后同步顶部计数与接缝栏的 .on。
+     **高亮层被重铺之后必须再调一次** —— 类挂在行元素上，renderPane 一重建就全没了，
+     而 navPos 还显示着「7 / 13」，不补就是「显示着第 7 处、屏幕上却没有标记」。 */
+  function paintActive() {
+    var old = document.querySelectorAll(".bl.act");
+    for (var i = 0; i < old.length; i++) old[i].classList.remove("act");
+    if (navIdx >= 0 && navs[navIdx]) {
+      var nv = navs[navIdx];
+      markRange(blList.L, nv.ai, nv.delN, true);
+      markRange(blList.R, nv.bi, nv.insN, true);
+      paintFrame("L", nv.ai, nv.delN);
+      paintFrame("R", nv.bi, nv.insN);
+    } else {
+      paintFrame("L", 0, 0);   /* n = 0 → 藏起来，不会去建元素 */
+      paintFrame("R", 0, 0);
+    }
+    $("navPos").textContent = navs.length
+      ? ((navIdx < 0 ? 0 : navIdx + 1) + " / " + navs.length)
+      : "0 / 0";
+    markGut();
+  }
+
+  /* 换到第 i 处（-1 = 没有）。**悬停和导航都走这里**，所以两边不可能不同步。 */
+  function setActive(i) {
+    if (i === navIdx) return;
+    navIdx = i;
+    paintActive();
+  }
+
+  /* 鼠标在某一侧的正文上 → 它属于哪一处差异。
+     y 直接相对高亮层取：那一层已经被 translate(0, -scrollTop) 挪过，
+     所以它的 rect 顶边就是「内容坐标 0」，不必再去扣 padding。 */
+  function activeAtPointer(side, e) {
+    if (!navs.length || !lineTop[side]) return -1;
+    var y = e.clientY - hlIn(side).getBoundingClientRect().top;
+    var line = lineAt(side, y);
+    var m = hunkAt[side];
+    if (!m || line < 0 || line >= m.length) return -1;
+    return m[line];
+  }
+
   /* ---- 量一次，滚一路 ----
      关键认识：offsetTop 只在**布局变化**时才变（文本改、窗口尺寸改、折行
      位置改），**滚动不会改它**。所以每处差异的几何量一次就够，滚动时只做算术。
@@ -1282,7 +1475,14 @@
     if (!n) { gutGeo = null; return; }
     gutGeoW = Math.max(8, inner.clientWidth);
     var geo = new Array(n);
-    for (var i = 0; i < n; i++) geo[i] = hunkGeo(navs[i]);
+    for (var i = 0; i < n; i++) {
+      geo[i] = hunkGeo(navs[i]);
+      /* 两个按钮的引用在这里存一次 —— paintGut 每帧都要写它们的 top，
+         每帧再做两次 querySelector 是白花的钱。 */
+      var h = inner.children[i];
+      h.__l = h.querySelector(".hk-l");
+      h.__r = h.querySelector(".hk-r");
+    }
     gutGeo = geo;
   }
 
@@ -1294,9 +1494,12 @@
     if (!n || !gutGeo) return;
     var w = gutGeoW;
     var ta = taOf(gutAnchor);
+    /* clientHeight 是一次布局读，循环里每读一次都可能强制重排（循环体在写
+       style），所以先取出来。下面「超一屏就退回贴顶」的判据也用它。 */
+    var taH = ta.clientHeight;
     /* 上下各留一屏：带子比一屏还高时，不至于在边缘「跳」出来 */
-    var vis0 = ta.scrollTop - ta.clientHeight;
-    var vis1 = ta.scrollTop + 2 * ta.clientHeight;
+    var vis0 = ta.scrollTop - taH;
+    var vis1 = ta.scrollTop + 2 * taH;
     /* 带子的坐标基准是**左侧内容坐标**（hunkGeo 量的就是它），而 #gutIn 的
        translateY 跟的是 gutAnchor 那一侧。锚切到右侧时整条带子要补一个 d，
        否则左右边缘会一起错 d（实测滚右侧时 6~8px）。锚在左侧时 off 为 0。 */
@@ -1335,6 +1538,42 @@
       if (hs[i].__t !== topR) {
         hs[i].style.transform = "translateY(" + topR + "px)";
         hs[i].__t = topR;
+      }
+      /* ★ 两个按钮各自在**自己那一侧**的带子里上下居中。
+         这里有两个约束叠在一起，缺一个都会出问题：
+
+         1) 必须按「自己那一侧」算，不能按 .hk 的顶边。.hk 的顶边是
+            min(lt, rt)，而连接带是楔形 —— 在那个高度只有一侧有颜色，
+            另一侧的箭头就整个落在灰底上（用户第一轮截图圈的就是这个）。
+            实测内置示例的 13 处差异**全部**是楔形，所以这不是偶发。
+         2) 居中要夹在自己那侧的范围内。行高 18px、按钮 16px，一格高的
+            带子只有 2px 余量，算出来的中心点几乎就是顶边 —— 夹一下才
+            不会越界。
+
+         ★ 唯一的例外：某一侧比一屏还高时退回贴顶。那种块的中心点在
+         十几屏之外，按钮会「飘到离视线很远的地方」，用户滚到块开头
+         根本点不到。能整段看全就居中、看不全就贴顶，判据用视口高度，
+         两侧范围是内容坐标、不随滚动变，所以这个分支是稳定的，
+         不会在滚动时来回跳。 */
+      var byL, byR;
+      if (lb - lt > taH) byL = Math.round(lt - topR);
+      else byL = Math.round((lt + lb) / 2 - topR - HK_BTN_H / 2);
+      if (rb - rt > taH) byR = Math.round(rt - topR);
+      else byR = Math.round((rt + rb) / 2 - topR - HK_BTN_H / 2);
+      /* 夹进自己那一侧的范围，再夹进 .hk 盒子（超出 #gut 会被裁掉）。
+         ★ 下界向上取整、上界向下取整：按钮必须**严格**落在 [顶边, 底边]
+         之内，否则带子两侧的「平台」就白留了 —— 平台是按未取整的
+         lt / lb 画的，差 0.4px 也会让按钮探出带子外。 */
+      byL = Math.min(Math.max(byL, Math.ceil(lt - topR)), Math.floor(lb - topR) - HK_BTN_H);
+      byR = Math.min(Math.max(byR, Math.ceil(rt - topR)), Math.floor(rb - topR) - HK_BTN_H);
+      if (byL > h - HK_BTN_H) byL = h - HK_BTN_H;
+      if (byR > h - HK_BTN_H) byR = h - HK_BTN_H;
+      if (byL < 0) byL = 0;
+      if (byR < 0) byR = 0;
+      if (hs[i].__bl !== byL || hs[i].__br !== byR) {
+        if (hs[i].__l) hs[i].__l.style.top = byL + "px";
+        if (hs[i].__r) hs[i].__r.style.top = byR + "px";
+        hs[i].__bl = byL; hs[i].__br = byR;
       }
       var dstr = gutPath(w, {
         yl: lt - topR, ybl: lb - topR, yr: rt - topR, ybr: rb - topR
@@ -1574,6 +1813,9 @@
 
   function runDiff(silent) {
     clearTimeout(autoTmr);
+    /* 两侧的高亮层马上要整个重建，旧的 .act 随 DOM 一起消失。
+       这里把 navIdx 也归零 —— 结果换了，旧的「第几处」不再有意义。 */
+    navIdx = -1;
     var t0 = (window.performance || Date).now();
 
     /* 输入区的「N 行 · N B」必须在这里刷新。
@@ -1601,6 +1843,7 @@
     if (!aLines.length && !bLines.length) {
       aDeco = []; bDeco = []; pairOfA = []; pairOfB = [];
       lastA = []; lastB = []; navs = []; navIdx = -1;
+      hunkAt.L = null; hunkAt.R = null;
       $("navPos").textContent = "0 / 0";
       layout();
       renderPane("L"); renderPane("R");
@@ -1634,6 +1877,7 @@
     navs = built.navs;
     navIdx = -1;
     lastA = aLines; lastB = bLines;
+    buildHunkAt();
     $("navPos").textContent = navs.length ? "0 / " + navs.length : "0 / 0";
 
     /* 相似度的分子是「行内字符数」（不含换行符），分母必须同口径 ——
@@ -1718,6 +1962,15 @@
   function dropDiff() {
     aDeco = []; bDeco = [];
     navs = []; navIdx = -1;
+    /* navs 已经空了，paintActive() 里的 markRange 会直接返回 —— 所以这里
+       必须按 class 反查把残留的 .act 摘干净，不能指望 paintActive。 */
+    var stale = document.querySelectorAll(".bl.act");
+    for (var si = 0; si < stale.length; si++) stale[si].classList.remove("act");
+    /* 外框同样要收 —— 它的隐藏分支不看 navs，直接调就有效。
+       （下面 renderPane 会把浮层整个冲掉，这里清是为了不依赖那个时机。） */
+    paintFrame("L", 0, 0);
+    paintFrame("R", 0, 0);
+    hunkAt.L = null; hunkAt.R = null;
     $("navPos").textContent = "0 / 0";
     setStatIdle();
     /* lastA / lastB 有两个用途：layout() 算行号列宽、syncFromTa 判「有没有内容」。
@@ -1758,9 +2011,6 @@
     navIdx = ((k % navs.length) + navs.length) % navs.length;
     var nv = navs[navIdx];
 
-    var prev = document.querySelectorAll(".bl.cur");
-    for (var k2 = 0; k2 < prev.length; k2++) prev[k2].classList.remove("cur");
-
     /* 差异块入口：删除侧滚到它的第一行，新增侧滚到它的第一行；
        只有一侧有时，另一侧按映射跟过去。 */
     var la = nv.a >= 0 ? nv.a : (nv.b >= 0 ? pairOfB[nv.b] : -1);
@@ -1768,16 +2018,12 @@
     if (la >= 0) taToLine("L", la, 1 / 3);
     if (lb >= 0) taToLine("R", lb, 1 / 3);
 
-    /* 行元素按行号取（blList 是 .bl 的静态列表，不含上下两个占位块）。
+    /* 高亮交给 paintActive：它按 navIdx 重画，和鼠标悬停走的是同一条路径。
        目标行此刻可能正被窗口移出渲染树（display:none）—— 加 class 不受影响，
        滚动到位后 applyWindow 会把它放回来，class 还在。 */
-    var eL = blList.L && blList.L[nv.a], eR = blList.R && blList.R[nv.b];
-    if (eL) eL.classList.add("cur");
-    if (eR) eR.classList.add("cur");
+    paintActive();
 
     syncHl("L"); syncHl("R");
-    markGut();          /* 窄屏胶囊要跟着切到当前那一处 */
-    $("navPos").textContent = (navIdx + 1) + " / " + navs.length;
   }
 
   function goNav(dir) {
@@ -2133,6 +2379,35 @@
   $("btnCopy").addEventListener("click", function () { copyText(toUnified(3)); closePops(); });
   $("btnDl").addEventListener("click", function () { download(toUnified(3)); closePops(); });
 
+  /* --- 悬停 = 导航（见 setActive / paintActive） ---
+     鼠标停到某一处差异上，就把它变成「当前差异」：顶部计数跳到「7 / 13」，
+     两侧同时加深。和点 ↑↓ 写的是同一个 navIdx，没有第二套逻辑。
+
+     **只在指到差异上时才切**：移到普通行、移出正文、移出接缝栏都不清场 ——
+     当前项保持不动，否则鼠标在页面上扫一遍，高亮会跟着闪成一片。
+     要换就换，不清空，这也让「悬停到的这一处」能当作后续 ↑↓ 的起点。 */
+  /* 入口 ①：接缝栏的连接带。.hk 是每次对比后重建的，所以同样走委托。
+     mouseover 会随着在带子里移动反复触发，但 setActive 里「下标没变就返回」，
+     实际只在换到另一处时才动 DOM。 */
+  $("gutIn").addEventListener("mouseover", function (e) {
+    var hk = e.target && e.target.closest ? e.target.closest(".hk") : null;
+    if (!hk) return;                          /* 落在带子之间的空隙上：不动 */
+    var i = parseInt(hk.getAttribute("data-i"), 10);
+    if (!isNaN(i)) setActive(i);
+  });
+  /* 入口 ②：正文。鼠标事件全被 textarea 收走（高亮层在它下面），
+     所以按坐标反查行号，而不是在 .bl 上挂监听。 */
+  $("taL").addEventListener("mousemove", function (e) {
+    var i = activeAtPointer("L", e);
+    if (i >= 0) setActive(i);
+  });
+  $("taR").addEventListener("mousemove", function (e) {
+    var i = activeAtPointer("R", e);
+    if (i >= 0) setActive(i);
+  });
+  /* 滚动不必单独处理：.act 挂在行元素上，行跟着内容一起滚，
+     高亮始终贴在正确的行上；下一次 mousemove 会按新位置重新判定。 */
+
   /* --- 滚动：先同步自己的高亮层与接缝栏，再按行号把另一侧带过去 --- */
   /* 顺序要紧：**先联动对侧、再摆接缝栏**。
      syncFromTa 会程序化改对侧的 scrollTop，而接缝栏右侧那半条带子的位置
@@ -2163,6 +2438,9 @@
     rzTmr = setTimeout(function () {
       layout();
       renderPane("L"); renderPane("R");
+      /* .act 挂在行元素上，高亮层一重铺就全没了 —— navIdx 还在，
+         不补的话会「显示着 4 / 13、屏幕上却没有高亮」。 */
+      paintActive();
       layoutGut();      /* 列宽一变折行位置就变，带子的上下边界要重新量 */
     }, 90);
   });
