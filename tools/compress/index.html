@@ -1,0 +1,2001 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>字符串压缩</title>
+<meta name="theme-color" content="#f6f7f9" />
+<meta name="description" content="在线字符串压缩与解压：gzip / deflate / deflate-raw / Brotli 与 LZW / LZ77 / LZ4 / Huffman / BWT / 算术编码 / RLE 共 11 种算法，实时显示压缩率、节省空间与耗时，可一键对比全部算法在同一段文本上的排名。全部在本地浏览器内完成，内容不上传。" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与其余工具页共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --warn: #a16207;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; color: inherit; text-decoration: none }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  #btnClear { margin-left: auto; }
+
+  /* ===== 控件 ===== */
+  button, select, input {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font: inherit; outline: 0;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  /* ★ 按钮 / 下拉绝不折行、也不许被压窄：.ops 是 flex 容器，窄屏下不设这两条时
+     flex 会把按钮挤到比文字还窄，中文被逐字竖排成一根竖条。空间不够请让它换行。 */
+  button, select { white-space: nowrap; flex-shrink: 0; }
+  button:hover, select:hover { border-color: var(--accent); background: var(--hover); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary {
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff; font-weight: 700;
+    box-shadow: 0 2px 10px -2px rgba(79,107,237,.45);
+  }
+  button.primary:hover { background: var(--accent); border-color: transparent; color: #fff; }
+  button.mini {
+    padding: 3px 9px; font-size: 11px; line-height: 1.5;
+    background: var(--panel-2); color: var(--text-2); border-color: var(--border);
+  }
+  button.mini:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button[disabled] { opacity: .5; cursor: not-allowed; }
+  button[disabled]:hover { border-color: var(--border-2); background: var(--panel); color: var(--text); }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  select optgroup { color: var(--text-3); font-size: 11px; }
+
+  /* ===== 主体 =====
+     ★ 宽度按比例缩放，不写死 px 上限（规则见 .card.panel）：基准窗口 1485px 下
+     这里是 1000px（67.3%），更宽按同一比例放大，更窄保持 1000px，装不下才退满宽。 */
+  main {
+    flex: 1; min-height: 0; overflow: auto; padding: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+  }
+  main::-webkit-scrollbar { width: 10px; height: 10px; }
+  main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
+  main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  main::-webkit-scrollbar-track { background: transparent; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .card + .card { margin-top: 12px; }
+  .card.panel { width: min(100%, max(1000px, 67.3vw)); margin-left: auto; margin-right: auto; }
+  .card > h2 {
+    margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* ===== 输入 / 输出文本域 =====
+     输入浅底、输出白底虚线框，一眼分清哪个能改。 */
+  .io {
+    display: block; width: 100%; min-height: 96px; resize: vertical;
+    font: 12.5px/1.65 var(--mono); color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; outline: 0;
+    word-break: break-all; white-space: pre-wrap;
+    transition: background .15s, border-color .15s, box-shadow .15s;
+  }
+  .io:focus { background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .io.out { background: var(--panel); border-style: dashed; }
+  .io.out.filled { border-style: solid; border-color: var(--border-2); }
+  .io.tall { min-height: 128px; }
+
+  .ops { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .ops .sp { margin-left: auto; }
+  .chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+  }
+  .chk input {
+    width: 14px; height: 14px; padding: 0; border: 0; background: none; border-radius: 3px;
+    accent-color: var(--accent); cursor: pointer; flex: none;
+  }
+
+  /* ===== 指标条 =====
+     gap:1px + 底色做分隔线：比给每块加 border 干净，也不会在圆角处露线。 */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; margin-top: 10px;
+  }
+  .stats:empty { display: none; }
+  .si { background: var(--panel); padding: 7px 10px; min-width: 0; }
+  .si .k { font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .si .v {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums; margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .si .v small { font-size: 10px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+  .si.good .v { color: var(--ok); }
+  .si.bad  .v { color: var(--err); }
+  .si.acc  .v { color: var(--accent); }
+  .si.warn .v { color: var(--warn); }
+
+  /* ===== 表格 ===== */
+  .tbl-wrap { overflow-x: auto; }
+  .tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; border: 2px solid var(--panel); }
+  table.tbl {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tbl th {
+    text-align: left; font-weight: 600; color: var(--text-2); font-size: 11.5px;
+    padding: 5px 9px; border-bottom: 1px solid var(--border-2); white-space: nowrap;
+  }
+  .tbl td { padding: 6px 9px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl td.n { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .tbl td.u { color: var(--text-3); }
+  .tbl td.wrap { word-break: break-word; }
+  .tbl.fit th:first-child, .tbl.fit td:first-child { width: 1%; white-space: nowrap; }
+  /* 说明表最后一列（互通性）按内容收紧：不加这条时它会被中间的说明列挤到只剩
+     几字宽，「通用（RFC 1952）」被拆成两行，看着像表格错位。 */
+  #algoTbl th:last-child, #algoTbl td:last-child { width: 1%; white-space: nowrap; }
+
+  /* 对比表：整行可点，点了就切到那个算法 */
+  table.cmp tbody tr { cursor: pointer; transition: background .12s; }
+  table.cmp tbody tr:hover { background: var(--hover); }
+  table.cmp tbody tr.on { background: var(--accent-soft); }
+  table.cmp tbody tr.on td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+  table.cmp tbody tr.best td { font-weight: 600; }
+  table.cmp td.algo { white-space: nowrap; }
+  table.cmp td.algo b { font-weight: 600; }
+  table.cmp td.bar-cell { width: 34%; min-width: 90px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--surface-1); overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .25s; }
+
+  .tag {
+    display: inline-block; font-size: 10px; line-height: 1.5; padding: 0 5px;
+    border-radius: 4px; font-weight: 500; white-space: nowrap;
+    background: var(--surface-1); color: var(--text-2); border: 1px solid var(--border);
+  }
+  .tag.std { background: rgba(13,122,82,.1); color: var(--ok); border-color: rgba(13,122,82,.22); }
+  .tag.own { background: rgba(79,107,237,.1); color: var(--accent); border-color: rgba(79,107,237,.22); }
+  .tag.off { background: var(--surface-2); color: var(--text-3); }
+
+  /* ===== 提示 ===== */
+  .note {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 11.5px; line-height: 1.7; color: var(--text-2);
+    word-break: break-word;
+  }
+  /* 空提示不占位：否则每张卡片底部都挂一个空灰框，看着像坏了 */
+  .note:empty { display: none; }
+  .note b { color: var(--text); font-weight: 600; }
+  .note code {
+    font-family: var(--mono); background: var(--surface-1);
+    padding: 1px 4px; border-radius: 4px; color: var(--accent);
+  }
+  .note .tbl-wrap { margin-top: 6px; }
+  .note table.tbl th, .note table.tbl td { padding: 3px 8px; font-size: 11.5px; }
+  .err-tip { color: var(--err); }
+  .ok-tip { color: var(--ok); }
+  .empty-tip { color: var(--text-3); }
+  .warn-tip { color: var(--warn); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(6px);
+    background: var(--accent); border: 1px solid var(--accent); color: #fff;
+    box-shadow: 0 12px 30px -14px rgba(79,107,237,.7);
+    padding: 7px 16px; border-radius: 20px; opacity: 0;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 9;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .hide-sm { display: none; }
+  }
+  @media (max-width: 640px) {
+    header { flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; }
+    header .brand { font-size: 14px; }
+    main { padding: 10px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 8px; }
+    button, select { padding: 5px 9px; font-size: 12px; }
+    .io { min-height: 80px; }
+    /* 对比表在手机上横向滚动，别把每列挤成竖排文字 */
+    table.cmp { min-width: 520px; }
+  }
+
+  /* 隐私说明：任何宽度都可见。窄屏放不下时 flex 会把它整体挪到下一行并换行显示，
+     绝不 hide、绝不裁切。 */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href=".." title="返回工具首页">Compress<span>Lab</span></a>
+  <span class="sep"></span>
+  <span class="stat"><b id="algoCount">11</b> 种压缩算法</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">全部在本地浏览器内计算，不上传任何内容</span>
+  <button class="mini" id="btnClear" title="清空输入与结果">清空</button>
+</header>
+
+<main>
+
+  <!-- ============ 1. 压缩 / 解压 ============ -->
+  <section class="card panel">
+    <h2>
+      字符串压缩 / 解压
+      <span class="hint">文本 → UTF-8 字节 → 压缩 → Base64</span>
+      <span class="right">
+        <button class="mini" data-act="swap" title="把结果放回输入，并反转方向">交换</button>
+        <button class="mini" data-act="ex" title="填入一段示例文本">示例</button>
+        <button class="mini" data-act="copy" title="复制结果">复制结果</button>
+      </span>
+    </h2>
+    <textarea class="io" id="inp" spellcheck="false" autocomplete="off"
+      placeholder="输入要压缩的文本，或粘贴压缩后的 Base64 / Hex…"></textarea>
+    <div class="ops">
+      <button class="primary" data-act="zip">压缩 →</button>
+      <button data-act="unzip">← 解压</button>
+      <select id="algo" title="压缩算法"></select>
+      <select id="fmt" title="输出的字节表示方式">
+        <option value="b64">Base64</option>
+        <option value="hex">Hex</option>
+      </select>
+      <label class="chk sp"><input type="checkbox" id="auto" checked>输入时自动运行</label>
+    </div>
+    <textarea class="io out tall" id="out" readonly spellcheck="false" placeholder="结果"></textarea>
+    <div class="stats" id="stats"></div>
+    <div class="note" id="note"></div>
+  </section>
+
+  <!-- ============ 2. 压缩率对比 ============ -->
+  <section class="card panel">
+    <h2>
+      压缩率对比
+      <span class="hint">同一段文本跑遍全部算法，按压缩后大小排序</span>
+      <span class="right">
+        <button class="mini" data-act="cmp" id="btnCmp">开始对比</button>
+      </span>
+    </h2>
+    <div class="tbl-wrap"><table class="tbl cmp" id="cmpTbl"></table></div>
+    <div class="note" id="cmpNote"></div>
+  </section>
+
+  <!-- ============ 3. 算法说明 ============ -->
+  <section class="card panel">
+    <h2>算法说明 <span class="hint">点算法名可直接切到那一档</span></h2>
+    <div class="tbl-wrap"><table class="tbl fit" id="algoTbl"></table></div>
+    <div class="note" id="helpNote"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const eh = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const U8 = new TextEncoder();
+  const CHUNK = 0x8000;   // fromCharCode.apply 一次最多约 64K 参数，超出会 RangeError
+
+  /* ============================================================
+     字节 / 文本 基础编解码
+     ============================================================ */
+
+  function u8dec(bytes, fatal) {
+    try { return new TextDecoder("utf-8", { fatal: !!fatal }).decode(bytes); }
+    catch (e) { return null; }
+  }
+  function bytesToB64(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
+  }
+  function b64ToBytes(str) {
+    const bin = atob(str);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  /* 宽松解析：容忍换行、空格、URL-safe 变体、缺失的 = 填充。
+     返回 null 表示「确实不是 Base64」。 */
+  function normalizeB64(s) {
+    s = s.replace(/[\s\r\n]+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (!s) return null;
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(s)) return null;
+    const pad = s.length % 4;
+    if (pad === 1) return null;
+    if (pad) s += "=".repeat(4 - pad);
+    return s;
+  }
+  function bytesToHex(bytes, upper) {
+    const parts = new Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      let h = bytes[i].toString(16).padStart(2, "0");
+      if (upper) h = h.toUpperCase();
+      parts[i] = h;
+    }
+    return parts.join(" ");
+  }
+  function hexToBytes(str) {
+    /* 先去掉 0x 前缀再剔除非十六进制字符：这样 "0x41 0x42"、"41:42"、"\\x41\\x42"
+       三种写法都能走同一条路径。 */
+    const clean = str.replace(/0x/gi, "").replace(/[^0-9a-fA-F]/g, "");
+    if (!clean) return { err: "没找到任何十六进制数字" };
+    if (clean.length % 2) return { err: "十六进制位数为奇数（" + clean.length + " 位），无法按整字节解析" };
+    const bytes = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+    return { bytes: bytes };
+  }
+
+  /* ============================================================
+     位流读写（MSB 优先，与 DEFLATE / GIF 等格式一致）
+     ============================================================ */
+
+  class BitWriter {
+    constructor(cap) {
+      this.buf = new Uint8Array(cap > 16 ? cap : 256);
+      this.len = 0; this.acc = 0; this.n = 0;
+    }
+    push(b) {
+      if (this.len === this.buf.length) {
+        const nb = new Uint8Array(this.buf.length * 2);
+        nb.set(this.buf); this.buf = nb;
+      }
+      this.buf[this.len++] = b;
+    }
+    /* 一次最多写 24 位：acc 用 JS 32 位整数保存，再多会溢出成负数 */
+    write(v, bits) {
+      while (bits > 0) {
+        const space = 8 - this.n;
+        const take = space < bits ? space : bits;
+        const shift = bits - take;
+        this.acc = (this.acc << take) | ((v >>> shift) & ((1 << take) - 1));
+        this.n += take;
+        bits -= take;
+        if (this.n === 8) { this.push(this.acc); this.acc = 0; this.n = 0; }
+      }
+    }
+    bytes() {
+      if (this.n > 0) { this.push(this.acc << (8 - this.n)); this.acc = 0; this.n = 0; }
+      return this.buf.slice(0, this.len);
+    }
+  }
+
+  class BitReader {
+    constructor(bytes, start) {
+      this.b = bytes; this.pos = start || 0; this.acc = 0; this.n = 0;
+    }
+    read(bits) {
+      let out = 0;
+      while (bits > 0) {
+        if (this.n === 0) {
+          if (this.pos >= this.b.length) throw new Error("数据不完整，读到末尾时压缩流还没结束");
+          this.acc = this.b[this.pos++]; this.n = 8;
+        }
+        const take = this.n < bits ? this.n : bits;
+        out = (out << take) | ((this.acc >> (this.n - take)) & ((1 << take) - 1));
+        this.n -= take;
+        bits -= take;
+      }
+      return out;
+    }
+  }
+
+  /* 4 字节大端原始长度头。所有自实现算法都以它开头：
+     ① 解码时知道该在哪停，不必设计 EOF 标记；
+     ② 解完能立刻校验长度，坏数据不会静默产出半截乱码。 */
+  function lenHead(n) {
+    return new Uint8Array([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+  }
+  function readLen(bytes, off) {
+    if (bytes.length < off + 4) throw new Error("数据太短，不足 4 字节长度头");
+    const n = ((bytes[off] << 24) >>> 0) + (bytes[off + 1] << 16) + (bytes[off + 2] << 8) + bytes[off + 3];
+    /* ★ 长度头是明文整数，把**别的格式**的数据喂进来会读出一个天文数字：
+       一段 gzip 的头是 1f 8b 08 00，当成长度就是 528 MB，接着 new Uint8Array(5亿)
+       再跑五亿轮解码 —— 实测标签页卡死 33 秒才抛 "Invalid array length"。
+       其它几档侥幸没事，是因为它们很快就撞上结构性错误（码超范围、偏移为 0）。
+       判据：压缩比不可能超过 65536:1，再叠一个 32 MB 绝对上限
+       （这工具处理的是文本框里的文本，几十 MB 已经不可用）。
+       注意只校验 off === 0 的那次 —— 后面 flagLen / primary / rleLen 天然被原长约束。 */
+    if (off === 0 && (n > 33554432 || n > bytes.length * 65536 + 1048576))
+      throw new Error("长度头不可信：这段数据多半不是本工具自有格式压出来的");
+    return n;
+  }
+  function concat(a, b) {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a, 0); out.set(b, a.length);
+    return out;
+  }
+
+  /* ============================================================
+     1. LZW —— 变长码字典压缩（9~12 位），字典满即停止增长
+     ============================================================ */
+
+  const LZW_MAXCODE = 1 << 12;
+
+  /* ★ 宽度函数必须是纯函数、且两端用同一套判据：
+       编码端写码时传「当前 next」，解码端读码时传「next + 1」。
+     差这一位是因为解码端的字典永远比编码端晚一项（第一码不建项）。
+     不做这个 +1，在 512 / 1024 / 2048 三个切换点上会错位，之后全是乱码。 */
+  function lzwWidth(next) {
+    return next < 512 ? 9 : next < 1024 ? 10 : next < 2048 ? 11 : 12;
+  }
+
+  function lzwCompress(src) {
+    const n = src.length;
+    const bw = new BitWriter(Math.max(256, n >> 1));
+    const dict = new Map();          // key = cur * 256 + byte，value = 新码
+    let next = 256;
+    let cur = src[0];
+    for (let i = 1; i < n; i++) {
+      const b = src[i];
+      const key = cur * 256 + b;     // cur < 4096 → key < 1048576，安全整数
+      const hit = dict.get(key);
+      if (hit !== undefined) {
+        cur = hit;
+      } else {
+        bw.write(cur, lzwWidth(next));
+        if (next < LZW_MAXCODE) { dict.set(key, next); next++; }
+        cur = b;
+      }
+    }
+    if (n) bw.write(cur, lzwWidth(next));
+    return concat(lenHead(n), bw.bytes());
+  }
+
+  function lzwDecompress(bytes) {
+    const origLen = readLen(bytes, 0);
+    const br = new BitReader(bytes, 4);
+    const out = new Uint8Array(origLen);
+    const prefix = new Int32Array(LZW_MAXCODE);
+    const suffix = new Int32Array(LZW_MAXCODE);
+    const firstByte = new Int32Array(LZW_MAXCODE);
+    for (let i = 0; i < 256; i++) { prefix[i] = -1; suffix[i] = i; firstByte[i] = i; }
+    const stack = new Uint8Array(LZW_MAXCODE + 256);
+    let next = 256, prev = -1, oi = 0;
+
+    while (oi < origLen) {
+      const code = br.read(lzwWidth(next + 1));
+      if (prev < 0) {                            // 第一码只能是字面量
+        if (code >= 256) throw new Error("压缩数据损坏：首码 " + code + " 不是字面量");
+        out[oi++] = code;
+        prev = code;
+        continue;
+      }
+      if (code > next) throw new Error("压缩数据损坏：码 " + code + " 超出字典范围 " + next);
+
+      /* 展开 code 对应的串到栈里（倒序），再倒着吐出来 */
+      let sp = 0, c = code;
+      if (code === next) {                       // KwKwK：串 = str(prev) + first(prev)
+        c = prev;
+        while (c >= 256) { stack[sp++] = suffix[c]; c = prefix[c]; }
+        stack[sp++] = suffix[c];
+        for (let i = sp - 1; i >= 0 && oi < origLen; i--) out[oi++] = stack[i];
+        if (oi < origLen) out[oi++] = firstByte[prev];
+        if (next < LZW_MAXCODE) {
+          prefix[next] = prev; suffix[next] = firstByte[prev]; firstByte[next] = firstByte[prev];
+          next++;
+        }
+        prev = next - 1;
+        continue;
+      }
+      while (c >= 256) { stack[sp++] = suffix[c]; c = prefix[c]; }
+      stack[sp++] = suffix[c];
+      for (let i = sp - 1; i >= 0 && oi < origLen; i--) out[oi++] = stack[i];
+      if (next < LZW_MAXCODE) {
+        prefix[next] = prev; suffix[next] = firstByte[code]; firstByte[next] = firstByte[prev];
+        next++;
+      }
+      prev = code;
+    }
+    return out;
+  }
+
+  /* ============================================================
+     2. LZ77 —— 255 字节窗口的贪心匹配
+     格式：[4B 原长][4B 标志区长度][标志位][token 数据]
+     token 按 8 个一组，标志字节的 bit7→bit0 依次对应；
+     字面量 = 1 字节；匹配 = 2 字节（offset-1, len-3）。
+     ============================================================ */
+
+  const LZ_WIN = 255, LZ_MIN = 3, LZ_MAXLEN = 258;
+
+  function lz77Compress(src) {
+    const n = src.length;
+    const flags = [];
+    const data = new Uint8Array(n + 64);
+    let dlen = 0;
+    let fcur = 0, fcnt = 0;
+
+    const head = new Int32Array(1 << 16).fill(-1);
+    const chain = new Int32Array(n).fill(-1);
+
+    const insert = pos => {
+      if (pos + 2 >= n) return;
+      const h = ((src[pos] << 10) ^ (src[pos + 1] << 5) ^ src[pos + 2]) & 0xffff;
+      chain[pos] = head[h]; head[h] = pos;
+    };
+    const pushFlag = bit => {
+      fcur = (fcur << 1) | bit; fcnt++;
+      if (fcnt === 8) { flags.push(fcur); fcur = 0; fcnt = 0; }
+    };
+    const pushByte = b => { data[dlen++] = b; };
+
+    let i = 0;
+    while (i < n) {
+      let bestLen = 0, bestOff = 0;
+      if (i + LZ_MIN <= n) {
+        const h = ((src[i] << 10) ^ (src[i + 1] << 5) ^ src[i + 2]) & 0xffff;
+        let cand = head[h], tries = 0;
+        const maxL = Math.min(LZ_MAXLEN, n - i);
+        while (cand >= 0 && i - cand <= LZ_WIN && tries < 16) {
+          let l = 0;
+          while (l < maxL && src[cand + l] === src[i + l]) l++;
+          if (l > bestLen) { bestLen = l; bestOff = i - cand; if (l >= maxL) break; }
+          cand = chain[cand];
+          tries++;
+        }
+      }
+      if (bestLen >= LZ_MIN) {
+        pushFlag(1);
+        pushByte(bestOff - 1);
+        pushByte(bestLen - LZ_MIN);
+        for (let k = 0; k < bestLen; k++) insert(i + k);
+        i += bestLen;
+      } else {
+        pushFlag(0);
+        pushByte(src[i]);
+        insert(i);
+        i++;
+      }
+    }
+    if (fcnt > 0) flags.push(fcur << (8 - fcnt));
+
+    const farr = Uint8Array.from(flags);
+    const head4 = lenHead(n), flen4 = lenHead(farr.length);
+    const out = new Uint8Array(8 + farr.length + dlen);
+    out.set(head4, 0); out.set(flen4, 4);
+    out.set(farr, 8); out.set(data.subarray(0, dlen), 8 + farr.length);
+    return out;
+  }
+
+  function lz77Decompress(bytes) {
+    const origLen = readLen(bytes, 0);
+    const flagLen = readLen(bytes, 4);
+    if (8 + flagLen > bytes.length) throw new Error("数据不完整：标志区长度越界");
+    const flags = bytes.subarray(8, 8 + flagLen);
+    const data = bytes.subarray(8 + flagLen);
+    const out = new Uint8Array(origLen);
+    let oi = 0, di = 0, fi = 0, bit = 0;
+
+    while (oi < origLen) {
+      if (fi >= flags.length) throw new Error("数据不完整：标志位用完了但还没解够长度");
+      const flag = (flags[fi] >> (7 - bit)) & 1;
+      if (++bit === 8) { bit = 0; fi++; }
+      if (flag === 0) {
+        if (di >= data.length) throw new Error("数据不完整：字面量不足");
+        out[oi++] = data[di++];
+      } else {
+        if (di + 1 >= data.length) throw new Error("数据不完整：匹配对不足");
+        const off = data[di] + 1;
+        const len = data[di + 1] + LZ_MIN;
+        di += 2;
+        if (off > oi) throw new Error("压缩数据损坏：回退距离 " + off + " 超过已解出的 " + oi + " 字节");
+        /* 逐字节复制，天然支持 offset < len 的重叠匹配（aaaaaaaa 这类） */
+        for (let k = 0; k < len && oi < origLen; k++) out[oi] = out[oi - off], oi++;
+      }
+    }
+    return out;
+  }
+
+  /* ============================================================
+     3. RLE —— PackBits 游程编码
+     控制字节 n：0~127 → 后跟 n+1 个字面量；129~255 → 下一字节重复 257-n 次；
+     128 保留不用。重复长度 ≥3 才值得单独成块，否则并进字面量。
+     ============================================================ */
+
+  function rleCompress(src) {
+    const n = src.length;
+    const out = new Uint8Array(n + (n >> 6) + 16);
+    let o = 0, i = 0;
+    while (i < n) {
+      let run = 1;
+      while (i + run < n && src[i + run] === src[i] && run < 128) run++;
+      if (run >= 3) {
+        out[o++] = 257 - run;      // run 128→129，run 2→255
+        out[o++] = src[i];
+        i += run;
+      } else {
+        const start = i;
+        let lit = 0;
+        while (i < n && lit < 128) {
+          let r = 1;
+          while (i + r < n && src[i + r] === src[i] && r < 3) r++;
+          if (r >= 3) break;       // 下一段是值得编码的游程，字面量到此为止
+          i++; lit++;
+        }
+        out[o++] = lit - 1;
+        for (let k = 0; k < lit; k++) out[o++] = src[start + k];
+      }
+    }
+    return concat(lenHead(n), out.subarray(0, o));
+  }
+
+  function rleDecompress(bytes) {
+    const origLen = readLen(bytes, 0);
+    const out = new Uint8Array(origLen);
+    let oi = 0, i = 4;
+    while (oi < origLen) {
+      if (i >= bytes.length) throw new Error("数据不完整：控制字节不足");
+      const c = bytes[i++];
+      if (c < 128) {
+        const cnt = c + 1;
+        if (i + cnt > bytes.length) throw new Error("数据不完整：字面量块被截断");
+        for (let k = 0; k < cnt && oi < origLen; k++) out[oi++] = bytes[i + k];
+        i += cnt;
+      } else if (c > 128) {
+        const cnt = 257 - c;
+        if (i >= bytes.length) throw new Error("数据不完整：重复字节缺失");
+        const b = bytes[i++];
+        for (let k = 0; k < cnt && oi < origLen; k++) out[oi++] = b;
+      } else {
+        throw new Error("压缩数据损坏：遇到 PackBits 保留字节 128");
+      }
+    }
+    return out;
+  }
+
+  /* ============================================================
+     4. Huffman —— 静态哈夫曼 + 规范码
+     格式：[4B 原长][256B 码长表][位流]
+     码长表固定 256 字节（每符号 1 字节），短文本会被这 256 字节拖累，
+     对比表里能看到这笔「头部开销」。
+     ============================================================ */
+
+  function huffCodeLengths(freq) {
+    const lens = new Uint8Array(256);
+    const nodes = [];
+    for (let i = 0; i < 256; i++) if (freq[i] > 0) nodes.push({ s: i, f: freq[i], l: null, r: null });
+    if (nodes.length === 0) return lens;
+    if (nodes.length === 1) { lens[nodes[0].s] = 1; return lens; }   // 单符号也要占 1 位
+    while (nodes.length > 1) {
+      nodes.sort((a, b) => a.f - b.f || a.s - b.s);
+      const a = nodes.shift(), b = nodes.shift();
+      nodes.push({ s: -1, f: a.f + b.f, l: a, r: b });
+    }
+    const stack = [[nodes[0], 0]];
+    while (stack.length) {
+      const it = stack.pop(), nd = it[0], d = it[1];
+      if (nd.s >= 0) { lens[nd.s] = d; continue; }
+      stack.push([nd.l, d + 1], [nd.r, d + 1]);
+    }
+    return lens;
+  }
+
+  /* 规范码：同码长的码字按符号值递增分配，解码端只凭码长表就能重建，
+     不必把整棵树序列化出去。 */
+  function huffCanonical(lens) {
+    let maxLen = 0;
+    for (let i = 0; i < 256; i++) if (lens[i] > maxLen) maxLen = lens[i];
+    const blCount = new Uint32Array(maxLen + 2);
+    for (let i = 0; i < 256; i++) if (lens[i]) blCount[lens[i]]++;
+    const nextCode = new Uint32Array(maxLen + 2);
+    let code = 0;
+    for (let bits = 1; bits <= maxLen; bits++) {
+      code = (code + blCount[bits - 1]) << 1;
+      nextCode[bits] = code;
+    }
+    const codes = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const l = lens[i];
+      if (l) codes[i] = nextCode[l]++;
+    }
+    return codes;
+  }
+
+  function huffmanCompress(src) {
+    const n = src.length;
+    const freq = new Uint32Array(256);
+    for (let i = 0; i < n; i++) freq[src[i]]++;
+    const lens = huffCodeLengths(freq);
+    const codes = huffCanonical(lens);
+    const bw = new BitWriter(Math.max(256, n >> 1));
+    for (let i = 0; i < n; i++) bw.write(codes[src[i]], lens[src[i]]);
+    const body = bw.bytes();
+    const out = new Uint8Array(4 + 256 + body.length);
+    out.set(lenHead(n), 0);
+    out.set(lens, 4);
+    out.set(body, 260);
+    return out;
+  }
+
+  function huffmanDecompress(bytes) {
+    if (bytes.length < 260) throw new Error("数据太短：哈夫曼头至少 260 字节");
+    const origLen = readLen(bytes, 0);
+    /* 解码表与位流读取和 BWT 档共用（见下面 huffDecodeBody） */
+    return huffDecodeBody(bytes, 260, origLen, bytes.subarray(4, 260));
+  }
+
+  /* ============================================================
+     5. BWT + MTF + RLE + Huffman —— bzip2 走的那条链路
+     和 LZ 系完全不同的思路：不找重复片段，而是把「相同的字符」
+     在物理上搬到一起，让后续的统计编码有东西可吃。
+     ============================================================ */
+
+  class ByteWriter {
+    constructor(cap) { this.buf = new Uint8Array(cap > 16 ? cap : 256); this.len = 0; }
+    push(b) {
+      if (this.len === this.buf.length) {
+        const nb = new Uint8Array(this.buf.length * 2);
+        nb.set(this.buf); this.buf = nb;
+      }
+      this.buf[this.len++] = b;
+    }
+    bytes() { return this.buf.slice(0, this.len); }
+  }
+
+  /* 后缀数组：倍增 + 两轮计数排序，O(n log n)。
+     直接对所有后缀做字符串排序是 O(n² log n)，30KB 就要几十秒，不能用。
+     输入值域 0~256（BWT 会在末尾追加一个值为 0 的哨兵，其余字节 +1 让位）。 */
+  function suffixArray(s) {
+    const n = s.length;
+    const sa = new Int32Array(n);
+    if (n === 0) return sa;
+    if (n === 1) { sa[0] = 0; return sa; }
+
+    const rank = new Int32Array(n);
+    const sa2 = new Int32Array(n);
+    const rk2 = new Int32Array(n);
+    const cnt = new Int32Array(Math.max(n + 2, 258));
+
+    /* 第一轮：按首字符计数排序 */
+    cnt.fill(0);
+    for (let i = 0; i < n; i++) cnt[s[i] + 1]++;
+    for (let i = 1; i <= 257; i++) cnt[i] += cnt[i - 1];
+    for (let i = 0; i < n; i++) sa[cnt[s[i]]++] = i;
+
+    let classes = 1;
+    rank[sa[0]] = 0;
+    for (let i = 1; i < n; i++) {
+      if (s[sa[i]] !== s[sa[i - 1]]) classes++;
+      rank[sa[i]] = classes - 1;
+    }
+
+    for (let k = 1; classes < n; k <<= 1) {
+      /* 按第二关键字排：sa[i]-k 这一批天然有序，先把尾部不足 k 的放进去 */
+      let p = 0;
+      for (let i = Math.max(0, n - k); i < n; i++) sa2[p++] = i;
+      for (let i = 0; i < n; i++) if (sa[i] >= k) sa2[p++] = sa[i] - k;
+
+      /* 再按第一关键字稳定计数排序 */
+      cnt.fill(0);
+      for (let i = 0; i < n; i++) cnt[rank[i] + 1]++;
+      for (let i = 1; i <= classes; i++) cnt[i] += cnt[i - 1];
+      for (let i = 0; i < n; i++) sa[cnt[rank[sa2[i]]]++] = sa2[i];
+
+      rk2[sa[0]] = 0;
+      let nc = 1;
+      for (let i = 1; i < n; i++) {
+        const a = sa[i - 1], b = sa[i];
+        const a2 = a + k < n ? rank[a + k] : -1;
+        const b2 = b + k < n ? rank[b + k] : -1;
+        if (rank[a] !== rank[b] || a2 !== b2) nc++;
+        rk2[b] = nc - 1;
+      }
+      rank.set(rk2);
+      classes = nc;
+      if (k > n) break;          // 防御：k 倍增到超过 n 还没收敛时兜底，避免死循环
+    }
+    return sa;
+  }
+
+  /* ★ BWT 必须带哨兵。
+     一开始我直接拿后缀数组算 L 列、再按循环移位那套 LF 映射逆变换，结果在
+     「最后 4 个字符里有 3 个换行」这种数据上炸了：LF 映射退化成好几个短环
+     （实测 31 字节只绕了 24 步就回到起点），倒推出来的东西整个是错的。
+     原因是没有哨兵时 BWT 不可逆 —— 相同的字符在 L 和 F 里对不齐，
+     置换不再单一。所以这里在末尾追加一个值为 0 的哨兵（原字节统一 +1 让位），
+     做完再去掉哨兵那一行，逆变换时再插回去。 */
+  function bwtForward(src) {
+    const n = src.length;
+    if (n === 0) return { data: src, primary: 0 };
+    const m = n + 1;
+    const t = new Int32Array(m);
+    for (let i = 0; i < n; i++) t[i] = src[i] + 1;
+    t[n] = 0;                        // 哨兵，比任何真实字符都小
+
+    const sa = suffixArray(t);
+    const out = new Uint8Array(n);
+    let p = 0, primary = 0;
+    for (let i = 0; i < m; i++) {
+      if (sa[i] === 0) { primary = p; continue; }   // 哨兵那一行，L 值是哨兵本身，跳过
+      out[p++] = t[sa[i] - 1] - 1;
+    }
+    return { data: out, primary: primary };
+  }
+
+  /* 逆变换：先把哨兵插回 primary 位置，再走 LF 映射倒推出整串。 */
+  function bwtInverse(L, primary) {
+    const n = L.length;
+    if (n === 0) return L;
+    const m = n + 1;
+    if (primary < 0 || primary >= m) throw new Error("BWT 主索引越界（" + primary + " / " + m + "）");
+
+    const Lp = new Int32Array(m);
+    for (let i = 0, j = 0; i < m; i++) {
+      if (i === primary) Lp[i] = 0;
+      else Lp[i] = L[j++] + 1;
+    }
+
+    const cnt = new Int32Array(257);
+    for (let i = 0; i < m; i++) cnt[Lp[i]]++;
+    const start = new Int32Array(257);
+    let sum = 0;
+    for (let i = 0; i < 257; i++) { start[i] = sum; sum += cnt[i]; }
+    const next = new Int32Array(m);
+    const seen = new Int32Array(257);
+    for (let i = 0; i < m; i++) next[i] = start[Lp[i]] + seen[Lp[i]]++;
+
+    const tmp = new Int32Array(m);
+    let p = primary;
+    for (let i = m - 1; i >= 0; i--) { tmp[i] = Lp[p]; p = next[p]; }
+
+    const out = new Uint8Array(n);
+    for (let i = 0; i < n; i++) out[i] = tmp[i] - 1;
+    return out;
+  }
+
+  /* MTF：把「字节值」换成「它在最近使用列表里的名次」。
+     BWT 之后相同字节扎堆，名次序列会挤出一大片 0 和小整数，正好交给后面的 RLE。 */
+  function mtfForward(src) {
+    const out = new Uint8Array(src.length);
+    const list = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) list[i] = i;
+    for (let i = 0; i < src.length; i++) {
+      const c = src[i];
+      let j = 0;
+      while (list[j] !== c) j++;
+      out[i] = j;
+      for (let k = j; k > 0; k--) list[k] = list[k - 1];
+      list[0] = c;
+    }
+    return out;
+  }
+  function mtfInverse(src) {
+    const out = new Uint8Array(src.length);
+    const list = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) list[i] = i;
+    for (let i = 0; i < src.length; i++) {
+      const j = src[i];
+      const c = list[j];
+      out[i] = c;
+      for (let k = j; k > 0; k--) list[k] = list[k - 1];
+      list[0] = c;
+    }
+    return out;
+  }
+
+  /* 只对 0 做游程：MTF 输出里 0 是最常见的那一个，其余值原样保留。
+     写成 (0, 次数) 两字节，次数上限 255。 */
+  function rle0Forward(src, w) {
+    let i = 0;
+    while (i < src.length) {
+      if (src[i] === 0) {
+        let run = 1;
+        while (i + run < src.length && src[i + run] === 0 && run < 255) run++;
+        w.push(0); w.push(run);
+        i += run;
+      } else {
+        w.push(src[i]);
+        i++;
+      }
+    }
+  }
+  function rle0Inverse(src, outLen) {
+    const out = new Uint8Array(outLen);
+    let oi = 0, i = 0;
+    while (i < src.length && oi < outLen) {
+      const b = src[i++];
+      if (b === 0) {
+        if (i >= src.length) throw new Error("数据不完整：RLE0 计数缺失");
+        const run = src[i++];
+        for (let k = 0; k < run && oi < outLen; k++) out[oi++] = 0;
+      } else {
+        out[oi++] = b;
+      }
+    }
+    if (oi !== outLen) throw new Error("数据不完整：RLE0 展开后长度不足");
+    return out;
+  }
+
+  /* 由码长表建解码表。哈夫曼解码是 BWT 档和纯 Huffman 档共用的。 */
+  function huffDecodeTable(lens) {
+    const codes = huffCanonical(lens);
+    const table = new Map();
+    for (let i = 0; i < 256; i++) {
+      const l = lens[i];
+      if (l > 32) throw new Error("哈夫曼码长表损坏：出现 " + l + " 位的码");
+      if (l) table.set(l * 4294967296 + codes[i], i);
+    }
+    return table;
+  }
+  function huffDecodeBody(bytes, start, outLen, lens) {
+    const table = huffDecodeTable(lens);
+    const br = new BitReader(bytes, start);
+    const out = new Uint8Array(outLen);
+    let oi = 0, code = 0, len = 0;
+    while (oi < outLen) {
+      code = (code << 1) | br.read(1);
+      len++;
+      const sym = table.get(len * 4294967296 + code);
+      if (sym !== undefined) { out[oi++] = sym; code = 0; len = 0; }
+      else if (len > 32) throw new Error("哈夫曼码表与数据不匹配（超过 32 位仍未命中）");
+    }
+    return out;
+  }
+
+  function bwtCompress(src) {
+    const n = src.length;
+    const fwd = bwtForward(src);
+    const mtf = mtfForward(fwd.data);
+    const bw = new ByteWriter(mtf.length + 64);
+    rle0Forward(mtf, bw);
+    const rle = bw.bytes();
+
+    const freq = new Uint32Array(256);
+    for (let i = 0; i < rle.length; i++) freq[rle[i]]++;
+    const lens = huffCodeLengths(freq);
+    const codes = huffCanonical(lens);
+    const bits = new BitWriter(Math.max(256, rle.length >> 1));
+    for (let i = 0; i < rle.length; i++) bits.write(codes[rle[i]], lens[rle[i]]);
+    const body = bits.bytes();
+
+    /* 头：原长 4B + 主索引 4B + RLE0 长度 4B + 码长表 256B */
+    const out = new Uint8Array(268 + body.length);
+    out.set(lenHead(n), 0);
+    out.set(lenHead(fwd.primary), 4);
+    out.set(lenHead(rle.length), 8);
+    out.set(lens, 12);
+    out.set(body, 268);
+    return out;
+  }
+
+  function bwtDecompress(bytes) {
+    if (bytes.length < 268) throw new Error("数据太短：BWT 头至少 268 字节");
+    const origLen = readLen(bytes, 0);
+    const primary = readLen(bytes, 4);
+    const rleLen = readLen(bytes, 8);
+    const lens = bytes.subarray(12, 268);
+    const rle = huffDecodeBody(bytes, 268, rleLen, lens);
+    const mtf = rle0Inverse(rle, origLen);
+    return bwtInverse(mtfInverse(mtf), primary);
+  }
+
+  /* ============================================================
+     6. LZ4 —— 标准块格式（block format）
+     和 LZ77 同源，但 token 压成 1 字节（高 4 位字面量长度、低 4 位匹配长度），
+     匹配最短 4 字节、偏移 2 字节，主打解压速度。主体是标准 LZ4 block，
+     lz4 库能直接解；外面那 4 字节长度头是本工具为了自描述加的
+     （LZ4 block 本身不含解压后长度）。
+     ============================================================ */
+
+  const LZ4_MFLIMIT = 12;        // 最后 12 字节内不再找匹配（规范要求，保证解压端能整块拷贝）
+  const LZ4_LASTLITERALS = 5;    // 结尾至少留 5 字节纯字面量（同上）
+
+  function lz4Compress(src) {
+    const n = src.length;
+    if (n === 0) return lenHead(0);
+    const w = new ByteWriter(n + (n >> 4) + 32);
+    const head = new Int32Array(1 << 16).fill(-1);
+    const hash = i => (Math.imul(
+      (src[i] | (src[i + 1] << 8) | (src[i + 2] << 16) | (src[i + 3] << 24)), 2654435761
+    ) >>> 16) & 0xffff;
+
+    let anchor = 0, i = 0;
+    while (i <= n - LZ4_MFLIMIT) {
+      const h = hash(i);
+      const cand = head[h];
+      head[h] = i;                     // LZ4 每个桶只留最近一个位置，够快
+      if (cand < 0 || i - cand > 65535 ||
+          src[cand] !== src[i] || src[cand + 1] !== src[i + 1] ||
+          src[cand + 2] !== src[i + 2] || src[cand + 3] !== src[i + 3]) {
+        i++;
+        continue;
+      }
+      let len = 4;
+      const maxLen = n - LZ4_LASTLITERALS - i;
+      while (len < maxLen && src[cand + len] === src[i + len]) len++;
+
+      const litLen = i - anchor;
+      const matchLen = len - 4;
+      w.push(((litLen < 15 ? litLen : 15) << 4) | (matchLen < 15 ? matchLen : 15));
+      if (litLen >= 15) { let r = litLen - 15; while (r >= 255) { w.push(255); r -= 255; } w.push(r); }
+      for (let k = anchor; k < i; k++) w.push(src[k]);
+      const off = i - cand;
+      w.push(off & 255); w.push(off >>> 8);
+      if (matchLen >= 15) { let r = matchLen - 15; while (r >= 255) { w.push(255); r -= 255; } w.push(r); }
+
+      /* 匹配区间里的位置也要进哈希表，否则紧跟着的重复抓不到 */
+      for (let k = 0; k < len; k++) {
+        const p = i + k;
+        if (p <= n - LZ4_MFLIMIT) head[hash(p)] = p;
+      }
+      i += len;
+      anchor = i;
+    }
+
+    /* 收尾：纯字面量，不跟 offset */
+    const tail = n - anchor;
+    w.push((tail < 15 ? tail : 15) << 4);
+    if (tail >= 15) { let r = tail - 15; while (r >= 255) { w.push(255); r -= 255; } w.push(r); }
+    for (let k = anchor; k < n; k++) w.push(src[k]);
+    return concat(lenHead(n), w.bytes());
+  }
+
+  function lz4Decompress(bytes) {
+    const origLen = readLen(bytes, 0);
+    const src = bytes.subarray(4);
+    const out = new Uint8Array(origLen);
+    let si = 0, oi = 0;
+
+    while (si < src.length) {
+      const token = src[si++];
+      let litLen = token >>> 4;
+      if (litLen === 15) {
+        let b;
+        do {
+          if (si >= src.length) throw new Error("数据不完整：LZ4 字面量长度缺失");
+          b = src[si++]; litLen += b;
+        } while (b === 255);
+      }
+      if (si + litLen > src.length) throw new Error("数据不完整：LZ4 字面量被截断");
+      if (oi + litLen > origLen) throw new Error("LZ4 解出长度超出预期");
+      out.set(src.subarray(si, si + litLen), oi);
+      si += litLen; oi += litLen;
+
+      if (si >= src.length) break;       // 最后一个序列只有字面量
+
+      if (si + 2 > src.length) throw new Error("数据不完整：LZ4 偏移缺失");
+      const off = src[si] | (src[si + 1] << 8);
+      si += 2;
+      if (off === 0) throw new Error("压缩数据损坏：LZ4 偏移为 0");
+
+      let matchLen = token & 15;
+      if (matchLen === 15) {
+        let b;
+        do {
+          if (si >= src.length) throw new Error("数据不完整：LZ4 匹配长度缺失");
+          b = src[si++]; matchLen += b;
+        } while (b === 255);
+      }
+      matchLen += 4;
+      if (off > oi) throw new Error("压缩数据损坏：LZ4 回退距离 " + off + " 超过已解出的 " + oi + " 字节");
+      if (oi + matchLen > origLen) throw new Error("LZ4 解出长度超出预期");
+      for (let k = 0; k < matchLen; k++) out[oi + k] = out[oi + k - off];
+      oi += matchLen;
+    }
+    if (oi !== origLen) throw new Error("LZ4 解出长度不符（" + oi + " / " + origLen + "）");
+    return out;
+  }
+
+  /* ============================================================
+     7. 算术编码（order-1 上下文模型 + 自适应 Range Coder）
+     和 Huffman 完全不同的熵编码：Huffman 每个符号必须占整数位，
+     算术编码把整个输入映射成 [0,1) 区间里的一个小数，用分数位编码，
+     理论上能贴着信息熵走。而且模型是自适应的 —— 边扫边学，
+     不需要事先统计、也不用存 256 字节的码长表。
+     ============================================================ */
+
+  const AC_PROB_BITS = 11;                 // 概率用 11 位定点（0~2048）
+  const AC_PROB_INIT = 1 << (AC_PROB_BITS - 1);
+  const AC_TOP = 1 << 24;                  // 区间低于这个值就要归一化
+
+  /* ★ 学习速率必须随「这个节点见过几次」变化，不能用固定步长。
+     踩过的坑：一开始写死 1/32（shift 5），结果是
+       · 结构化文本（中文、Base64、JSON）压到 44%，比 Huffman 只赢 26 个百分点；
+       · 完全无记忆的随机文本，因为 256 个上下文各自从 0.5 重新学起
+         （上下文稀释），反而输给 Huffman 两个多点。
+     改成「头两次一步到位、之后逐步收窄」后，同一批文本分别降到
+     18.5% / 6.3% / 25.7%，随机文本也追平了。
+     道理很直白：新上下文的第一条样本就是全部信息，步子该大；
+     见多了才该细调，否则估计会一直跟着噪声抖。 */
+  const AC_SHIFT = [1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5];
+
+  function acShift(count) {
+    return count < AC_SHIFT.length ? AC_SHIFT[count] : 5;
+  }
+
+  class RangeEncoder {
+    constructor() {
+      this.low = 0;
+      this.range = 0xFFFFFFFF;
+      this.cache = 0;
+      this.cacheSize = 1;
+      this.out = new ByteWriter();
+    }
+    encodeBit(prob, bit) {
+      const bound = (this.range >>> AC_PROB_BITS) * prob;
+      if (bit === 0) {
+        this.range = bound;
+      } else {
+        this.low += bound;
+        this.range -= bound;
+      }
+      while (this.range < AC_TOP) {
+        this.range = (this.range << 8) >>> 0;
+        this.shiftLow();
+      }
+    }
+    /* ★ 进位处理是 range coder 唯一难写的地方：low 可能越过 2^32，
+       那一位要加到之前缓存的 0xFF 链上。cacheSize 记录挂起了多少个 0xFF。 */
+    shiftLow() {
+      const lo = this.low >>> 0;
+      const carry = Math.floor(this.low / 4294967296);
+      if (lo < 0xFF000000 || carry !== 0) {
+        let temp = this.cache;
+        do {
+          this.out.push((temp + carry) & 255);
+          temp = 0xFF;
+        } while (--this.cacheSize !== 0);
+        this.cache = (lo >>> 24) & 255;
+      }
+      this.cacheSize++;
+      this.low = (lo << 8) >>> 0;
+    }
+    finish() {
+      for (let i = 0; i < 5; i++) this.shiftLow();   // 把挂起的字节全冲出来
+      return this.out.bytes();
+    }
+  }
+
+  class RangeDecoder {
+    constructor(bytes, start) {
+      this.b = bytes;
+      this.pos = start || 0;
+      this.range = 0xFFFFFFFF;
+      this.code = 0;
+      for (let i = 0; i < 5; i++) this.code = ((this.code << 8) | (this.b[this.pos++] || 0)) >>> 0;
+    }
+    decodeBit(prob) {
+      const bound = (this.range >>> AC_PROB_BITS) * prob;
+      let bit;
+      if ((this.code >>> 0) < (bound >>> 0)) {
+        this.range = bound;
+        bit = 0;
+      } else {
+        this.code = (this.code - bound) >>> 0;
+        this.range = (this.range - bound) >>> 0;
+        bit = 1;
+      }
+      while (this.range < AC_TOP) {
+        this.range = (this.range << 8) >>> 0;
+        this.code = ((this.code << 8) | (this.b[this.pos++] || 0)) >>> 0;
+      }
+      return bit;
+    }
+  }
+
+  /* 模型：256 个上下文（前一个字节）× 每上下文一棵 8 层二叉树。
+     节点 1~255，probs[ctx*256 + node] 存的是「这一位为 0」的概率。
+     一共 128 KB 的 Uint16Array + 64 KB 的计数表，比 order-2 省一个数量级。 */
+
+  /* ★ 只有算术编码需要额外校验和，别的那几档不需要：
+     LZW 会撞上「码超出字典范围」、LZ77 / LZ4 会撞上非法 offset、
+     Huffman / BWT 会撞上码长表对不上 —— 都有结构性错误可撞。
+     算术编码没有结构，截断的数据喂进去只会被补 0 继续解，
+     结果是**长度完全正确、内容全错**（实测截掉 10% 解出 510 个乱字，原文 282 字）。
+     所以补 2 字节 Fletcher-16，对**解码后的字节**校验。 */
+  function fletcher16(b) {
+    let s1 = 0, s2 = 0;
+    for (let i = 0; i < b.length; i++) {
+      s1 += b[i];
+      if (s1 >= 255) s1 -= 255;      // b[i] ≤ 255、s1 < 255 ⇒ s1 < 510，减一次就够
+      s2 += s1;
+      if (s2 >= 255) s2 -= 255;
+    }
+    return (s2 << 8) | s1;
+  }
+
+  function acCompress(src) {
+    const n = src.length;
+    if (n === 0) return lenHead(0);
+    const enc = new RangeEncoder();
+    const probs = new Uint16Array(256 * 256).fill(AC_PROB_INIT);
+    const cnt = new Uint8Array(256 * 256);
+    let prev = 0;
+    for (let i = 0; i < n; i++) {
+      const byte = src[i];
+      const base = prev << 8;
+      let node = 1;
+      for (let b = 7; b >= 0; b--) {
+        const bit = (byte >> b) & 1;
+        const idx = base + node;
+        const p = probs[idx], c = cnt[idx];
+        enc.encodeBit(p, bit);
+        /* 见到 0 朝 2048 走、见到 1 朝 0 走；p 最小停在 1、
+           最大停在 2047，不会塌成 0 或满格让区间退化。 */
+        const sh = acShift(c);
+        probs[idx] = bit === 0 ? p + ((2048 - p) >> sh) : p - (p >> sh);
+        if (c < 255) cnt[idx] = c + 1;
+        node = (node << 1) | bit;
+      }
+      prev = byte;
+    }
+    const sum = fletcher16(src);
+    return concat(concat(lenHead(n), enc.finish()), new Uint8Array([sum >> 8, sum & 255]));
+  }
+
+  function acDecompress(bytes) {
+    const origLen = readLen(bytes, 0);
+    if (origLen === 0) return new Uint8Array(0);
+    if (bytes.length < 4 + 5 + 2) throw new Error("算术编码数据太短");
+    const bodyEnd = bytes.length - 2;
+    const want = (bytes[bodyEnd] << 8) | bytes[bodyEnd + 1];
+    /* ★ 把校验和那 2 字节切掉再交给解码器，否则读到流末尾时会把校验和当成
+       后续数据吞进去。subarray 是视图、不复制。 */
+    const dec = new RangeDecoder(bytes.subarray(4, bodyEnd), 0);
+    const probs = new Uint16Array(256 * 256).fill(AC_PROB_INIT);
+    const cnt = new Uint8Array(256 * 256);
+    const out = new Uint8Array(origLen);
+    let prev = 0;
+    for (let i = 0; i < origLen; i++) {
+      const base = prev << 8;
+      let node = 1, byte = 0;
+      for (let b = 0; b < 8; b++) {
+        const idx = base + node;
+        const p = probs[idx], c = cnt[idx];
+        const bit = dec.decodeBit(p);
+        const sh = acShift(c);          /* ★ 必须和压缩端完全同步，差一档就全乱 */
+        probs[idx] = bit === 0 ? p + ((2048 - p) >> sh) : p - (p >> sh);
+        if (c < 255) cnt[idx] = c + 1;
+        node = (node << 1) | bit;
+        byte = (byte << 1) | bit;
+      }
+      out[i] = byte;
+      prev = byte;
+    }
+    if (fletcher16(out) !== want) throw new Error("算术编码校验不通过：数据已损坏或被截断");
+    return out;
+  }
+
+  /* ============================================================
+     8. 浏览器原生 CompressionStream
+     ============================================================ */
+
+  /* ★ 不用 `new Response(stream).arrayBuffer()` —— 解压失败时那条路径只抛出
+     "Failed to fetch"，把 zlib 的真实报错（incorrect header check 之类）全吞掉了，
+     用户看到的是一句跟压缩毫无关系的网络错误。手动 getReader 逐块读，
+     底层错误才能原样冒上来，也顺便避免了整段数据在内存里再复制一遍。 */
+  async function pump(stream) {
+    const reader = stream.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const r = await reader.read();
+      if (r.done) break;
+      chunks.push(r.value);
+      total += r.value.length;
+    }
+    const out = new Uint8Array(total);
+    let o = 0;
+    for (let i = 0; i < chunks.length; i++) { out.set(chunks[i], o); o += chunks[i].length; }
+    return out;
+  }
+  async function nativeZip(bytes, fmt) {
+    const cs = new CompressionStream(fmt);
+    const w = cs.writable.getWriter();
+    w.write(bytes).catch(() => {});
+    w.close().catch(() => {});
+    return pump(cs.readable);
+  }
+  async function nativeUnzip(bytes, fmt) {
+    const ds = new DecompressionStream(fmt);
+    const w = ds.writable.getWriter();
+    w.write(bytes).catch(() => {});
+    w.close().catch(() => {});
+    return pump(ds.readable);
+  }
+
+  /* ============================================================
+     9. Brotli —— Web 平台没有原生 API，靠本地 WASM
+     vendor/brotli_wasm_bg.wasm 是 brotli-wasm@3.0.1 的 pkg.web 产物（Apache-2.0），
+     1.03 MB，**只在第一次用到 Brotli 时才 fetch**，首屏不加载。
+     ============================================================ */
+
+  const BR_WASM_LABEL = "1.0 MB";
+  let brMod = null, brLoading = null;
+
+  function loadBrotli() {
+    if (brMod) return Promise.resolve(brMod);
+    if (!brLoading) {
+      brLoading = import("./vendor/brotli_wasm.js")
+        .then(m => m.default().then(() => m))   // default 是 wasm-bindgen 的 init()
+        .then(m => { brMod = m; return m; })
+        .catch(err => {
+          brLoading = null;   // 清掉缓存的失败态，下次还能重试
+          /* 原始错误是 "Failed to fetch" 之类的，直接透出去会被 friendly()
+             误判成「数据损坏」，所以这里先翻译成人话 */
+          const raw = String(err && err.message || err);
+          const why = /fetch|network|abort|404|load/i.test(raw)
+            ? "文件取不到（404 或网络中断）"
+            : raw;
+          throw new Error("Brotli 引擎加载失败：" + why +
+            "。请确认 vendor/brotli_wasm.js 与 vendor/brotli_wasm_bg.wasm 都已部署。");
+        });
+    }
+    return brLoading;
+  }
+
+  /* ============================================================
+     算法注册表
+     ============================================================ */
+
+  const ALGOS = [
+    {
+      id: "gzip", name: "gzip", kind: "native", fmt: "gzip",
+      std: true, tag: "标准格式",
+      desc: "DEFLATE 数据外加 gzip 头尾（魔数 1f 8b、CRC32、原始长度）。HTTP 的 <code>Content-Encoding: gzip</code>、.tar.gz 都是它，兼容性最好。",
+      compat: "通用（RFC 1952）"
+    },
+    {
+      id: "deflate", name: "deflate (zlib)", kind: "native", fmt: "deflate",
+      std: true, tag: "标准格式",
+      desc: "zlib 容器（RFC 1950）包住的 DEFLATE：2 字节头 + Adler-32 校验。toolhelper 等站点说的「zlib」就是这一档，Node 的 <code>zlib.deflate</code> 也默认产出它。",
+      compat: "通用（RFC 1950）"
+    },
+    {
+      id: "deflate-raw", name: "deflate-raw", kind: "native", fmt: "deflate-raw",
+      std: true, tag: "标准格式",
+      desc: "裸 DEFLATE（RFC 1951），无头无尾，比 zlib 少 6 字节。需要自己约定长度与校验的场合（如 PNG 的 IDAT 块）用它。",
+      compat: "通用（RFC 1951）"
+    },
+    {
+      id: "br", name: "Brotli", kind: "wasm", quality: 9,
+      zip: async b => {
+        /* 将来浏览器真给了原生 API 就直接用，省掉 1MB 的下载 */
+        if (streamOk("zip", "br")) return nativeZip(b, "br");
+        const m = await loadBrotli();
+        return m.compress(b, { quality: 9 });
+      },
+      unzip: async b => {
+        if (streamOk("unzip", "br")) return nativeUnzip(b, "br");
+        const m = await loadBrotli();
+        return m.decompress(b);
+      },
+      std: true, tag: "标准格式",
+      desc: "RFC 7932。内置一份 120KB 的常用词词典，小文本上通常比 gzip 再省 15~25%，现代浏览器的 <code>Accept-Encoding: br</code> 就走它。Web 平台至今没有提供 Brotli 的 <code>CompressionStream</code>，本页用本地 WASM 实现（质量档 9/11），<b>首次使用才加载那 1 MB</b>。",
+      compat: "通用（RFC 7932）"
+    },
+    {
+      id: "lzw", name: "LZW", kind: "own", zip: lzwCompress, unzip: lzwDecompress,
+      std: false, tag: "本站实现",
+      desc: "字典压缩的经典形态：把出现过的串登记成新码，下次整串用码代替。码宽随字典增长从 9 位升到 12 位，字典满 4096 项后不再扩。GIF 和 TIFF 用的就是这一族。",
+      compat: "本工具自有格式"
+    },
+    {
+      id: "lz77", name: "LZ77", kind: "own", zip: lz77Compress, unzip: lz77Decompress,
+      std: false, tag: "本站实现",
+      desc: "滑动窗口找重复：在最近 255 字节里搜最长匹配，用「回退多远、复制多长」两字节指针代替原文。DEFLATE 的压缩核心就是它。",
+      compat: "本工具自有格式"
+    },
+    {
+      id: "lz4", name: "LZ4", kind: "own", zip: lz4Compress, unzip: lz4Decompress,
+      std: false, tag: "标准块格式",
+      desc: "同样是滑动窗口，但把 token 压进 1 个字节（高 4 位给字面量长度、低 4 位给匹配长度），每个哈希桶只留最近一个候选。压缩率明显不如上面几档，换来的是<b>解压极快</b>——LZ4 的设计目标就是「解压速度接近 memcpy」。主体是标准 LZ4 block 格式，外面加了 4 字节长度头。",
+      compat: "标准 block 格式 + 4B 头"
+    },
+    {
+      id: "huffman", name: "Huffman", kind: "own", zip: huffmanCompress, unzip: huffmanDecompress,
+      std: false, tag: "本站实现",
+      desc: "纯频率统计：按字节出现次数建哈夫曼树，高频字节给短码、低频给长码。不利用重复片段，所以对重复度高的文本不如 LZ 系，但对分布偏斜的文本很稳。",
+      compat: "本工具自有格式"
+    },
+    {
+      id: "bwt", name: "BWT + MTF + Huffman", kind: "own", zip: bwtCompress, unzip: bwtDecompress,
+      std: false, tag: "本站实现",
+      desc: "bzip2 的核心链路，思路和 LZ 系完全不同：先用 Burrows-Wheeler 变换把所有后缀按字典序排一遍，把相同的字符搬到一起，再用 Move-to-Front 把「扎堆」变成一串小整数，游程编码吃掉连片的 0，最后交给哈夫曼。中文这类重复度高的文本上经常压得比 gzip 还狠。",
+      compat: "本工具自有格式"
+    },
+    {
+      id: "ac", name: "算术编码", kind: "own", zip: acCompress, unzip: acDecompress,
+      std: false, tag: "本站实现",
+      desc: "自适应算术编码（order-1 上下文模型）。和 Huffman 同属熵编码，但 Huffman 每个符号至少要占整数个 bit，最坏情况白扔近 1 bit；算术编码把整段输入映射成 [0,1) 区间里的一个小数，用<b>分数位</b>编码，理论上能贴着信息熵走。模型还吃上下文——同一个字节跟在「的」后面和跟在「0x」后面，概率分布完全不同，它分别学。实测在中文、JSON、Base64 这类文本上能把 Huffman 甩开三十个百分点以上。代价是它只吃统计与上下文规律，<b>不利用长距离重复</b>（同一个词出现一百次它也不会变便宜），所以纯重复文本仍该交给 LZ 系。",
+      compat: "本工具自有格式"
+    },
+    {
+      id: "rle", name: "RLE (PackBits)", kind: "own", zip: rleCompress, unzip: rleDecompress,
+      std: false, tag: "本站实现",
+      desc: "游程编码：连续重复的字节记成「重复几次 + 是什么」。对 <code>aaaa…</code>、成片空格、纯色位图效果极好，对普通自然语言几乎压不动——它是这张表里的下限参照。",
+      compat: "本工具自有格式"
+    }
+  ];
+
+  const ALGO_MAP = {};
+  ALGOS.forEach(a => { ALGO_MAP[a.id] = a; });
+
+  /* Brotli 能不能压，取决于浏览器有没有实现。不实现就把那一档禁用，
+     而不是让用户点了才报错。 */
+  function streamOk(kind, fmt) {
+    const C = kind === "zip" ? window.CompressionStream : window.DecompressionStream;
+    if (typeof C !== "function") return false;
+    try { new C(fmt); return true; } catch (e) { return false; }
+  }
+  const WASM_OK = typeof WebAssembly === "object" && typeof WebAssembly.instantiate === "function";
+
+  /* 顶栏那个数字只算真正能用的档位：列了却点不动的算法不算数 */
+  const USABLE = ALGOS.filter(a => {
+    if (a.kind === "own") return true;
+    if (a.kind === "wasm") return WASM_OK;
+    return streamOk("zip", a.fmt) || streamOk("unzip", a.fmt);
+  }).length;
+
+  async function compressWith(id, bytes) {
+    const a = ALGO_MAP[id];
+    if (!a) throw new Error("未知算法 " + id);
+    if (a.kind === "native") {
+      if (!streamOk("zip", a.fmt)) throw new Error(a.name + " 在当前浏览器不可用：Web 平台没有提供它的压缩 API");
+      return nativeZip(bytes, a.fmt);
+    }
+    return a.zip(bytes);
+  }
+  async function decompressWith(id, bytes) {
+    const a = ALGO_MAP[id];
+    if (!a) throw new Error("未知算法 " + id);
+    if (a.kind === "native") {
+      if (!streamOk("unzip", a.fmt)) throw new Error(a.name + " 在当前浏览器不可用：Web 平台没有提供它的解压 API");
+      return nativeUnzip(bytes, a.fmt);
+    }
+    return a.unzip(bytes);
+  }
+
+  /* ============================================================
+     格式化小工具
+     ============================================================ */
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 2 : 1) + " KB";
+    return (n / 1048576).toFixed(2) + " MB";
+  }
+  function pct(part, whole) {
+    if (!whole) return "—";
+    return (part / whole * 100).toFixed(1) + "%";
+  }
+  function fmtMs(ms) {
+    if (ms < 0.01) return "< 0.01 ms";
+    return ms < 1 ? ms.toFixed(2) + " ms" : ms < 100 ? ms.toFixed(1) + " ms" : Math.round(ms) + " ms";
+  }
+  function barColor(r) {
+    if (r <= 55) return "var(--ok)";
+    if (r <= 100) return "var(--accent)";
+    return "var(--err)";
+  }
+
+  /* 把底层异常翻成人话。原生 API 抛的是英文 DOMException，
+     直接摊给用户看不出「算法选错了」这层意思。 */
+  function friendly(e) {
+    const m = String(e && e.message || e);
+    /* 已经翻成人话的直接放行 —— 必须排在 fetch / 数据损坏那几条之前，
+       否则「引擎加载失败」会被误报成「这段数据不是当前算法压出来的」 */
+    if (/引擎加载失败/.test(m)) return m;
+    if (/incorrect header check|unknown compression method|invalid distance|invalid code|invalid stored block|invalid block type/i.test(m))
+      return "这段数据不是当前算法压出来的，或者内容已经损坏 —— 换一档算法再试。";
+    /* Chrome 的 DecompressionStream 有时只吐一句 "Failed to fetch"，
+       跟网络毫无关系，是流内部报错被包成了 TypeError。 */
+    if (/Failed to fetch|network error|terminated/i.test(m))
+      return "这段数据不是当前算法压出来的，或者内容已经损坏。换一档算法再试。";
+    if (/数据不完整|数据太短|unexpected end|premature/i.test(m))
+      return "数据被截断了：Base64 / Hex 没有粘全，或者中间少了字符。";
+    if (/invalid utf-8|The encoded data was not valid/i.test(m))
+      return "解出来的字节不是合法 UTF-8，可能这段数据本就不是文本。";
+    return m;
+  }
+
+  /* ============================================================
+     主卡片：压缩 / 解压
+     ============================================================ */
+
+  let dir = "zip";
+  let runToken = 0;
+
+  function renderStats(items) {
+    $("stats").innerHTML = items.map(it =>
+      '<div class="si ' + (it.cls || "") + '"><div class="k">' + eh(it.k) + '</div>' +
+      '<div class="v">' + it.v + '</div></div>'
+    ).join("");
+  }
+
+  function setNote(html) { $("note").innerHTML = html || ""; }
+
+  async function run() {
+    const token = ++runToken;
+    const raw = $("inp").value;
+    const id = $("algo").value;
+    const fmt = $("fmt").value;
+    const out = $("out");
+    syncCmpHighlight();
+
+    if (!raw) {
+      out.value = ""; out.classList.remove("filled");
+      $("stats").innerHTML = "";
+      setNote('<span class="empty-tip">' + (dir === "zip"
+        ? "输入文本后自动压缩"
+        : "粘贴 Base64 / Hex 压缩结果后自动解压") + '</span>');
+      return;
+    }
+
+    /* Brotli 的 WASM 有 1 MB，第一次用会停一下。先写提示、再让出一帧让它画出来，
+       否则用户看到的是「点了没反应」。加载放在计时之前，否则「耗时」那格会把
+       下载时间算进去 —— 实测慢网下会显示 1240 ms，而压缩本身只要 5 ms。 */
+    const sel = ALGO_MAP[id];
+    if (sel && sel.kind === "wasm" && !brMod) {
+      setNote('<span class="empty-tip">首次使用 ' + eh(sel.name) + '，正在加载 ' + BR_WASM_LABEL +
+        ' 的 WASM 引擎，之后就缓存在内存里了…</span>');
+      await new Promise(r => setTimeout(r, 16));
+      try {
+        await loadBrotli();
+      } catch (e) {
+        out.value = ""; out.classList.remove("filled");
+        renderStats([]);
+        setNote('<span class="err-tip">' + eh(friendly(e)) + '</span>');
+        return;
+      }
+    }
+
+    const t0 = performance.now();
+    try {
+      if (dir === "zip") {
+        const bytes = U8.encode(raw);
+        const z = await compressWith(id, bytes);
+        if (token !== runToken) return;
+        const ms = performance.now() - t0;
+        const text = fmt === "b64" ? bytesToB64(z) : bytesToHex(z, false);
+        out.value = text; out.classList.add("filled");
+
+        const ratio = z.length / bytes.length * 100;
+        const saved = bytes.length - z.length;
+        const encLen = text.length;
+        const a = ALGO_MAP[id];
+
+        renderStats([
+          { k: "原始", v: fmtBytes(bytes.length), cls: "" },
+          { k: "压缩后", v: fmtBytes(z.length), cls: "acc" },
+          { k: "压缩率", v: ratio.toFixed(1) + "%", cls: ratio <= 100 ? "good" : "bad" },
+          /* 比原文还大时别再写「节省」，那是在说反话 */
+          { k: saved >= 0 ? "节省" : "膨胀", v: fmtBytes(Math.abs(saved)), cls: saved >= 0 ? "good" : "bad" },
+          { k: "输出长度", v: encLen.toLocaleString() + '<small>字符</small>', cls: "" },
+          { k: "耗时", v: fmtMs(ms), cls: "" }
+        ]);
+
+        const notes = [];
+        notes.push('<b>' + eh(a.name) + '</b>：' + fmtBytes(bytes.length) + ' → <b>' + fmtBytes(z.length) +
+          '</b>，压缩率 <b>' + ratio.toFixed(1) + '%</b>' +
+          (saved >= 0 ? '，省下 ' + fmtBytes(saved) + '。' : '，<span class="err-tip">反而大了 ' + fmtBytes(-saved) + '</span>。'));
+        if (ratio > 100) {
+          notes.push('膨胀是正常的：<b>越短的文本越压不动</b>。LZ 系要攒够重复片段、哈夫曼要付 256 字节码长表，' +
+            '头部开销摊不下来就会比原文更长。文本上到几百字节以上才会明显转正。');
+        }
+        if (fmt === "b64") {
+          notes.push('输出是 Base64，字符数是压缩字节的 <b>4/3</b>（' + fmtBytes(z.length) + ' → ' + encLen +
+            ' 字符）。要衡量真实压缩效果看「压缩率」这一格，它只算压缩后的字节。');
+        } else {
+          notes.push('输出是 Hex，字符数是压缩字节的 <b>2 倍</b>（' + fmtBytes(z.length) + ' → ' + encLen +
+            ' 字符）。Hex 只是方便肉眼核对，实际传输用 Base64 更省。');
+        }
+        if (!a.std) {
+          notes.push('这一档是本工具自有的封装格式，<b>只能在本页解压</b>；要跟后端或命令行互通，请选 gzip / deflate / deflate-raw。');
+        }
+        setNote(notes.join("<br>"));
+      } else {
+        let bytes;
+        if (fmt === "b64") {
+          const nb = normalizeB64(raw);
+          if (!nb) throw new Error("不是合法的 Base64：含非法字符，或长度 ÷ 4 余 1");
+          bytes = b64ToBytes(nb);
+        } else {
+          const r = hexToBytes(raw);
+          if (r.err) throw new Error(r.err);
+          bytes = r.bytes;
+        }
+        const plain = await decompressWith(id, bytes);
+        if (token !== runToken) return;
+        const ms = performance.now() - t0;
+        const okUtf8 = u8dec(plain, true) !== null;
+        const text = okUtf8 ? u8dec(plain, false) : Array.prototype.map.call(plain, b => String.fromCharCode(b)).join("");
+        out.value = text; out.classList.add("filled");
+
+        const ratio = bytes.length / (plain.length || 1) * 100;
+        const a = ALGO_MAP[id];
+        renderStats([
+          { k: "输入", v: fmtBytes(bytes.length), cls: "" },
+          { k: "还原后", v: fmtBytes(plain.length), cls: "acc" },
+          { k: "压缩率", v: ratio.toFixed(1) + "%", cls: ratio <= 100 ? "good" : "bad" },
+          { k: "字符数", v: plain.length && okUtf8 ? text.length.toLocaleString() : "—", cls: "" },
+          { k: "耗时", v: fmtMs(ms), cls: "" }
+        ]);
+
+        const notes = [];
+        notes.push('按 <b>' + eh(a.name) + '</b> 解压：' + fmtBytes(bytes.length) + ' → <b>' + fmtBytes(plain.length) + '</b>。');
+        if (!okUtf8) {
+          notes.push('<span class="warn-tip">解出的字节不是合法 UTF-8</span>，下面按 Latin-1 逐字节映射显示，' +
+            '只能用来确认字节内容。若这是一段二进制数据，说明压缩本身成功了、只是原文不是文本。');
+        }
+        if (!a.std) {
+          notes.push('自实现算法的解码器只认本页产出的格式，输入必须是同一个算法压出来的。');
+        }
+        setNote(notes.join("<br>"));
+      }
+    } catch (e) {
+      if (token !== runToken) return;
+      out.value = ""; out.classList.remove("filled");
+      renderStats([]);
+      /* 解压方向最常见的两种失败是「算法选错」和「格式选错」，
+         后者光看报错猜不到，直接把补救动作写出来 */
+      const hint = dir === "unzip"
+        ? '<br><span class="empty-tip">排查：① 算法要和压缩时用的一致；' +
+          '② 如果这段是十六进制串，把右边的格式切到 Hex（Base64 串则保持 Base64）；' +
+          '③ 确认没有漏粘字符。</span>'
+        : "";
+      setNote('<span class="err-tip">' + eh(friendly(e)) + '</span>' + hint);
+    }
+  }
+
+  /* 对比表里的高亮要跟着算法下拉走：用户在别处切了算法，
+     表里那条蓝线不能还停在旧的那一行 */
+  function syncCmpHighlight() {
+    const cur = $("algo").value;
+    const rows = document.querySelectorAll("#cmpTbl tbody tr[data-algo]");
+    for (let i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle("on", rows[i].dataset.algo === cur);
+    }
+  }
+
+  /* 输入防抖：大文本下每次按键都重算会明显卡顿 */
+  let timer = 0;
+  function runSoon() {
+    clearTimeout(timer);
+    timer = setTimeout(run, 220);
+  }
+
+  /* ============================================================
+     对比表
+     ============================================================ */
+
+  let cmpBusy = false;
+
+  async function compareAll() {
+    if (cmpBusy) return;
+    const raw = $("inp").value;
+    const tbl = $("cmpTbl"), note = $("cmpNote");
+
+    if (!raw) {
+      tbl.innerHTML = "";
+      note.innerHTML = '<span class="empty-tip">先在上面输入一段文本，再点「开始对比」。</span>';
+      toast("还没有输入文本");
+      return;
+    }
+
+    const bytes = U8.encode(raw);
+    if (bytes.length > 262144) {
+      note.innerHTML = '<span class="warn-tip">文本有 ' + fmtBytes(bytes.length) + '，逐档跑完会比较慢，请稍候…</span>';
+    }
+
+    cmpBusy = true;
+    $("btnCmp").disabled = true;
+    const rows = [];
+
+    for (let i = 0; i < ALGOS.length; i++) {
+      const a = ALGOS[i];
+      const willLoad = a.kind === "wasm" && !brMod && WASM_OK;
+      note.innerHTML = '<span class="empty-tip">' + (willLoad
+        ? '正在加载 ' + BR_WASM_LABEL + ' 的 ' + eh(a.name) + ' 引擎…'
+        : '正在计算 ' + (i + 1) + ' / ' + ALGOS.length + '：' + eh(a.name) + ' …') + '</span>';
+      /* 让出一帧，否则连续计算会把进度文案一起卡住，看着像死机 */
+      await new Promise(r => setTimeout(r, 16));
+      if (a.kind === "native" && !streamOk("zip", a.fmt)) { rows.push({ a: a, size: -1, ms: 0, off: true }); continue; }
+      if (a.kind === "wasm" && !WASM_OK) { rows.push({ a: a, size: -1, ms: 0, off: true }); continue; }
+      /* WASM 引擎先单独加载完，再开始计时 —— 否则「耗时」那一列会把 1 MB 的
+         加载时间算进去，看着像 Brotli 比 gzip 慢一百倍，纯属误导 */
+      if (willLoad) {
+        try { await loadBrotli(); }
+        catch (e) { rows.push({ a: a, size: -1, ms: 0, err: friendly(e) }); continue; }
+      }
+      const t0 = performance.now();
+      try {
+        const z = await compressWith(a.id, bytes);
+        rows.push({ a: a, size: z.length, ms: performance.now() - t0 });
+      } catch (e) {
+        rows.push({ a: a, size: -1, ms: performance.now() - t0, err: friendly(e) });
+      }
+    }
+
+    cmpBusy = false;
+    $("btnCmp").disabled = false;
+
+    rows.sort((x, y) => {
+      if (x.size < 0 && y.size < 0) return 0;
+      if (x.size < 0) return 1;
+      if (y.size < 0) return -1;
+      return x.size - y.size;
+    });
+    const best = rows.find(r => r.size >= 0);
+    const cur = $("algo").value;
+
+    tbl.innerHTML = "<thead><tr><th>算法</th><th>压缩后</th><th>压缩率</th><th>相对大小</th><th>耗时</th></tr></thead><tbody>"
+      + rows.map(r => {
+          if (r.size < 0) {
+            return '<tr data-algo="' + eh(r.a.id) + '" class="off"><td class="algo">' + eh(r.a.name) +
+              ' <span class="tag off">' + (r.off ? "不支持" : "失败") + '</span></td>' +
+              '<td class="u" colspan="3">' + eh(r.err || "浏览器没有提供这个 API") + '</td>' +
+              '<td class="u">—</td></tr>';
+          }
+          const ratio = r.size / bytes.length * 100;
+          const w = Math.max(2, Math.min(100, ratio));
+          return '<tr data-algo="' + eh(r.a.id) + '"' +
+            (r.a.id === cur ? ' class="on"' : (r === best ? ' class="best"' : '')) + '>' +
+            '<td class="algo"><b>' + eh(r.a.name) + '</b> <span class="tag ' + (r.a.std ? "std" : "own") + '">' +
+              (r.a.std ? "标准" : "本站") + '</span></td>' +
+            '<td class="n">' + fmtBytes(r.size) + '</td>' +
+            '<td class="n" style="color:' + (ratio <= 100 ? "var(--ok)" : "var(--err)") + '">' + ratio.toFixed(1) + '%</td>' +
+            '<td class="bar-cell"><div class="bar"><i style="width:' + w + '%;background:' + barColor(ratio) + '"></i></div></td>' +
+            '<td class="u">' + fmtMs(r.ms) + '</td></tr>';
+        }).join("")
+      + "</tbody>";
+
+    const okRows = rows.filter(r => r.size >= 0);
+    const msgs = [];
+    if (okRows.length) {
+      const b = okRows[0];
+      const w = okRows[okRows.length - 1];
+      msgs.push('原始 <b>' + fmtBytes(bytes.length) + '</b>，' + okRows.length + ' 档算法全部跑完。' +
+        '最优是 <b>' + eh(b.a.name) + '</b>（' + fmtBytes(b.size) + '，' + (b.size / bytes.length * 100).toFixed(1) + '%），' +
+        '最差是 <b>' + eh(w.a.name) + '</b>（' + (w.size / bytes.length * 100).toFixed(1) + '%）。');
+      if (b.size / bytes.length > 1) {
+        msgs.push('<span class="warn-tip">这一段太短，所有算法都压不动</span> —— 头部开销（gzip 约 18 字节、哈夫曼 256 字节）摊不下来。' +
+          '换成几百字节以上的文本再看，排名会完全不同。');
+      }
+    }
+    msgs.push('点表格任意一行即可切换到那一档算法。');
+    note.innerHTML = msgs.join("<br>");
+  }
+
+  /* ============================================================
+     算法说明表
+     ============================================================ */
+
+  function renderAlgoTable() {
+    $("algoTbl").innerHTML = "<thead><tr><th>算法</th><th>说明</th><th>互通性</th></tr></thead><tbody>"
+      + ALGOS.map(a =>
+          '<tr><td><b>' + eh(a.name) + '</b><br><span class="tag ' + (a.std ? "std" : "own") + '">' +
+          eh(a.tag) + '</span></td><td class="wrap">' + a.desc + '</td><td class="u">' + eh(a.compat) + '</td></tr>'
+        ).join("")
+      + "</tbody>";
+
+    $("helpNote").innerHTML =
+      '<b>压缩率怎么算</b>：压缩率 = 压缩后字节 ÷ 原始字节 × 100%，<b>越小越好</b>；「节省」是它的补数。' +
+      '所有数字都只算压缩后的字节，<b>不含 Base64 / Hex 的编码膨胀</b>（Base64 让长度 ×4/3，Hex ×2）。<br>' +
+      '<b>原文怎么算</b>：一律按 <code>UTF-8</code> 转成字节再压。一个汉字 3 字节、一个 emoji 4 字节，' +
+      '所以同样「看起来 100 字」的中文，比英文体积大得多，压缩率也不一样。<br>' +
+      '<b>换行符会被统一</b>：输入框是 <code>&lt;textarea&gt;</code>，按 HTML 规范它会把 <code>\\r\\n</code> 和单独的 <code>\\r</code> ' +
+      '都规范成 <code>\\n</code>，所以压缩「保留 CRLF 的文件内容」时，每行会少 1 字节。需要逐字节一致请改用文件级工具。<br>' +
+      '<b>互操作为什么重要</b>：gzip / deflate / deflate-raw / Brotli 是有 RFC 的标准容器，' +
+      '拿去给 Node、Python、Nginx 都能直接解；LZ4 的主体也是标准 block 格式，只多一个 4 字节长度头。' +
+      'LZW / LZ77 / Huffman / BWT / 算术编码 / RLE 是本页自己实现的封装，格式由这里定义，<b>只在本页能解</b>' +
+      '——它们存在的意义是让「同一段数据、不同思路能压到多少」变得可比较。<br>' +
+      '<b>算术编码特殊在哪</b>：其余十档都在找「重复」或「统计频率后发整数位码」，' +
+      '算术编码干脆放弃「一个符号 = 若干 bit」的框架，把整段输入压成一个 [0,1) 之间的小数，' +
+      '一个符号只花它理论上该花的那点信息量（可能是 0.3 bit、也可能是 0.0001 bit）。' +
+      '所以它在<b>有上下文规律</b>的文本（中文、JSON、Base64、源码）上常常甩开 Huffman 三十个百分点以上，' +
+      '反过来在纯重复文本上远不如 LZ 系——它压根不看「上一次出现这个词」这件事。<br>' +
+      '<b>Brotli 为什么第一次点会停一下</b>：Web 平台至今没有 <code>CompressionStream("br")</code>，' +
+      '只能跑 WASM。那 1 MB 的引擎放在 <code>vendor/</code> 里、<b>首次用到才加载</b>，之后常驻内存；' +
+      '不选 Brotli 就一个字节都不会下载。';
+  }
+
+  /* ============================================================
+     交互
+     ============================================================ */
+
+  const EXAMPLE =
+`压缩算法的核心是消除冗余，而冗余有两种：统计上的和结构上的。
+Huffman 编码吃的是统计冗余 —— 一段自然语言里字符出现频率并不均匀，空格、字母 e、字母 t 很常见，
+字母 z、q 很罕见，于是给高频字符分配短码、低频字符分配长码，平均码长就能小于 8 位。
+LZ77 和 LZW 吃的是结构冗余 —— 它们不统计频率，而是在已经出现过的内容里找重复片段，
+用一个「回退多远、复制多长」的指针代替原文。重复越多，压得越狠。
+gzip、deflate、Brotli 都是这两类方法的组合：先用 LZ 把重复折叠成指针，再用 Huffman 给指针和字面量编码。
+BWT 换了个方向：它不做匹配，而是把所有后缀按字典序排一遍，把相同的字符搬到一起，
+再用 Move-to-Front 和游程编码吃掉连片的小整数。bzip2 走的就是这条路。
+举个具体的例子。同一段中文分别交给 gzip 和 bzip2，通常 gzip 更快、bzip2 更小；
+同一段 JSON 日志交给 gzip 和 Brotli，Brotli 又往往更小一截，因为它内置了一份常见词词典。
+但换成一段随机生成的密钥、一张已经压过的 JPEG，任何算法都无能为力 —— 熵已经满了，压不动就是压不动。
+压缩率从来不是一个固定数字。同一段文本，算法不同、窗口大小不同、重复程度不同，结果都会差很远；
+同一段文本，换成另一种语言、另一种编码，排名甚至会反过来。
+所以「哪个算法最好」这个问题没有答案，只有「在这份数据上哪个最划算」。`;
+
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]");
+    if (b) {
+      const act = b.dataset.act;
+      if (act === "zip" || act === "unzip") {
+        dir = act;
+        await run();
+      } else if (act === "swap") {
+        const o = $("out").value;
+        if (!o) { toast("还没有结果可交换"); return; }
+        $("inp").value = o;
+        $("out").value = ""; $("out").classList.remove("filled");
+        dir = dir === "zip" ? "unzip" : "zip";
+        await run();
+        toast(dir === "unzip" ? "已切到解压方向" : "已切到压缩方向");
+      } else if (act === "ex") {
+        $("inp").value = EXAMPLE;
+        dir = "zip";
+        await run();
+        toast("已填入示例文本");
+      } else if (act === "copy") {
+        const v = $("out").value;
+        if (!v) { toast("还没有可复制的结果"); return; }
+        copyText(v, "已复制结果");
+      } else if (act === "cmp") {
+        await compareAll();
+      }
+      return;
+    }
+
+    /* 对比表整行可点：切算法并立即重跑 */
+    const tr = e.target.closest("#cmpTbl tbody tr[data-algo]");
+    if (tr) {
+      const id = tr.dataset.algo;
+      if (!ALGO_MAP[id]) return;
+      if (ALGO_MAP[id].kind === "native" && !streamOk("zip", ALGO_MAP[id].fmt)) {
+        toast("当前浏览器不支持这一档"); return;
+      }
+      $("algo").value = id;
+      syncAlgoHint();
+      await run();
+      toast("已切换到 " + ALGO_MAP[id].name);
+    }
+  });
+
+  function syncAlgoHint() {
+    const a = ALGO_MAP[$("algo").value];
+    if (a) $("algo").title = a.desc.replace(/<[^>]+>/g, "");
+  }
+
+  $("inp").addEventListener("input", () => { if ($("auto").checked) runSoon(); });
+  $("algo").addEventListener("change", () => { syncAlgoHint(); run(); });
+  $("fmt").addEventListener("change", () => run());
+
+  $("btnClear").addEventListener("click", () => {
+    $("inp").value = ""; $("out").value = "";
+    $("out").classList.remove("filled");
+    $("stats").innerHTML = "";
+    $("cmpTbl").innerHTML = "";
+    dir = "zip";
+    setNote('<span class="empty-tip">输入文本后自动压缩</span>');
+    $("cmpNote").innerHTML = '<span class="empty-tip">先在上面输入一段文本，再点「开始对比」。</span>';
+    toast("已清空");
+  });
+
+  /* ============================================================
+     复制 / 提示
+     ============================================================ */
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+  }
+  function copyText(text, msg) {
+    const s = String(text);
+    const done = () => toast(msg || "已复制");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(s).then(done, () => fallbackCopy(s, done));
+    } else {
+      fallbackCopy(s, done);
+    }
+  }
+  /* file:// 下 clipboard API 不可用（不是安全上下文），退回 textarea + execCommand */
+  function fallbackCopy(s, done) {
+    const ta = document.createElement("textarea");
+    ta.value = s;
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (ok) done(); else toast("复制失败，请手动选择");
+  }
+
+  /* ============================================================
+     初始化
+     ============================================================ */
+
+  /* 算法下拉按「标准格式 / 本站实现」分组，顺序与 ALGOS 一致 */
+  (function buildSelect() {
+    const gStd = document.createElement("optgroup");
+    gStd.label = "标准格式 · 可与其他工具互通";
+    const gOwn = document.createElement("optgroup");
+    gOwn.label = "本站实现 · 通用算法";
+    ALGOS.forEach(a => {
+      const o = document.createElement("option");
+      o.value = a.id;
+      o.textContent = a.name;
+      if (a.kind === "wasm" && !WASM_OK) {
+        /* 连 WebAssembly 都没有的浏览器，这一档点了也起不来 */
+        o.textContent = a.name + "（浏览器不支持）";
+        o.disabled = true;
+      }
+      (a.std ? gStd : gOwn).appendChild(o);
+    });
+    $("algo").appendChild(gStd);
+    $("algo").appendChild(gOwn);
+    $("algo").value = "gzip";
+  })();
+
+  $("algoCount").textContent = USABLE;
+  renderAlgoTable();
+  syncAlgoHint();
+  setNote('<span class="empty-tip">输入文本后自动压缩</span>');
+  $("cmpNote").innerHTML = '<span class="empty-tip">先在上面输入一段文本，再点「开始对比」。</span>';
+})();
+</script>
+</body>
+</html>
