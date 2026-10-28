@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>音频播放器</title>
+<meta name="theme-color" content="#f6f7f9" />
+<meta name="description" content="在线音频播放器：播放 MP3 / WAV / FLAC / OGG / M4A / AAC / WebM / AIFF，无头 PCM 可按采样率、位深、声道、字节序参数解析，并可导出为 WAV、MP3 或裸 PCM。全部在浏览器本地完成，文件不上传。" />
+<meta name="keywords" content="音频播放器,PCM播放器,PCM解析,无头PCM,MP3转换,WAV转换,音频格式转换,采样率,位深,字节序" />
+<link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" href="/favicon.ico" />
+<style>
+  :root {
+    /* ===== 与「工具首页 / 文本工具箱 / 图片工具」共用的一套配色（浅色 · 靛蓝）=====
+       改配色只动这里；下面所有 CSS 一律引用变量，不要写死颜色。 */
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f2f4f7;
+    --border: rgba(15,23,42,.09);
+    --border-2: rgba(15,23,42,.15);
+    --text: #0f172a;
+    --text-2: #5b6675;
+    --text-3: #94a0b0;
+    --accent: #4f6bed;
+    --accent-2: #7c8aff;
+    --accent-soft: rgba(79,107,237,.11);
+    --hover: rgba(15,23,42,.042);
+    --surface-1: rgba(15,23,42,.05);
+    --surface-2: rgba(15,23,42,.08);
+    --scrollbar: rgba(15,23,42,.16);
+    --scrollbar-hover: rgba(15,23,42,.3);
+    --num: #b25e09;
+    --ok: #0d7a52;
+    --err: #d1242f;
+
+    --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
+  }
+  * { box-sizing: border-box; }
+
+  /* ★ 必须是 height:100%（不能写 min-height）—— 写 min-height 会让 body 随内容长高、
+     main 失去滚动容器身份，main 上的 overflow:auto 会静默失效。 */
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ===== 顶栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+    padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border);
+    overflow: hidden; flex: none;
+  }
+  .brand { font-weight: 700; letter-spacing: .5px; margin-right: 4px; white-space: nowrap; color: inherit; text-decoration: none }
+  .brand span { color: var(--accent); }
+  .sep { width: 1px; height: 22px; background: var(--border-2); flex: none; }
+  .stat { color: var(--text-2); font-size: 12px; white-space: nowrap; flex: none; }
+  .stat b { color: var(--accent); font-weight: 600; }
+  /* 隐私说明：任何宽度都必须可见，放不下时整体换行（见 .memory/MEMORY.md） */
+  .stat.privacy-stat { display: inline-block; white-space: normal; flex: 0 1 auto; min-width: 0; }
+
+  /* ===== 页面骨架 ===== */
+  main { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px 44px; }
+  /* ★ 宽度 = 1485px 基准窗口下的原宽等比放大：≥1485 按 64.65vw 走，<1485 固定 960px，
+     装不下退化为 100%。不要改成固定 px 上限、也不要直接铺满。 */
+  .wrap { width: min(100%, max(960px, 64.65vw)); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card > h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .2px;
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .card > h2 .hint { font-size: 11.5px; font-weight: 400; color: var(--text-3); }
+  .card > h2 .right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* ===== 控件 ===== */
+  button {
+    font: inherit; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--border-2); border-radius: 7px; padding: 5px 11px;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  button:hover:not(:disabled) { background: var(--hover); border-color: var(--text-3); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: #3f5ae0; border-color: #3f5ae0; }
+  button.mini { padding: 3px 9px; font-size: 12px; }
+  button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  select, input[type="number"], input[type="text"] {
+    font: inherit; color: var(--text); background: var(--panel-2);
+    border: 1px solid var(--border-2); border-radius: 7px; padding: 4px 7px;
+    outline: none; min-width: 0;
+  }
+  select { cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  select:disabled, input:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* 字段：标签在上、控件在下（窄屏自动回流，不会把中文压成竖条） */
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-2); min-width: 0; }
+  .field > select, .field > input { width: 100%; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px 12px; }
+  .grid.wide { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row + .row { margin-top: 10px; }
+
+  /* ===== 载入区 ===== */
+  .pick {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+    padding: 20px 14px; border: 1.5px dashed var(--border-2); border-radius: 10px;
+    background: var(--panel-2); text-align: center; transition: border-color .15s, background .15s;
+  }
+  .pick.over { border-color: var(--accent); background: var(--accent-soft); }
+  .pick-line { font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .pick-sub { font-size: 11.5px; color: var(--text-3); line-height: 1.6; }
+  .pick-sub code { font-size: 11px; background: var(--surface-1); padding: 1px 4px; border-radius: 4px; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 22px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 5px;
+    background: var(--panel-2); color: var(--text-2); font-size: 11.5px; white-space: nowrap;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tag.name { background: var(--accent-soft); color: var(--accent); max-width: min(100%, 420px); }
+  .tag.type { background: rgba(79,107,237,.07); color: var(--text-2); }
+  .tag b { font-weight: 600; color: var(--text); }
+
+  .msg { display: none; margin-top: 10px; padding: 8px 11px; border-radius: 8px; font-size: 12px; line-height: 1.6; }
+  .msg.show { display: block; }
+  .msg.warn { background: rgba(178,94,9,.09); color: var(--num); }
+  .msg.err { background: rgba(209,36,47,.08); color: var(--err); }
+  .msg.ok { background: rgba(13,122,82,.09); color: var(--ok); }
+  .msg.info { background: var(--panel-2); color: var(--text-2); }
+
+  /* ===== 波形 ===== */
+  .wavebox { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  #wave { display: block; width: 100%; height: 150px; touch-action: none; cursor: pointer; }
+  #waveEmpty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); font-size: 12.5px; pointer-events: none; text-align: center; padding: 0 16px;
+  }
+
+  .transport { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .tbtn { width: 38px; height: 34px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+  .tbtn svg { width: 15px; height: 15px; }
+  .tbtn.big { width: 46px; height: 38px; }
+  .tbtn.big svg { width: 17px; height: 17px; }
+  .time { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+  .time b { color: var(--text); font-weight: 600; }
+  .grow { flex: 1 1 auto; }
+  .vol { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-2); }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 96px; height: 4px; border-radius: 2px;
+    background: var(--surface-2); outline: none; padding: 0; border: none; flex: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--accent); border: none; cursor: pointer;
+  }
+  input[type="range"]:disabled { opacity: .4; }
+
+  /* ===== 开关 ===== */
+  .switch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-2); cursor: pointer; user-select: none; }
+  .switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 19px; border-radius: 10px; background: var(--surface-2); position: relative; cursor: pointer; margin: 0; transition: background .15s; flex: none; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,.25); transition: transform .15s; }
+  .switch input:checked { background: var(--accent); }
+  .switch input:checked::after { transform: translateX(15px); }
+  .switch input:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  /* ===== 导出 ===== */
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px 12px; }
+  .summary {
+    margin-top: 12px; padding: 9px 11px; border-radius: 8px; background: var(--panel-2);
+    color: var(--text-2); font-size: 12px; line-height: 1.7;
+  }
+  .summary b { color: var(--text); font-weight: 600; }
+  .summary .out { color: var(--accent); }
+  .bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; margin-top: 10px; display: none; }
+  .bar.show { display: block; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .12s linear; }
+
+  .foot { color: var(--text-3); font-size: 11.5px; line-height: 1.8; padding: 0 2px; }
+  .foot code { background: var(--surface-1); padding: 1px 4px; border-radius: 4px; }
+
+  /* 拖放遮罩 */
+  #dropmask {
+    position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
+    background: rgba(79,107,237,.10); border: 3px dashed var(--accent); border-radius: 0;
+    color: var(--accent); font-size: 16px; font-weight: 600; pointer-events: none;
+  }
+  #dropmask.show { display: flex; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 5px; border: 3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+  @media (max-width: 640px) {
+    .hide-sm { display: none; }
+    header { padding: 7px 10px; gap: 8px; }
+    main { padding: 12px 10px 40px; }
+    .card { padding: 12px; }
+    .card > h2 { margin-bottom: 10px; }
+    button, select { font-size: 12px; }
+    #wave { height: 112px; }
+    .pick { padding: 16px 10px; }
+    input[type="range"] { width: 72px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href=".." title="返回工具首页">Audio<span>Kit</span></a>
+  <span class="sep"></span>
+  <span class="stat hide-sm" id="hdrStat">未载入文件</span>
+  <span class="sep hide-sm"></span>
+  <span class="stat privacy-stat">音频只在本机解码，不上传也不保存</span>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <!-- ============ 1. 载入 ============ -->
+    <section class="card">
+      <h2>
+        载入音频
+        <span class="hint">拖到页面任意位置也可以</span>
+        <span class="right">
+          <button class="mini" id="btnTone" title="生成一段 5 秒测试音，用来验证播放与导出">测试音</button>
+        </span>
+      </h2>
+
+      <div class="pick" id="pick">
+        <div class="pick-line">
+          <span>把音频文件拖到这里，或</span>
+          <button class="primary" id="btnPick">选择文件</button>
+        </div>
+        <div class="pick-sub">
+          mp3 · wav · flac · ogg / opus · m4a / aac · webm · aif(f) · caf 由浏览器解码；<br />
+          没有文件头的 <code>.pcm</code> / <code>.raw</code> 按下方参数解析
+        </div>
+      </div>
+
+      <div class="meta" id="meta"></div>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      <input type="file" id="file" accept="audio/*,.pcm,.raw,.s16,.s24,.s32,.f32,.f64,.sw,.aif,.aiff,.flac,.opus,.m4a,.webm,.caf" hidden />
+    </section>
+
+    <!-- ============ 2. 波形与播放 ============ -->
+    <section class="card">
+      <h2>
+        波形与播放
+        <span class="hint">点击波形任意位置跳转；空格播放 / 暂停，← → 前后 5 秒</span>
+      </h2>
+
+      <div class="wavebox">
+        <canvas id="wave" aria-label="波形，可点击跳转"></canvas>
+        <div id="waveEmpty">还没有载入音频</div>
+      </div>
+
+      <div class="transport">
+        <button class="tbtn big" id="btnPlay" title="播放 / 暂停（空格）" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L19.2 12z"/></svg>
+        </button>
+        <button class="tbtn" id="btnStop" title="停止并回到开头" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.6"/></svg>
+        </button>
+        <span class="time"><b id="tCur">0:00.00</b> / <span id="tDur">0:00.00</span></span>
+        <span class="grow"></span>
+        <label class="vol" title="音量">音量
+          <input type="range" id="vol" min="0" max="100" value="90" />
+          <span id="volTxt">90</span>
+        </label>
+        <label class="vol" title="变速会连带改变音调（不做时间伸缩）">倍速
+          <select id="rate" disabled>
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <!-- ============ 3. 无头 PCM 参数 ============ -->
+    <section class="card">
+      <h2>
+        无头 PCM 参数
+        <span class="hint">没有文件头时，按这组参数把字节解释成采样点</span>
+        <span class="right">
+          <label class="switch">
+            <input type="checkbox" id="rawMode" />
+            <span>按无头 PCM 解析</span>
+          </label>
+        </span>
+      </h2>
+
+      <div class="grid">
+        <label class="field">采样率
+          <select id="pRate">
+            <option value="8000">8000 Hz</option>
+            <option value="11025">11025 Hz</option>
+            <option value="16000" selected>16000 Hz</option>
+            <option value="22050">22050 Hz</option>
+            <option value="24000">24000 Hz</option>
+            <option value="32000">32000 Hz</option>
+            <option value="44100">44100 Hz</option>
+            <option value="48000">48000 Hz</option>
+          </select>
+        </label>
+        <label class="field">位深
+          <select id="pBits">
+            <option value="8">8 bit</option>
+            <option value="16" selected>16 bit</option>
+            <option value="24">24 bit</option>
+            <option value="32">32 bit 整数</option>
+            <option value="32f">32 bit 浮点</option>
+            <option value="64f">64 bit 浮点</option>
+          </select>
+        </label>
+        <label class="field">声道
+          <select id="pCh">
+            <option value="1" selected>单声道</option>
+            <option value="2">立体声</option>
+            <option value="3">3 声道</option>
+            <option value="4">4 声道</option>
+            <option value="6">5.1（6）</option>
+            <option value="8">7.1（8）</option>
+          </select>
+        </label>
+        <label class="field">字节序
+          <select id="pEnd">
+            <option value="le" selected>小端 LE</option>
+            <option value="be">大端 BE</option>
+          </select>
+        </label>
+        <label class="field">排列
+          <select id="pPlanar">
+            <option value="0" selected>交错</option>
+            <option value="1">分声道</option>
+          </select>
+        </label>
+        <label class="field" title="跳过文件开头的若干字节（例如剥掉未知文件头）">头部偏移（字节）
+          <input type="number" id="pOffset" min="0" step="1" value="0" />
+        </label>
+        <label class="field">8 bit 符号
+          <select id="pS8">
+            <option value="u" selected>无符号 0–255</option>
+            <option value="s">有符号 −128–127</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="msg info show" id="pcmNote" style="margin-top:12px"></div>
+    </section>
+
+    <!-- ============ 4. 转换导出 ============ -->
+    <section class="card">
+      <h2>
+        转换导出
+        <span class="hint">在本地重新编码，不经过服务器</span>
+      </h2>
+
+      <div class="opts">
+        <label class="field">目标格式
+          <select id="exFmt">
+            <option value="wav" selected>WAV（无损）</option>
+            <option value="mp3">MP3（有损）</option>
+            <option value="pcm">裸 PCM（无文件头）</option>
+          </select>
+        </label>
+        <label class="field">采样率
+          <select id="exRate">
+            <option value="0" selected>保持原始</option>
+            <option value="48000">48000 Hz</option>
+            <option value="44100">44100 Hz</option>
+            <option value="32000">32000 Hz</option>
+            <option value="24000">24000 Hz</option>
+            <option value="22050">22050 Hz</option>
+            <option value="16000">16000 Hz</option>
+            <option value="12000">12000 Hz</option>
+            <option value="11025">11025 Hz</option>
+            <option value="8000">8000 Hz</option>
+          </select>
+        </label>
+        <label class="field">声道
+          <select id="exCh">
+            <option value="0" selected>保持原始</option>
+            <option value="1">单声道</option>
+            <option value="2">立体声</option>
+          </select>
+        </label>
+        <label class="field" data-f="wav pcm">位深
+          <select id="exBits">
+            <option value="8">8 bit</option>
+            <option value="16" selected>16 bit</option>
+            <option value="24">24 bit</option>
+            <option value="32">32 bit 整数</option>
+            <option value="32f">32 bit 浮点</option>
+          </select>
+        </label>
+        <label class="field" data-f="mp3">码率
+          <select id="exBr">
+            <option value="320">320 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="192" selected>192 kbps</option>
+            <option value="160">160 kbps</option>
+            <option value="128">128 kbps</option>
+            <option value="96">96 kbps</option>
+            <option value="64">64 kbps</option>
+            <option value="32">32 kbps</option>
+          </select>
+        </label>
+        <label class="field" data-f="pcm">字节序
+          <select id="exEnd">
+            <option value="le" selected>小端 LE</option>
+            <option value="be">大端 BE</option>
+          </select>
+        </label>
+        <label class="field" data-f="pcm">排列
+          <select id="exPlanar">
+            <option value="0" selected>交错</option>
+            <option value="1">分声道</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="summary" id="exSummary">载入音频后这里会显示将要写出的格式与体积。</div>
+      <div class="bar" id="exBar"><i></i></div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="btnExport" disabled>导出</button>
+        <span class="foot" id="exHint" style="padding:0"></span>
+      </div>
+    </section>
+
+    <div class="foot">
+      说明：转换走浏览器内置解码 + 本站实现的 WAV / 裸 PCM 封装；MP3 用 lamejs（首次导出时才加载，
+      优先读本机 <code>vendor/lame.min.js</code>，缺失时回退 CDN）。OGG / FLAC / M4A 目前只有解码器没有编码器，
+      故不作为导出格式。大于 250 MB 的文件建议先用 <code>ffmpeg</code> 切段。
+    </div>
+
+  </div>
+</main>
+
+<div id="dropmask">松开即可载入</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     基础工具
+     ============================================================ */
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var MAXBYTES = 250 * 1024 * 1024;
+  var WARNBYTES = 80 * 1024 * 1024;
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function fmtT(t, dec) {
+    t = t > 0 && isFinite(t) ? t : 0;
+    var f = dec ? 2 : 0, p = dec ? 100 : 1;
+    var total = Math.round(t * p) / p;
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total - h * 3600) / 60);
+    var s = total - h * 3600 - m * 60;
+    var ss = dec ? (s < 10 ? '0' : '') + s.toFixed(2) : pad2(Math.floor(s));
+    if (h) return h + ':' + pad2(m) + ':' + ss;
+    return m + ':' + ss;
+  }
+
+  function fmtB(n) {
+    if (!(n > 0)) return '0 B';
+    if (n < 1024) return n + ' B';
+    var u = ['KB', 'MB', 'GB'], i = -1;
+    do { n /= 1024; i++; } while (n >= 1024 && i < 2);
+    return n.toFixed(n < 10 ? 2 : 1) + ' ' + u[i];
+  }
+
+  function tick() { return new Promise(function (r) { setTimeout(r, 0); }); }
+
+  /* ============================================================
+     状态
+     ============================================================ */
+  var S = {
+    file: null,
+    buf: null,          // 原始 ArrayBuffer（保留，用于切换解析方式）
+    audio: null,        // AudioBuffer
+    peaks: null,
+    dur: 0,
+    pausedAt: 0,
+    src: null,
+    playing: false,
+    startOff: 0,
+    startAt: 0,
+    rate: 1,
+    vol: .9,
+    busy: false,
+    rawAuto: false,     // 「按无头 PCM」这个勾是自动翻过来的吗（换文件时要复位）
+    meta: null
+  };
+
+  var ctx = null, gain = null;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var OC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+  function ensureCtx() {
+    if (!ctx) {
+      ctx = new AC();
+      gain = ctx.createGain();
+      gain.gain.value = S.vol;
+      gain.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+    return ctx;
+  }
+
+  /* ============================================================
+     文件信息 / 提示
+     ============================================================ */
+  var msgEl = $('#msg');
+  function setMsg(text, kind) {
+    if (!text) { msgEl.className = 'msg'; msgEl.textContent = ''; return; }
+    msgEl.className = 'msg show ' + (kind || 'info');
+    msgEl.textContent = text;
+  }
+
+  function clearMeta() { $('#meta').textContent = ''; }
+
+  function addTag(text, cls) {
+    var s = document.createElement('span');
+    s.className = 'tag' + (cls ? ' ' + cls : '');
+    s.textContent = text;
+    $('#meta').appendChild(s);
+  }
+
+  function paintMeta() {
+    clearMeta();
+    var m = S.meta || {};
+    if (S.file) addTag(S.file.name, 'name');
+    if (m.kind) addTag(m.kind, 'type');
+    if (S.file) addTag(fmtB(S.file.size));
+    if (S.dur) addTag('时长 ' + fmtT(S.dur, true));
+    if (S.audio) {
+      addTag('采样率 ' + S.audio.sampleRate + ' Hz');
+      addTag(({ 1: '单声道', 2: '立体声' }[S.audio.numberOfChannels] || S.audio.numberOfChannels + ' 声道'));
+    }
+    if (m.source) addTag(m.source);
+  }
+
+  function hdr(text) { $('#hdrStat').textContent = text; }
+
+  /* ============================================================
+     文件头探测（只用来定采样率 / 判断有没有容器头）
+     ============================================================ */
+  function fourcc(dv, o) {
+    return String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+  }
+
+  function wavRate(dv) {
+    var p = 12, n = dv.byteLength;
+    while (p + 8 <= n) {
+      var id = fourcc(dv, p), sz = dv.getUint32(p + 4, true);
+      if (id === 'fmt ' && p + 8 + 16 <= n) return dv.getUint32(p + 12, true) || 0;
+      if (!(sz >= 0) || sz > n) break;
+      p += 8 + sz + (sz & 1);
+    }
+    return 0;
+  }
+
+  function ext80(dv, o) {
+    var e = ((dv.getUint8(o) & 0x7f) << 8) | dv.getUint8(o + 1);
+    var hi = dv.getUint32(o + 2), lo = dv.getUint32(o + 6);
+    if (!e && !hi && !lo) return 0;
+    var m = hi * 4294967296 + lo;
+    return Math.round(m * Math.pow(2, e - 16383 - 63));
+  }
+
+  function aiffRate(dv) {
+    var p = 12, n = dv.byteLength;
+    while (p + 8 <= n) {
+      var id = fourcc(dv, p), sz = dv.getUint32(p + 4, false);
+      if (id === 'COMM' && p + 8 + 18 <= n) return ext80(dv, p + 8 + 8) || 0;
+      if (!(sz >= 0) || sz > n) break;
+      p += 8 + sz + (sz & 1);
+    }
+    return 0;
+  }
+
+  function flacRate(dv) {
+    if (dv.byteLength < 8 + 34) return 0;
+    var o = 8;
+    var b0 = dv.getUint8(o + 10), b1 = dv.getUint8(o + 11), b2 = dv.getUint8(o + 12);
+    return (b0 << 12) | (b1 << 4) | (b2 >> 4);
+  }
+
+  function oggRate(dv) {
+    if (dv.byteLength < 27) return 0;
+    var nseg = dv.getUint8(26), p = 27 + nseg;
+    if (p + 16 > dv.byteLength) return 0;
+    if (fourcc(dv, p) === 'Opus') return 48000;
+    if (dv.getUint8(p) === 1 && fourcc(dv, p + 1) === 'vorb') return dv.getUint32(p + 12, true) || 0;
+    return 0;
+  }
+
+  function mp3Rate(dv, off) {
+    var n = dv.byteLength, lim = Math.min(n - 4, off + 262144);
+    for (var i = Math.max(0, off); i < lim; i++) {
+      if (dv.getUint8(i) !== 0xFF) continue;
+      var b1 = dv.getUint8(i + 1);
+      if ((b1 & 0xE0) !== 0xE0) continue;
+      var ver = (b1 >> 3) & 3;      // 3=MPEG1 2=MPEG2 0=MPEG2.5 1=保留
+      var layer = (b1 >> 1) & 3;    // 1=Layer III
+      if (ver === 1 || layer !== 1) continue;
+      var sri = (dv.getUint8(i + 2) >> 2) & 3;
+      if (sri === 3) continue;
+      var base = ver === 3 ? [44100, 48000, 32000] : ver === 2 ? [22050, 24000, 16000] : [11025, 12000, 8000];
+      return base[sri];
+    }
+    return 0;
+  }
+
+  // 返回 {rate, kind}；不是已知容器头时 rate 为 0
+  function probe(buf) {
+    try {
+      var dv = new DataView(buf), n = dv.byteLength;
+      if (n < 12) return { rate: 0, kind: '' };
+      var tag = fourcc(dv, 0);
+      if ((tag === 'RIFF' || tag === 'RF64') && fourcc(dv, 8) === 'WAVE') return { rate: wavRate(dv), kind: 'WAV 容器' };
+      if (tag === 'FORM' && /^AIF[FC]$/.test(fourcc(dv, 8))) return { rate: aiffRate(dv), kind: 'AIFF 容器' };
+      if (tag === 'fLaC') return { rate: flacRate(dv), kind: 'FLAC 容器' };
+      if (tag === 'OggS') return { rate: oggRate(dv), kind: 'Ogg 容器' };
+      var off = 0;
+      if (fourcc(dv, 0).slice(0, 3) === 'ID3' && n > 10) {
+        var sz = ((dv.getUint8(6) & 0x7f) << 21) | ((dv.getUint8(7) & 0x7f) << 14) | ((dv.getUint8(8) & 0x7f) << 7) | (dv.getUint8(9) & 0x7f);
+        off = 10 + sz + ((dv.getUint8(5) & 0x10) ? 10 : 0);
+      }
+      var r = mp3Rate(dv, off);
+      if (r) return { rate: r, kind: 'MP3 流' };
+      if (fourcc(dv, 4) === 'ftyp') return { rate: 0, kind: 'MP4 / M4A 容器' };
+      if (fourcc(dv, 0) === 'caff') return { rate: 0, kind: 'CAF 容器' };
+      if (dv.byteLength > 4 && fourcc(dv, 0) === '\x1A\x45\xDF\xA3') return { rate: 0, kind: 'WebM / Matroska 容器' };
+      return { rate: 0, kind: '' };
+    } catch (e) { return { rate: 0, kind: '' }; }
+  }
+
+  /* ============================================================
+     解码：容器 → AudioBuffer
+     ============================================================ */
+  function decodeContainer(buf) {
+    var rate = probe(buf).rate || (ctx ? ctx.sampleRate : 48000);
+    // 损坏的 WAV/AIFF 头里 fmt 段可能读出任意值；越界会让 OfflineAudioContext 直接抛 RangeError
+    if (!(rate >= 3000 && rate <= 768000)) rate = ctx ? ctx.sampleRate : 48000;
+    var octx = new OC(1, 1, rate);
+    // decodeAudioData 会 detach 传入的 ArrayBuffer，必须给副本（S.buf 要留着切无头 PCM）
+    return octx.decodeAudioData(buf.slice(0));
+  }
+
+  var BPS = { '8': 1, '16': 2, '24': 3, '32': 4, '32f': 4, '64f': 8 };
+
+  function pcmOpts() {
+    return {
+      rate: +$('#pRate').value,
+      bits: $('#pBits').value,
+      ch: +$('#pCh').value,
+      be: $('#pEnd').value === 'be',
+      planar: $('#pPlanar').value === '1',
+      offset: Math.max(0, +$('#pOffset').value || 0),
+      s8: $('#pS8').value === 's'
+    };
+  }
+
+  // 从 buf 里按下标取第 i 个采样（跨声道步长 stride）
+  function pcmChannel(buf, dv, off, count, stride, bits, be) {
+    var out = new Float32Array(count), i, p;
+    if (bits === '16') {
+      if (!be && (off & 1) === 0) {
+        var a = new Int16Array(buf, off, count * (stride / 2));
+        var st = stride / 2;
+        for (i = 0; i < count; i++) out[i] = a[i * st] / 32768;
+        return out;
+      }
+      for (i = 0, p = off; i < count; i++, p += stride) out[i] = dv.getInt16(p, !be) / 32768;
+      return out;
+    }
+    if (bits === '32f') {
+      if ((off & 3) === 0) {
+        var f = new Float32Array(buf, off, count * (stride / 4));
+        var stf = stride / 4;
+        for (i = 0; i < count; i++) out[i] = f[i * stf];
+        return out;
+      }
+      for (i = 0, p = off; i < count; i++, p += stride) out[i] = dv.getFloat32(p, !be);
+      return out;
+    }
+    if (bits === '64f') {
+      for (i = 0, p = off; i < count; i++, p += stride) out[i] = dv.getFloat64(p, !be);
+      return out;
+    }
+    if (bits === '8') {
+      var signed8 = pcmOpts().s8;
+      for (i = 0, p = off; i < count; i++, p += stride) {
+        out[i] = signed8 ? dv.getInt8(p) / 128 : (dv.getUint8(p) - 128) / 128;
+      }
+      return out;
+    }
+    if (bits === '24') {
+      for (i = 0, p = off; i < count; i++, p += stride) {
+        var b0 = dv.getUint8(p), b1 = dv.getUint8(p + 1), b2 = dv.getUint8(p + 2);
+        var v = be ? ((b0 << 16) | (b1 << 8) | b2) : ((b2 << 16) | (b1 << 8) | b0);
+        if (v & 0x800000) v -= 0x1000000;
+        out[i] = v / 8388608;
+      }
+      return out;
+    }
+    // '32' 整数
+    for (i = 0, p = off; i < count; i++, p += stride) out[i] = dv.getInt32(p, !be) / 2147483648;
+    return out;
+  }
+
+  function parsePcm(buf) {
+    var o = pcmOpts();
+    var bps = BPS[o.bits] || 2;
+    var frame = bps * o.ch;
+    var off = Math.min(buf.byteLength, o.offset);
+    var n = Math.floor((buf.byteLength - off) / frame);
+    if (!(n > 0)) {
+      throw new Error('按当前参数算出的采样点数为 0 —— 请检查位深 / 声道数 / 头部偏移是否填反了');
+    }
+    var audio;
+    try {
+      audio = ctx.createBuffer(o.ch, n, o.rate);
+    } catch (e) {
+      throw new Error('无法分配音频缓冲区（' + fmtB(n * frame) + '）：数据太长或内存不足');
+    }
+    var dv = new DataView(buf);
+    var stride = o.planar ? bps : frame;
+    for (var c = 0; c < o.ch; c++) {
+      var base = o.planar ? off + c * n * bps : off + c * bps;
+      if (base + (n - 1) * stride + bps > buf.byteLength) break;
+      audio.copyToChannel(pcmChannel(buf, dv, base, n, stride, o.bits, o.be), c);
+    }
+    return audio;
+  }
+
+  /* ============================================================
+     波形峰值 + 绘制
+     ============================================================ */
+  var BUCKETS = 4096;
+
+  function computePeaks(audio) {
+    var n = audio.length, chs = audio.numberOfChannels;
+    var mn = new Float32Array(BUCKETS), mx = new Float32Array(BUCKETS);
+    var data = [], c;
+    for (c = 0; c < chs; c++) data.push(audio.getChannelData(c));
+    var step = n / BUCKETS;
+    for (var b = 0; b < BUCKETS; b++) {
+      var a = Math.floor(b * step), z = Math.min(n, Math.floor((b + 1) * step));
+      if (z <= a) z = Math.min(n, a + 1);
+      var lo = 0, hi = 0;
+      for (c = 0; c < chs; c++) {
+        var d = data[c];
+        for (var i = a; i < z; i++) { var v = d[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+      }
+      mn[b] = lo; mx[b] = hi;
+    }
+    // 归一化：安静素材（-30dB 的录音/PCM）在固定比例下只剩一条线，看不清结构。
+    // 峰值高于 0.02 时按峰值铺满，低于 0.02 时最多放大 50 倍，避免把静音底的噪声画满。
+    var pk = 0;
+    for (var j = 0; j < BUCKETS; j++) {
+      if (mx[j] > pk) pk = mx[j];
+      if (-mn[j] > pk) pk = -mn[j];
+    }
+    return { mn: mn, mx: mx, gain: pk > 0.02 ? 1 / pk : 50 };
+  }
+
+  var wave = $('#wave'), waveG = null;
+  var layerOff = null, layerOn = null, layerW = 0, layerH = 0;
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function buildLayer(w, h, color, alpha) {
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    var g = cv.getContext('2d');
+    if (!S.peaks) return cv;
+    g.globalAlpha = alpha === undefined ? 1 : alpha;
+    var mn = S.peaks.mn, mx = S.peaks.mx;
+    var mid = h / 2, amp = Math.max(2, h / 2 - 3) * (S.peaks.gain || 1);
+    g.fillStyle = color;
+    for (var x = 0; x < w; x++) {
+      var i0 = Math.floor(x * BUCKETS / w), i1 = Math.floor((x + 1) * BUCKETS / w);
+      if (i1 <= i0) i1 = i0 + 1;
+      var lo = 0, hi = 0;
+      for (var i = i0; i < i1 && i < BUCKETS; i++) { if (mn[i] < lo) lo = mn[i]; if (mx[i] > hi) hi = mx[i]; }
+      var y0 = mid - hi * amp, y1 = mid - lo * amp;
+      var hh = Math.max(1, y1 - y0);
+      g.fillRect(x, Math.round(mid - hh / 2), 1, Math.round(hh));
+    }
+    return cv;
+  }
+
+  function ensureWaveSize() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var w = Math.max(1, Math.round(wave.clientWidth * dpr));
+    var h = Math.max(1, Math.round(wave.clientHeight * dpr));
+    if (wave.width !== w) wave.width = w;
+    if (wave.height !== h) wave.height = h;
+    if (!waveG) waveG = wave.getContext('2d');
+    if (w !== layerW || h !== layerH) {
+      layerW = w; layerH = h;
+      layerOff = buildLayer(w, h, cssVar('--text-3'), .55);   // 未播放部分淡一点，已播放的靛蓝才跳得出来
+      layerOn = buildLayer(w, h, cssVar('--accent'));
+    }
+  }
+
+  function paint() {
+    ensureWaveSize();
+    var g = waveG, w = layerW, h = layerH;
+    g.clearRect(0, 0, w, h);
+    // 中线
+    g.fillStyle = cssVar('--border-2');
+    g.fillRect(0, (h / 2) | 0, w, 1);
+    if (layerOff) g.drawImage(layerOff, 0, 0);
+    if (S.audio && S.dur > 0) {
+      var p = clamp(pos() / S.dur, 0, 1);
+      var x = Math.round(p * w);
+      if (x > 0 && layerOn) {
+        g.save(); g.beginPath(); g.rect(0, 0, x, h); g.clip();
+        g.drawImage(layerOn, 0, 0);
+        g.restore();
+      }
+      g.fillStyle = cssVar('--accent');
+      g.fillRect(Math.max(0, x - 1), 0, 2, h);
+    }
+    $('#tCur').textContent = fmtT(pos(), true);
+    $('#tDur').textContent = fmtT(S.dur, true);
+  }
+
+  var repaintQueued = 0;
+  function queuePaint() {
+    if (repaintQueued) return;
+    repaintQueued = requestAnimationFrame(function () { repaintQueued = 0; paint(); });
+  }
+
+  /* ============================================================
+     播放控制
+     ============================================================ */
+  function pos() {
+    if (S.playing && S.src && ctx) {
+      return clamp(S.startOff + (ctx.currentTime - S.startAt) * S.rate, 0, S.dur);
+    }
+    return clamp(S.pausedAt, 0, S.dur || 0);
+  }
+
+  function killSrc() {
+    if (S.src) {
+      S.src.onended = null;
+      try { S.src.stop(); } catch (e) {}
+      try { S.src.disconnect(); } catch (e) {}
+      S.src = null;
+    }
+    S.playing = false;
+  }
+
+  function play(from) {
+    if (!S.audio) return;
+    ensureCtx();
+    if (from === undefined) from = S.pausedAt;
+    if (from >= S.dur - 0.01) from = 0;
+    killSrc();
+    var src = ctx.createBufferSource();
+    src.buffer = S.audio;
+    src.playbackRate.value = S.rate;
+    src.connect(gain);
+    src.onended = function () {
+      if (S.src !== src) return;
+      S.src = null; S.playing = false; S.pausedAt = S.dur;
+      paint(); setPlayIcon();
+    };
+    S.src = src;
+    S.startOff = from;
+    S.startAt = ctx.currentTime;
+    S.playing = true;
+    src.start(0, from);
+    setPlayIcon();
+    rafLoop();
+  }
+
+  function pause() {
+    if (!S.playing) return;
+    S.pausedAt = pos();
+    killSrc();
+    setPlayIcon();
+    paint();
+  }
+
+  function toggle() { S.playing ? pause() : play(); }
+
+  function stop() {
+    killSrc();
+    S.pausedAt = 0;
+    setPlayIcon();
+    paint();
+  }
+
+  function seek(t) {
+    if (!S.audio) return;
+    t = clamp(t, 0, S.dur);
+    if (S.playing) play(t); else { S.pausedAt = t; paint(); }
+  }
+
+  var rafId = 0;
+  function rafLoop() {
+    cancelAnimationFrame(rafId);
+    var step = function () {
+      if (!S.playing) return;
+      paint();
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+
+  var ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L19.2 12z"/></svg>';
+  var ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5.4" width="4" height="13.2" rx="1.1"/><rect x="13.5" y="5.4" width="4" height="13.2" rx="1.1"/></svg>';
+
+  function setPlayIcon() {
+    $('#btnPlay').innerHTML = S.playing ? ICON_PAUSE : ICON_PLAY;
+  }
+
+  /* ============================================================
+     装填
+     ============================================================ */
+  function setEnabled(on) {
+    ['btnPlay', 'btnStop', 'rate'].forEach(function (id) {
+      $('#' + id).disabled = !on;
+    });
+    $('#btnExport').disabled = !on || S.busy;
+  }
+
+  function install(audio, keepPos) {
+    var oldPos = keepPos ? pos() : 0;
+    killSrc();
+    S.audio = audio;
+    S.dur = audio.duration;
+    S.pausedAt = clamp(oldPos, 0, S.dur);
+    S.peaks = null;
+    layerW = layerH = 0;      // 换文件必须丢掉旧的波形图层，否则会先闪一下上一首
+    setMsg('');
+    $('#waveEmpty').style.display = 'none';
+    setEnabled(true);
+    hdr(audio.sampleRate + ' Hz · ' + ({ 1: '单声道', 2: '立体声' }[audio.numberOfChannels] || audio.numberOfChannels + ' 声道') + ' · ' + fmtT(S.dur, true));
+    paintMeta();
+    $('#pcmNote').textContent = noteFor();
+    updateSummary();
+    setPlayIcon();
+    paint();
+    // 峰值放到下一帧算，避免和首帧绘制抢时间
+    setTimeout(function () {
+      S.peaks = computePeaks(audio);
+      layerW = layerH = 0;
+      paint();
+    }, 0);
+  }
+
+  function noteFor() {
+    if (!S.buf) return '设定参数后，点右上角的「按无头 PCM 解析」即可把当前文件当裸数据重新解释。';
+    var pv = probe(S.buf);
+    if ($('#rawMode').checked) {
+      return pv.kind
+        ? '⚠ 当前文件带 ' + pv.kind + ' 头，按无头 PCM 解析多半会得到噪声 —— 一般不需要打开这个开关。'
+        : '已按无头 PCM 解析：' + pcmOpts().rate + ' Hz · ' + $('#pBits').value + ' bit · ' + pcmOpts().ch + ' 声道。改参数会立即重新解释。';
+    }
+    return pv.kind
+      ? '已按 ' + pv.kind + ' 正常解码（' + (S.audio ? S.audio.sampleRate + ' Hz' : '') + '）。下方参数只影响「无头 PCM」解析与裸 PCM 导出。'
+      : '当前按音频容器解码。若结果是噪声或时长明显不对，多半是无头 PCM —— 打开右上角开关并按下方参数调整。';
+  }
+
+  /* ============================================================
+     载入流程
+     ============================================================ */
+  function loadFile(file) {
+    if (!file) return;
+    if (S.busy) return;
+    if (file.size > MAXBYTES) {
+      setMsg('文件 ' + fmtB(file.size) + ' 超过 250 MB：整块读进内存会让标签页崩溃。请先用 ffmpeg 切段，例如 ' +
+        'ffmpeg -i in.wav -f segment -segment_time 600 out%03d.wav', 'err');
+      return;
+    }
+    if (file.size === 0) { setMsg('这个文件是空的（0 字节）。', 'err'); return; }
+    // ★ 必须先清状态再重绘：反过来 stop() 里的 paint() 会把上一首的时长重新写回 #tDur，
+    //   界面看起来「已经载入新文件」，实际还在解码。
+    S.file = file;
+    S.buf = null;
+    S.audio = null;
+    S.peaks = null;
+    S.dur = 0;
+    S.pausedAt = 0;
+    S.meta = null;
+    killSrc();
+    setPlayIcon();
+    layerW = layerH = 0;
+    paint();
+    // 上一次是「自动兜底」翻到无头模式的，换文件时复位 —— 否则下一个正常 mp3 会被当裸数据糊掉
+    if (S.rawAuto) { $('#rawMode').checked = false; S.rawAuto = false; }
+    setEnabled(false);
+    $('#waveEmpty').style.display = '';
+    $('#waveEmpty').textContent = '读取中…';
+    clearMeta();
+    addTag(file.name, 'name');
+    addTag(fmtB(file.size));
+    setMsg(file.size > WARNBYTES ? '文件较大（' + fmtB(file.size) + '），解码期间页面可能卡顿几秒。' : '', file.size > WARNBYTES ? 'warn' : '');
+    hdr('读取中…');
+
+    // FileReader 能给进度，arrayBuffer() 不能
+    var fr = new FileReader();
+    fr.onprogress = function (e) {
+      if (e.lengthComputable && file.size > WARNBYTES) hdr('读取 ' + Math.round(e.loaded / file.size * 100) + '%');
+    };
+    fr.onerror = function () {
+      setMsg('读取文件失败：' + (fr.error && fr.error.message || '未知错误'), 'err');
+      $('#waveEmpty').textContent = '还没有载入音频';
+      hdr('未载入文件');
+    };
+    fr.onload = function () {
+      S.buf = fr.result;
+      rebuild(false);
+    };
+    fr.readAsArrayBuffer(file);
+  }
+
+  function rebuild(keepPos) {
+    if (!S.buf) return;
+    var raw = $('#rawMode').checked;
+    var pv = probe(S.buf);
+    S.meta = { kind: pv.kind || (raw ? '无头 PCM' : '未知容器'), source: raw ? '参数解析' : '浏览器解码' };
+    if (!ctx) ensureCtx();
+
+    if (!raw) {
+      setMsg('解码中…', 'info');
+      decodeContainer(S.buf).then(function (audio) {
+        S.meta.kind = pv.kind || '音频容器';
+        S.meta.source = '浏览器解码';
+        install(audio, keepPos);
+        setMsg('');
+      }).catch(function (e) {
+        // 容器解码失败 → 自动按无头 PCM 再试一次
+        $('#rawMode').checked = true;
+        S.rawAuto = true;
+        try {
+          var audio = parsePcm(S.buf);
+          // 兜底解析出来的东西短到不可能是音频，说明这文件根本不是音频 —— 宁可报错，不要给用户一段噪声
+          if (audio.duration < 0.05) {
+            throw new Error('只解析出 ' + audio.duration.toFixed(3) + ' 秒，不像是音频文件');
+          }
+          S.meta.kind = '无头 PCM';
+          S.meta.source = '参数解析';
+          install(audio, false);
+          setMsg('浏览器解不出这个容器（' + (e && e.message || '格式不支持') + '），已自动改按无头 PCM 解析。若听到的是噪声，请在下面调整采样率 / 位深 / 声道 / 字节序。', 'warn');
+        } catch (e2) {
+          var o = pcmOpts();
+          setMsg('无法识别这个文件：浏览器解不出音频容器（' + (e && e.message || '格式不支持') +
+            '），按无头 PCM（' + o.rate + 'Hz / ' + o.bits + 'bit / ' + o.ch + ' 声道）也解不出可用的采样点 —— ' +
+            (e2 && e2.message || e2) + '。如果它确实是裸 PCM，请在下面换一组参数再试。', 'err');
+          $('#waveEmpty').textContent = '解码失败';
+          $('#waveEmpty').style.display = '';
+          hdr('解码失败');
+          S.meta = null;
+          clearMeta();
+          if (S.file) addTag(S.file.name, 'name');
+        }
+      });
+      return;
+    }
+
+    try {
+      var a = parsePcm(S.buf);
+      install(a, keepPos);
+    } catch (e) {
+      setMsg(e.message, 'err');
+      $('#waveEmpty').textContent = '按当前参数解析不出数据';
+      $('#waveEmpty').style.display = '';
+      hdr('解析失败');
+    }
+  }
+
+  /* ============================================================
+     交互：载入
+     ============================================================ */
+  $('#btnPick').addEventListener('click', function () { $('#file').click(); });
+  $('#file').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (f) loadFile(f);
+    e.target.value = '';
+  });
+
+  // 拖放
+  var dragDepth = 0;
+  var mask = $('#dropmask');
+  function hasFiles(e) {
+    var dt = e.dataTransfer;
+    if (!dt) return false;
+    var t = dt.types || [];
+    for (var i = 0; i < t.length; i++) if (t[i] === 'Files') return true;
+    return false;
+  }
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (ev === 'dragenter') dragDepth++;
+      mask.classList.add('show');
+      $('#pick').classList.add('over');
+    });
+  });
+  document.addEventListener('dragleave', function (e) {
+    if (!hasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) { mask.classList.remove('show'); $('#pick').classList.remove('over'); }
+  });
+  document.addEventListener('drop', function (e) {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    mask.classList.remove('show');
+    $('#pick').classList.remove('over');
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  // 测试音：5 秒，含单声道段 / 左右分声道段 / 扫频段
+  $('#btnTone').addEventListener('click', function () {
+    ensureCtx();
+    var rate = 48000, dur = 5, n = rate * dur;
+    var b = ctx.createBuffer(2, n, rate);
+    var L = b.getChannelData(0), R = b.getChannelData(1);
+    var ph1 = 0, ph2 = 0, ph3 = 0;
+    for (var i = 0; i < n; i++) {
+      var t = i / rate, v, w;
+      var env = Math.min(1, t / 0.08, Math.max(0, (dur - t)) / 0.12);
+      if (t < 1.5) { v = w = 0.32 * Math.sin(2 * Math.PI * 440 * t); }
+      else if (t < 3) { v = 0.32 * Math.sin(2 * Math.PI * 660 * t); w = 0.32 * Math.sin(2 * Math.PI * 880 * t); }
+      else {
+        var f = 1000 + (t - 3) / 2 * 3000, dt = 1 / rate;
+        ph3 += 2 * Math.PI * f * dt;
+        v = w = 0.3 * Math.sin(ph3);
+      }
+      L[i] = v * env; R[i] = w * env;
+    }
+    S.file = null;
+    S.buf = null;
+    S.meta = { kind: '测试音 48 kHz', source: '本机合成' };
+    install(b, false);
+    setMsg('已生成 5 秒测试音：0–1.5s 双声道 440Hz，1.5–3s 左 660Hz / 右 880Hz（可验左右声道），3–5s 1000→4000Hz 扫频。', 'info');
+    hdr('48000 Hz · 立体声 · 0:05.00');
+  });
+
+  /* ============================================================
+     交互：播放
+     ============================================================ */
+  setPlayIcon();
+  $('#btnPlay').addEventListener('click', function () { if (S.audio) toggle(); });
+  $('#btnStop').addEventListener('click', function () { if (S.audio) stop(); });
+
+  $('#vol').addEventListener('input', function () {
+    S.vol = clamp(+this.value / 100, 0, 1);
+    $('#volTxt').textContent = Math.round(S.vol * 100);
+    if (gain) gain.gain.value = S.vol;
+  });
+
+  $('#rate').addEventListener('change', function () {
+    S.rate = +this.value || 1;
+    if (S.playing) { var p = pos(); killSrc(); S.pausedAt = p; play(p); }
+    else paint();
+  });
+
+  // 波形拖动 / 点击
+  var scrubbing = false;
+  function waveSeek(e) {
+    if (!S.audio) return;
+    var r = wave.getBoundingClientRect();
+    var p = clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1);
+    seek(p * S.dur);
+  }
+  wave.addEventListener('pointerdown', function (e) {
+    if (!S.audio) return;
+    scrubbing = true;
+    try { wave.setPointerCapture(e.pointerId); } catch (err) {}
+    waveSeek(e);
+  });
+  wave.addEventListener('pointermove', function (e) {
+    if (scrubbing) waveSeek(e);
+  });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    wave.addEventListener(ev, function () { scrubbing = false; });
+  });
+
+  // 参数变化 → 重新解析（只在无头模式下有意义）
+  var reTimer = 0;
+  ['pRate', 'pBits', 'pCh', 'pEnd', 'pPlanar', 'pS8', 'pOffset'].forEach(function (id) {
+    $('#' + id).addEventListener('change', function () {
+      clearTimeout(reTimer);
+      reTimer = setTimeout(function () {
+        if (!S.buf) return;
+        if ($('#rawMode').checked) rebuild(true);
+        else { $('#pcmNote').textContent = noteFor(); updateSummary(); }
+      }, 60);
+    });
+  });
+  $('#rawMode').addEventListener('change', function () {
+    S.rawAuto = false;   // 用户自己动的开关，不再算自动兜底
+    if (!S.buf) { $('#pcmNote').textContent = noteFor(); return; }
+    rebuild(true);
+    updateSummary();
+  });
+
+  /* ============================================================
+     键盘
+     ============================================================ */
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (t && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!S.audio) return;
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); seek(pos() - 5); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); seek(pos() + 5); }
+    else if (e.key === 'Home') { e.preventDefault(); seek(0); }
+    else if (e.key === 'End') { e.preventDefault(); seek(S.dur); }
+  });
+
+  /* ============================================================
+     导出
+     ============================================================ */
+  function f2i16(v) { return v < -1 ? -32768 : v > 1 ? 32767 : (v < 0 ? v * 32768 : v * 32767) | 0; }
+
+  function mapChannels(a, n) {
+    if (!n || n === a.numberOfChannels) return a;
+    ensureCtx();
+    var out = ctx.createBuffer(n, a.length, a.sampleRate);
+    var i, c;
+    if (n === 1) {
+      var acc = new Float32Array(a.length);
+      for (c = 0; c < a.numberOfChannels; c++) {
+        var d = a.getChannelData(c);
+        for (i = 0; i < a.length; i++) acc[i] += d[i];
+      }
+      var k = 1 / a.numberOfChannels;
+      for (i = 0; i < a.length; i++) acc[i] *= k;
+      out.copyToChannel(acc, 0);
+    } else {
+      for (c = 0; c < n; c++) {
+        out.copyToChannel(a.getChannelData(Math.min(c, a.numberOfChannels - 1)), c);
+      }
+    }
+    return out;
+  }
+
+  function resample(a, rate) {
+    if (a.sampleRate === rate) return Promise.resolve(a);
+    var len = Math.max(1, Math.round(a.duration * rate));
+    var octx = new OC(a.numberOfChannels, len, rate);
+    var s = octx.createBufferSource();
+    s.buffer = a;
+    s.connect(octx.destination);
+    s.start();
+    return octx.startRendering();
+  }
+
+  function encodeWav(a, bits) {
+    var ch = a.numberOfChannels, n = a.length, rate = a.sampleRate;
+    var isF = bits === '32f';
+    var bps = BPS[bits] || 2;
+    var fmtSize = isF ? 18 : 16;
+    var headLen = 12 + 8 + fmtSize + 8;
+    var dataLen = n * ch * bps;
+    var ab = new ArrayBuffer(headLen + dataLen);
+    var dv = new DataView(ab), o = 0, i, c, v;
+
+    function str(s) { for (var k = 0; k < s.length; k++) dv.setUint8(o++, s.charCodeAt(k)); }
+    function u32(x) { dv.setUint32(o, x, true); o += 4; }
+    function u16(x) { dv.setUint16(o, x, true); o += 2; }
+
+    str('RIFF'); u32(headLen - 8 + dataLen); str('WAVE');
+    str('fmt '); u32(fmtSize);
+    u16(isF ? 3 : 1); u16(ch); u32(rate);
+    u32(rate * ch * bps); u16(ch * bps); u16(bps * 8);
+    if (isF) u16(0);
+    str('data'); u32(dataLen);
+
+    var data = [];
+    for (c = 0; c < ch; c++) data.push(a.getChannelData(c));
+    for (i = 0; i < n; i++) {
+      for (c = 0; c < ch; c++) {
+        v = data[c][i];
+        if (bits === '8') dv.setUint8(o, clamp(Math.round(v * 128 + 128), 0, 255));
+        else if (bits === '16') dv.setInt16(o, f2i16(v), true);
+        else if (bits === '24') {
+          var s24 = v < -1 ? -8388608 : v > 1 ? 8388607 : Math.round(v * 8388607);
+          dv.setUint8(o, s24 & 255); dv.setUint8(o + 1, (s24 >> 8) & 255); dv.setUint8(o + 2, (s24 >> 16) & 255);
+        } else if (bits === '32') dv.setInt32(o, v < -1 ? -2147483648 : v > 1 ? 2147483647 : Math.round(v * 2147483647), true);
+        else dv.setFloat32(o, v, true);
+        o += bps;
+      }
+    }
+    return new Blob([ab], { type: 'audio/wav' });
+  }
+
+  function encodePcm(a, bits, be, planar) {
+    var ch = a.numberOfChannels, n = a.length, bps = BPS[bits] || 2;
+    var ab = new ArrayBuffer(n * ch * bps);
+    var dv = new DataView(ab);
+    var data = [], c, i, o, v;
+    for (c = 0; c < ch; c++) data.push(a.getChannelData(c));
+    var le = !be;
+    for (c = 0; c < ch; c++) {
+      var d = data[c];
+      for (i = 0; i < n; i++) {
+        o = planar ? (c * n + i) * bps : (i * ch + c) * bps;
+        v = d[i];
+        if (bits === '8') dv.setUint8(o, clamp(Math.round(v * 128 + 128), 0, 255));
+        else if (bits === '16') dv.setInt16(o, f2i16(v), le);
+        else if (bits === '24') {
+          var s24 = v < -1 ? -8388608 : v > 1 ? 8388607 : Math.round(v * 8388607);
+          if (be) { dv.setUint8(o, (s24 >> 16) & 255); dv.setUint8(o + 1, (s24 >> 8) & 255); dv.setUint8(o + 2, s24 & 255); }
+          else { dv.setUint8(o, s24 & 255); dv.setUint8(o + 1, (s24 >> 8) & 255); dv.setUint8(o + 2, (s24 >> 16) & 255); }
+        } else if (bits === '32') dv.setInt32(o, v < -1 ? -2147483648 : v > 1 ? 2147483647 : Math.round(v * 2147483647), le);
+        else dv.setFloat32(o, v, le);
+      }
+    }
+    return new Blob([ab], { type: 'application/octet-stream' });
+  }
+
+  /* MP3：lamejs 首次使用时才加载（本地 vendor 优先，CDN 兜底，版本锁死） */
+  var LAME_SRC = [
+    'vendor/lame.min.js',
+    'https://unpkg.com/lamejs@1.2.1/lame.min.js',
+    'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js'
+  ];
+  var lamePromise = null;
+  function ensureLame() {
+    if (window.lamejs && window.lamejs.Mp3Encoder) return Promise.resolve();
+    if (lamePromise) return lamePromise;
+    lamePromise = new Promise(function (res, rej) {
+      var i = 0;
+      function next() {
+        if (i >= LAME_SRC.length) { lamePromise = null; rej(new Error('MP3 编码器加载失败（本地 vendor 与 CDN 都取不到）')); return; }
+        var s = document.createElement('script');
+        s.src = LAME_SRC[i++];
+        s.onload = function () {
+          if (window.lamejs && window.lamejs.Mp3Encoder) res(); else next();
+        };
+        s.onerror = next;
+        document.head.appendChild(s);
+      }
+      next();
+    });
+    return lamePromise;
+  }
+
+  var LAME_RATES = [8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000];
+  var LAME_MAXBR = { 8000: 64, 11025: 64, 12000: 64, 16000: 160, 22050: 160, 24000: 160, 32000: 320, 44100: 320, 48000: 320 };
+  function lameRate(r) {
+    var best = LAME_RATES[0], bd = Infinity;
+    for (var i = 0; i < LAME_RATES.length; i++) {
+      var d = Math.abs(LAME_RATES[i] - r);
+      if (d < bd) { bd = d; best = LAME_RATES[i]; }
+    }
+    return best;
+  }
+
+  async function encodeMp3(a, kbps, onProg) {
+    await ensureLame();
+    var ch = Math.min(2, a.numberOfChannels);
+    var rate = lameRate(a.sampleRate);
+    var br = Math.min(kbps, LAME_MAXBR[rate] || 320);
+    var enc = new window.lamejs.Mp3Encoder(ch, rate, br);
+    var n = a.length;
+    var L = a.getChannelData(0);
+    var R = ch > 1 ? a.getChannelData(1) : null;
+    var CH = 1152 * 16;
+    var bl = new Int16Array(CH), brr = new Int16Array(CH);
+    var out = [], chunks = 0;
+    for (var i = 0; i < n; i += CH) {
+      var len = Math.min(CH, n - i), k;
+      for (k = 0; k < len; k++) {
+        bl[k] = f2i16(L[i + k]);
+        if (R) brr[k] = f2i16(R[i + k]);
+      }
+      var d = R ? enc.encodeBuffer(bl.subarray(0, len), brr.subarray(0, len)) : enc.encodeBuffer(bl.subarray(0, len));
+      if (d.length) out.push(d);
+      if (++chunks % 8 === 0) {
+        if (onProg) onProg(i / n);
+        await tick();
+      }
+    }
+    var tail = enc.flush();
+    if (tail.length) out.push(tail);
+    if (onProg) onProg(1);
+    return new Blob(out, { type: 'audio/mpeg' });
+  }
+
+  /* ---------- 导出面板 ---------- */
+  function exFmt() { return $('#exFmt').value; }
+
+  function syncFmtRows() {
+    var f = exFmt();
+    Array.prototype.forEach.call(document.querySelectorAll('.opts .field[data-f]'), function (el) {
+      el.style.display = el.getAttribute('data-f').split(' ').indexOf(f) >= 0 ? '' : 'none';
+    });
+  }
+
+  function targetRate() {
+    var r = +$('#exRate').value;
+    if (!r) return S.audio ? S.audio.sampleRate : 0;
+    if (exFmt() === 'mp3') return lameRate(r);
+    return r;
+  }
+  function targetCh() {
+    var c = +$('#exCh').value;
+    if (c) return c;
+    if (!S.audio) return 2;
+    // WAV / PCM 能装下任意声道数，只有 MP3 必须压到 2 以内
+    return exFmt() === 'mp3' ? Math.min(2, S.audio.numberOfChannels) : S.audio.numberOfChannels;
+  }
+
+  function updateSummary() {
+    var el = $('#exSummary');
+    if (!S.audio) { el.textContent = '载入音频后这里会显示将要写出的格式与体积。'; return; }
+    var f = exFmt();
+    var rate = targetRate(), ch = targetCh();
+    var dur = S.audio.duration;
+    var bytes, label;
+    if (f === 'wav') {
+      var bps = BPS[$('#exBits').value] || 2;
+      var fmtSize = $('#exBits').value === '32f' ? 18 : 16;
+      bytes = 28 + fmtSize + Math.round(dur * rate) * ch * bps;
+      label = 'WAV · ' + ($('#exBits').value === '32f' ? '32 bit 浮点' : $('#exBits').value + ' bit') + ' · 无损';
+    } else if (f === 'mp3') {
+      var br = Math.min(+$('#exBr').value, LAME_MAXBR[rate] || 320);
+      bytes = Math.round(dur * br * 1000 / 8);
+      label = 'MP3 · ' + br + ' kbps · 有损';
+    } else {
+      var bp2 = BPS[$('#exBits').value] || 2;
+      bytes = Math.round(dur * rate) * ch * bp2;
+      label = '裸 PCM · ' + ($('#exBits').value === '32f' ? '32 bit 浮点' : $('#exBits').value + ' bit') +
+        ' · ' + ($('#exEnd').value === 'be' ? '大端' : '小端') + ' · ' + ($('#exPlanar').value === '1' ? '分声道' : '交错');
+    }
+    var extra = '';
+    if (rate !== S.audio.sampleRate) extra += '，重采样 ' + S.audio.sampleRate + '→' + rate + ' Hz';
+    if (f === 'mp3' && S.audio.sampleRate !== rate) extra += '（MP3 只支持固定几档采样率）';
+    if (ch !== S.audio.numberOfChannels) extra += '，声道 ' + S.audio.numberOfChannels + '→' + ch;
+    el.innerHTML = '';
+    var b1 = document.createElement('b'); b1.textContent = label; el.appendChild(b1);
+    el.appendChild(document.createTextNode(' · ' + rate + ' Hz · ' + (ch === 1 ? '单声道' : ch === 2 ? '立体声' : ch + ' 声道')));
+    el.appendChild(document.createTextNode(' · 约 ' + fmtB(bytes)));
+    if (extra) {
+      var sp = document.createElement('span');
+      sp.className = 'out';
+      sp.textContent = extra;
+      el.appendChild(sp);
+    }
+    $('#exHint').textContent = f === 'mp3'
+      ? '有损重编码；首次使用会先加载编码器'
+      : f === 'wav'
+        ? '无损封装，可交给任意播放器与剪辑软件'
+        : '无文件头，播放时需要按同样参数解释';
+  }
+
+  ['exFmt', 'exRate', 'exCh', 'exBits', 'exBr', 'exEnd', 'exPlanar'].forEach(function (id) {
+    $('#' + id).addEventListener('change', function () {
+      if (id === 'exFmt') syncFmtRows();
+      updateSummary();
+    });
+  });
+
+  function setBusy(on, text) {
+    S.busy = on;
+    $('#btnExport').disabled = on || !S.audio;
+    $('#btnExport').textContent = on ? (text || '处理中…') : '导出';
+    $('#exBar').classList.toggle('show', on);
+    if (!on) { $('#exBar i').style.width = '0%'; }
+  }
+  function progress(p) { $('#exBar i').style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; }
+
+  function saveBlob(blob, name) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+  }
+
+  function baseName() {
+    if (S.file) return (S.file.name.replace(/\.[^.\\/]+$/, '') || 'audio');
+    return 'test-tone';
+  }
+
+  $('#btnExport').addEventListener('click', async function () {
+    if (!S.audio || S.busy) return;
+    var f = exFmt();
+    var rate = targetRate(), ch = targetCh();
+    ensureCtx();
+    setBusy(true, '准备中…');
+    try {
+      var a = S.audio;
+      if (ch !== a.numberOfChannels) a = mapChannels(a, ch);
+      if (rate !== a.sampleRate) {
+        setBusy(true, '重采样中…');
+        a = await resample(a, rate);
+      }
+      var name = baseName(), blob;
+      if (f === 'wav') {
+        setBusy(true, '封装 WAV…');
+        blob = encodeWav(a, $('#exBits').value);
+        name += '.wav';
+      } else if (f === 'mp3') {
+        setBusy(true, '编码 MP3 0%');
+        blob = await encodeMp3(a, +$('#exBr').value, function (p) {
+          progress(p);
+          $('#btnExport').textContent = '编码 MP3 ' + Math.round(p * 100) + '%';
+        });
+        name += '.mp3';
+      } else {
+        setBusy(true, '写出 PCM…');
+        blob = encodePcm(a, $('#exBits').value, $('#exEnd').value === 'be', $('#exPlanar').value === '1');
+        name += '.' + a.sampleRate + 'hz.' + ($('#exBits').value === '32f' ? 'f32' : $('#exBits').value + 'bit') +
+          '.' + (a.numberOfChannels === 1 ? 'mono' : 'stereo') + '.' + ($('#exEnd').value === 'be' ? 'be' : 'le') + '.pcm';
+      }
+      await tick();
+      saveBlob(blob, name);
+      setMsg('已导出 ' + name + '（' + fmtB(blob.size) + '）', 'ok');
+    } catch (e) {
+      setMsg('导出失败：' + (e && e.message || e), 'err');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  /* ============================================================
+     收尾
+     ============================================================ */
+  var rzTimer = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(function () {
+      layerW = layerH = 0;
+      paint();
+    }, 80);
+  });
+
+  // 初始态
+  $('#waveEmpty').style.display = '';
+  $('#pcmNote').textContent = noteFor();
+  syncFmtRows();
+  updateSummary();
+  setEnabled(false);
+  paint();
+})();
+</script>
+</body>
+</html>
