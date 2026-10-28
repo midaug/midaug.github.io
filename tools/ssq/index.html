@@ -37,9 +37,11 @@
     --ball-red: #d1242f;
     --ball-blue: #4f6bed;
 
-    /* 内容列最大宽度。整宽会让「识别结果」里的投注行只有约 300px 内容、
-       右侧空出上千像素，观感很差；收窄成居中窄列（参照 child-growth 的 .wrap）。 */
-    --wrap: 720px;
+    /* ★ 内容列宽度按比例缩放（用户 2026-10-28 定的规则）：
+       基准窗口 1485px 下这里是 720px（48.5%）。窗口更宽时按同一比例放大
+       （2560 → 1242px，比例仍是 48.5%），更窄时保持 720px 固定，
+       窄到装不下才退化成 100%。列表用 auto-fill 栅格，宽度变大时自动多排几列。 */
+    --wrap: min(100%, max(720px, 48.5vw));
 
     --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
@@ -57,8 +59,7 @@
   body { display: flex; flex-direction: column; }
 
   /* ===== 顶栏 ===== */
-  /* 内容收窄成居中窄列（用户要求，参照 child-growth 的 .wrap）。
-     顶栏本身仍整宽（底边线要通到底），只把左右内边距撑到与内容列对齐。 */
+  /* 顶栏本身仍整宽（底边线要通到底），只把左右内边距撑到与内容列对齐 */
   header {
     flex: none; position: sticky; top: 0; z-index: 10;
     display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap;
@@ -113,7 +114,7 @@
   .card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 16px; min-width: 0;
-    /* 居中窄列：卡片不铺满整屏（见 :root 的 --wrap） */
+    /* 宽度 = --wrap（基准 720px，宽屏按比例放大，见 :root 注释） */
     width: 100%; max-width: var(--wrap); margin-inline: auto;
   }
   .card > h2 {

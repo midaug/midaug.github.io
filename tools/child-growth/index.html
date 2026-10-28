@@ -46,8 +46,12 @@
     --sex-male: #4f6bed;      --sex-male-soft: rgba(79,107,237,.11);
     --sex-female: #c2317f;    --sex-female-soft: rgba(194,49,127,.10);
 
-    /* 内容列最大宽度：内容型工具页不铺满整屏（与 ssq 一致，见 MEMORY.md） */
-    --wrap: 720px;
+    /* ★ 内容列宽度按比例缩放（用户 2026-10-28 定的规则）：
+       基准窗口 1485px 下这里是 720px（48.5%）。窗口更宽时按同一比例放大
+       （2560 → 1242px，比例仍是 48.5%），更窄时保持 720px 固定，
+       窄到装不下才退化成 100%，再窄就进手机布局。
+       ⚠️ 不要再改回「宽屏切成两列」：用户要的是同一套布局等比放大，不是重排。 */
+    --wrap: min(100%, max(720px, 48.5vw));
     --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "PingFang SC", monospace;
   }
@@ -63,6 +67,7 @@
   body{display:flex; flex-direction:column}
 
   /* ===== 顶栏 ===== */
+  /* 顶栏本身仍整宽（底边线要通到底），只把左右内边距撑到与内容列对齐 */
   header{
     flex:none; position:sticky; top:0; z-index:10;
     display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap;
@@ -87,6 +92,7 @@
   main::-webkit-scrollbar-thumb{background:var(--scrollbar); border-radius:10px; border:3px solid var(--bg)}
   main::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
   main::-webkit-scrollbar-track{background:transparent}
+  /* 卡片宽度 = --wrap（基准 720px，宽屏按比例放大，见 :root 注释） */
   main > *{width:100%; max-width:var(--wrap); flex:none; min-width:0}
 
   .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 16px; min-width:0}

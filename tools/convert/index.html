@@ -96,9 +96,10 @@
   main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
   main::-webkit-scrollbar-track { background: transparent; }
 
-  /* ★ 内容型页面收窄，不要吃满 1440px */
+  /* ★ 宽度按比例缩放（用户 2026-10-28 定的规则）：基准窗口 1485px 下这里是 1140px（76.8%）。
+     窗口更宽时按同一比例放大（2560 → 1966px），更窄时保持 1140px 固定。 */
   .grid {
-    max-width: 1140px; margin: 0 auto;
+    width: min(100%, max(1140px, 76.8vw)); margin: 0 auto;
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px; align-content: start;
   }

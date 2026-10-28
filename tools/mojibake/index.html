@@ -89,10 +89,12 @@
   main::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
   main::-webkit-scrollbar-track { background: transparent; }
 
-  /* ★ 内容型工具页不要铺满整屏：卡片收窄居中 */
+  /* ★ 宽度按比例缩放（用户 2026-10-28 定的规则）：基准窗口 1485px 下这里是 900px（60.6%）。
+     窗口更宽时按同一比例放大（2560 → 1552px），更窄时保持 900px 固定，
+     窄到装不下才退化成 100%。 */
   .card {
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    padding: 14px 16px; max-width: 900px; margin: 0 auto 12px; min-width: 0;
+    padding: 14px 16px; width: min(100%, max(900px, 60.6vw)); margin: 0 auto 12px; min-width: 0;
   }
   .card > h2 {
     margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);

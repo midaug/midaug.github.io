@@ -121,8 +121,10 @@
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 16px; min-width: 0;
   }
+  /* ★ 宽度按比例缩放（用户 2026-10-28 定的规则）：基准窗口 1485px 下这里是 1280px（86.2%）。
+     窗口更宽时按同一比例放大（2560 → 2207px），更窄时保持 1280px 固定。 */
   .card.panel {
-    width: 100%; max-width: 1280px; margin: 0 auto;
+    width: min(100%, max(1280px, 86.2vw)); margin: 0 auto;
     display: flex; flex-direction: column; min-height: 0;
     overflow: auto; scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
   }

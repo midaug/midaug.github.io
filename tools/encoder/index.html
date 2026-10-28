@@ -121,8 +121,10 @@
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   /* ===== 主体 =====
-     一次只显示一个面板，所以不再是多列 grid —— 单列 + 收窄容器。
-     直接铺满 1440px 会让文本框长得不像话，也给表格留出足够宽度。 */
+     一次只显示一个面板，所以不再是多列 grid —— 单列。
+     ★ 面板宽度按比例缩放，不写死 px（见下面 .card.panel）：宽屏下固定 860px 会在两侧
+     各留出上千像素空白，看着像一个漂在中间的手机页面（用户 2026-10-28 反馈）。
+     左右留白由 main 的 padding 提供，随窗口一起缩放。 */
   main {
     flex: 1; min-height: 0; overflow: auto; padding: 14px;
     scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
@@ -136,7 +138,10 @@
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
     padding: 14px 16px; min-width: 0;
   }
-  .card.panel { max-width: 860px; margin: 0 auto; }
+  /* ★ 宽度按比例缩放（用户 2026-10-28 定的规则）：基准窗口 1485px 下这里是 860px（57.9%）。
+     窗口更宽时按同一比例放大（2560 → 1482px），更窄时保持 860px 固定，
+     窄到装不下才退化成 100%，再窄进手机布局。 */
+  .card.panel { width: min(100%, max(860px, 57.9vw)); margin: 0 auto; }
   .card.panel[hidden] { display: none; }
   .card > h2 {
     margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
