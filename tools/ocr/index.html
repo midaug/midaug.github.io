@@ -252,16 +252,8 @@
 <header>
   <a class="brand" href=".." title="返回工具首页">OCR<span>文字识别</span></a>
   <span class="sep"></span>
-  <select id="lang" aria-label="识别语言" title="识别语言">
-    <option value="zh-CHS">简体中文</option>
-    <option value="zh-CHT">繁體中文</option>
-    <option value="en-US">English</option>
-    <option value="ja">日本語</option>
-    <option value="ko">한국어</option>
-  </select>
-  <span class="sep"></span>
   <button id="add" type="button">＋ 添加</button>
-  <button id="againAll" type="button" title="按当前语言重新识别全部图片">全部重新识别</button>
+  <button id="againAll" type="button" title="重新识别全部图片">全部重新识别</button>
   <button id="clear" type="button">清空</button>
   <span class="sep hide-sm"></span>
   <label class="chk"><input type="checkbox" id="showBox" checked> 识别框</label>
@@ -298,7 +290,7 @@
         <button type="button" id="zoomOut" title="缩小" aria-label="缩小">−</button>
         <button type="button" id="zoomReset" title="适应窗口" aria-label="适应窗口">适应</button>
         <button type="button" id="zoomIn" title="放大" aria-label="放大">+</button>
-        <button type="button" id="rot" title="顺时针旋转90°，并按当前语言重新识别" aria-label="顺时针旋转90度并重新识别">旋转</button>
+        <button type="button" id="rot" title="顺时针旋转90°，并重新识别" aria-label="顺时针旋转90度并重新识别">旋转</button>
         <button type="button" id="fs" title="全屏查看" aria-label="全屏查看">全屏</button>
       </div>
     </div>
@@ -307,7 +299,7 @@
   <section class="card text-card">
     <h2>识别结果 <span class="hint" id="tStat">—</span>
       <span class="right">
-        <button class="mini" id="again" type="button" title="按当前语言重新识别这张图片">重识别</button>
+        <button class="mini" id="again" type="button" title="重新识别这张图片">重识别</button>
         <button class="mini" id="copy" type="button">复制</button>
         <button class="mini" id="exp" type="button">导出 TXT</button>
       </span>
@@ -322,29 +314,32 @@
 <div class="dropmask" id="mask">松开鼠标添加图片</div>
 <div class="toast" id="toast"></div>
 
+<!-- PP-OCR（PaddleOCR v4 ONNX，PaddleOCR 为百度开源引擎，Apache-2.0）依赖 onnxruntime-web
+     的 ESM 裸引用，用 import map 把包名映射到本地 ort.min.mjs（它 re-export 了
+     onnxruntime-common 的全部公开 API）。import map 不被支持的老浏览器里
+     window.__ppocr 不会定义 → 页面报「引擎不可用」。
+     ★ 这份引擎资源与 ssq 工具共用（ssq 引用 ../ocr/vendor/，两页同 URL 才共享浏览器缓存；
+     移动/重命名要两边同步改）。2026-11-02 起替换掉 PearOCR 引擎（闭源，且数字识别不可靠）。 -->
+<script type="importmap">
+{"imports":{"onnxruntime-web":"./vendor/ort/ort.min.mjs","onnxruntime-common":"./vendor/ort/ort.min.mjs"}}
+</script>
+<script type="module">
+/* PP-OCR 引擎加载器：共享 loader 在 ./vendor/ppocr/ppocr-loader.mjs
+   （国内 npmmirror 优先 → unpkg 备用 → 本地兜底，详见 loader 文件头注释）。
+   init() reject（老浏览器无 import map / CDN 与本地全失败）→ 顶栏显示引擎加载失败，识别时重试。 */
+import { init } from './vendor/ppocr/ppocr-loader.mjs';
+window.__ppocr = { init: init };
+</script>
 <script>
 (function () {
   'use strict';
 
-  var LANGS = ['zh-CHS', 'zh-CHT', 'en-US', 'ja', 'ko'];
-  var TF = {
-    'zh-CHS': ['f91b0416e9517bfd576b4654bc712562.tf', '592ed67e13a2ca0ca7bd0614ff158eb5.tf', '644bcca4eea52af1e33121a940e41599.tf'],
-    'zh-CHT': ['f91b0416e9517bfd576b4654bc712562.tf', '7ec01f4aebd077a3a9d9d1e6cd7b8e2b.tf', 'dfbc0cf2d00af43499155509ba1dc806.tf'],
-    'en-US':  ['f91b0416e9517bfd576b4654bc712562.tf', 'c43b6f3fff445f88847343a445f01c04.tf', '36f987338d326a0339fbf5662ec04473.tf'],
-    'ja':     ['f91b0416e9517bfd576b4654bc712562.tf', '0120c1c55690be53d0d59a49bfa4f228.tf', '7ab430b2ff567e1eff986ea092bb78e0.tf'],
-    'ko':     ['f91b0416e9517bfd576b4654bc712562.tf', 'b66f6a54ccc99cf6f08e71e6ab25010d.tf', 'de3fd5408fa47bb690369bbb82b78ce8.tf']
-  };
-  var TSIZE = {
-    'zh-CHS': [2304374, 4362980, 13246],
-    'zh-CHT': [2304374, 5060604, 16842],
-    'en-US':  [2304374, 1830116, 190],
-    'ja':     [2304374, 3499680, 8798],
-    'ko':     [2304374, 3223812, 7376]
-  };
-  var VENDOR = 'vendor/';
+  /* ===== PP-OCR 引擎（window.__ppocr.init，见上方 module 脚本） =====
+     模型：ch_PP-OCRv4 det/rec + 字典，支持简体中文与英文（PearOCR 的 ja/ko/繁体随旧引擎移除）。
+     detect 输入 {data,width,height}（RGBA ImageData），输出 texts: [{text, mean, box:[[x,y]×4]}]，
+     box 已缩放回输入图坐标系；行自带 mean≥0.5 过滤，我们再用 THRES 收紧。 */
   var THRES = 0.6;
   var MAX_SIDE = 2600;
-  var LANG_KEY = 'tools:ocr:lang:v1';
   var ENH_KEY = 'tools:ocr:enhance:v1';
 
   var $ = function (id) { return document.getElementById(id); };
@@ -355,7 +350,7 @@
   var rotBtn = $('rot');
   var zoom = 1, panX = 0, panY = 0, baseW = 0, baseH = 0;
   var drag = null, pinchStart = null, pointers = new Map();
-  var langEl = $('lang'), globEl = $('glob'), maskEl = $('mask'), toastEl = $('toast');
+  var globEl = $('glob'), maskEl = $('mask'), toastEl = $('toast');
   var showBoxEl = $('showBox'), enhEl = $('enh'), addBtn = $('add'), clearBtn = $('clear');
   var againBtn = $('again'), againAllBtn = $('againAll'), copyBtn = $('copy'), expBtn = $('exp');
 
@@ -365,8 +360,11 @@
   var autoFollow = true;
   var followId = 0;
   var seq = 0;
-  var lang = 'zh-CHS';
-  var tfCache = new Map();
+  var engineReady = false;        /* PP-OCR 模块 + 模型全部就绪 */
+  /* ★ 预热闸门（用户 2026-11-02 要求）：预热收场（成功或失败）前不允许添加图片。
+     与 engineReady 分开 —— 失败后 engineReady 仍是 false，但要放行添加，
+     让用户走识别时 ensureEngine 的重试；warmDone 只表示「预热流程已收场」。 */
+  var warmDone = false;
   var toastTimer = null;
 
   function setGlobal(text) { globEl.textContent = text; }
@@ -384,10 +382,10 @@
     it._bar.style.display = s === 'run' ? '' : 'none';
     it._fill.style.width = (s === 'run' ? p : 0) + '%';
     if (s === 'run') {
+      /* PP-OCR 无逐步进度回调（单图 1-3s），进度条隐藏、只给状态文字 */
+      it._bar.style.display = 'none';
       it._st.className = 'st run';
-      it._st.textContent = p < 30
-        ? '加载模型 ' + Math.round(p / 30 * 100) + '%'
-        : '识别中 ' + Math.round((p - 30) / 70 * 100) + '%';
+      it._st.textContent = '识别中…';
     } else if (s === 'done') {
       it._st.className = 'st ok';
       it._st.textContent = '完成 · ' + ((it.ms || 0) / 1000).toFixed(1) + 's · ' + (it.items ? it.items.length : 0) + ' 段';
@@ -749,7 +747,6 @@
     clearBtn.disabled = !has || busy;
     againBtn.disabled = !cur || busy;
     againAllBtn.disabled = !has || busy;
-    langEl.disabled = busy;
     enhEl.disabled = busy;
     rotBtn.disabled = !cur || busy;
     copyBtn.disabled = !(cur && cur.status === 'done' && outEl.value);
@@ -765,230 +762,86 @@
     });
   }
 
-  function fetchBuf(url, expected, onprog) {
-    return fetch(url, { cache: 'force-cache' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      var total = parseInt(r.headers.get('content-length') || '0', 10) || expected || 0;
-      if (!r.body || !r.body.getReader || !total) {
-        return r.arrayBuffer().then(function (b) {
-          onprog(1);
-          return b;
-        });
-      }
-      var reader = r.body.getReader();
-      var chunks = [], got = 0;
-      var step = function (res) {
-        if (res.done) {
-          onprog(1);
-          return new Blob(chunks).arrayBuffer();
-        }
-        chunks.push(res.value);
-        got += res.value.length;
-        onprog(Math.min(1, got / total));
-        return reader.read().then(step);
-      };
-      return reader.read().then(step);
-    });
-  }
-
-  /* 模型包：按语言缓存。onProg 可选 —— 页面预热时没有具体图片项，就不传。 */
-  function getModels(code, onProg) {
-    if (tfCache.has(code)) return tfCache.get(code);
-    var defs = TF[code], sizes = TSIZE[code];
-    var prog = [0, 0, 0];
-    var bump = function () {
-      if (onProg) onProg((prog[0] + prog[1] + prog[2]) / 3);
-    };
-    var p = Promise.all(defs.map(function (f, i) {
-      return fetchBuf(VENDOR + f, sizes[i], function (r) {
-        prog[i] = r;
-        bump();
-      });
-    })).catch(function (e) {
-      tfCache.delete(code);
-      throw new Error('模型加载失败：' + (e && e.message ? e.message : e));
-    });
-    tfCache.set(code, p);
-    return p;
-  }
-
-  /* ===== 引擎预热 =====
-     ★ 引擎 worker 只能「Init 一次 + rec 一次」（第二次 rec 无任何回包，见 .memory/tools/ocr.md），
-     所以没法复用同一个 worker；但可以在**空闲时先把后面的 worker 的 wasm 初始化跑完**：
-     页面打开就预热，每次用掉立刻补一个 —— 真正识别时直接 postMessage，省掉 ~15s 的 wasm init。
-     预热失败不阻塞页面：真正识别时会再试一次，仍失败才报「引擎不可用」。
-
-     池子深度：初始化一次 ~15s，一张图消耗一个，所以**深度 1 只能救第一张**，连拍三张时第 2、3 张
-     仍要各等一次 init。深度 2 才能让「识别一张 + 备好下一张」成立。低内存/低核设备退回 1，
-     避免同时挂着 3 个 wasm 实例。 */
-  var WARM_MAX = ((navigator.deviceMemory || 4) >= 4 && (navigator.hardwareConcurrency || 4) >= 4) ? 2 : 1;
-  var warmPool = [];                      /* 已 Init 就绪、待用的 worker */
-  var inflight = [];                      /* 正在初始化的 Promise<Worker> */
-  var engineReady = false;
-  var modelReady = {};                    /* lang -> true，模型包已下完 */
-
-  /* 空闲时的状态文案：引擎与当前语言的模型都就绪才写「就绪」 */
-  function idleStatus() {
-    if (imgs.length || busy) return;
-    if (engineReady && modelReady[lang]) setGlobal('就绪');
-    else if (!engineReady) setGlobal('引擎预热中…');
-  }
-
-  function spawnWorker() {
-    return new Promise(function (res, rej) {
-      var wk;
-      try {
-        wk = new Worker(VENDOR + 'antocr-worker.js');
-      } catch (e) {
-        rej(new Error('无法启动识别引擎'));
-        return;
-      }
-      var done = false;
-      var timer = setTimeout(function () {
-        if (done) return;
-        done = true;
-        try { wk.terminate(); } catch (e) {}
-        rej(new Error('引擎初始化超时'));
-      }, 120000);
-      wk.onmessage = function (e) {
-        if (done || e.data !== 'Init') return;
-        done = true;
-        clearTimeout(timer);
-        wk.onmessage = null;
-        wk.onerror = null;
-        res(wk);
-      };
-      wk.onerror = function (e) {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        try { wk.terminate(); } catch (x) {}
-        rej(new Error(e && e.message ? e.message : '引擎异常'));
-      };
-    });
-  }
-
-  /* 起一个初始化任务并入队（单独一个函数，保证 p 是每次调用自己的闭包变量） */
-  function warmOne() {
-    var p = spawnWorker().then(function (wk) {
-      var i = inflight.indexOf(p);
-      if (i >= 0) inflight.splice(i, 1);
-      warmPool.push(wk);
+  /* ===== 引擎就绪与预热 =====
+     PP-OCR 是单例（一个 Ocr 实例跑所有图），不像 PearOCR 那样一张图烧一个 worker。
+     页面打开就预热（用户 2026-11-02 要求）：首次访问要下载约 40MB 引擎资源（国内 npmmirror 为主、
+     unpkg 备用，之后走 HTTP 缓存），等用户选完图再开始下就太慢了。预热失败不弹错，真正识别时会重试一次。 */
+  function ensureEngine() {
+    if (!window.__ppocr) {
+      return Promise.reject(new Error('当前浏览器不支持本地 OCR 引擎（需要支持 import map 的现代浏览器）'));
+    }
+    return window.__ppocr.init().then(function (api) {
       engineReady = true;
-      idleStatus();
-      return wk;
+      return api;
     }, function (e) {
-      var i = inflight.indexOf(p);
-      if (i >= 0) inflight.splice(i, 1);
-      engineReady = warmPool.length > 0;
-      if (!imgs.length && !busy) setGlobal('引擎预热失败');
-      throw e;
-    });
-    inflight.push(p);
-    return p;
-  }
-
-  /* 把池子补到 WARM_MAX。返回「第一个可用 worker」：
-     - 池里已有 → 直接给（takeWarm 会取走）；
-     - 池空但有在初始化的 → 等最先成功的那个（**不能直接 reject**：页面刚打开时两个都在 init，
-       池子必然是空的，直接 reject 会让第一次识别报「引擎预热失败」）；
-     - 池空且没有在初始化 → 全部初始化失败，才报错。 */
-  function ensureWarm() {
-    while (warmPool.length + inflight.length < WARM_MAX) warmOne();
-    if (warmPool.length) return Promise.resolve(warmPool[0]);
-    if (inflight.length) {
-      var list = inflight.slice();
-      return new Promise(function (res, rej) {
-        var left = list.length, lastErr = null;
-        list.forEach(function (pr) {
-          pr.then(res, function (e) { lastErr = e; if (--left === 0) rej(lastErr); });
-        });
-      });
-    }
-    return Promise.reject(new Error('引擎预热失败'));
-  }
-
-  /* 取一个已就绪的 worker（池子空就等预热完成），并立刻在后台补位 */
-  function takeWarm() {
-    if (warmPool.length) {
-      var wk = warmPool.shift();
-      ensureWarm().catch(function () {});   /* 补位失败不打断当前识别，下次再试 */
-      return Promise.resolve(wk);
-    }
-    return ensureWarm().then(function (w) {
-      var idx = warmPool.indexOf(w);
-      if (idx >= 0) warmPool.splice(idx, 1);
-      ensureWarm().catch(function () {});
-      return w;
-    });
-  }
-
-  /* 预热某语言：模型包 + 引擎 worker 都提前备好（worker 与语言无关，模型才分语言） */
-  function warmFor(code) {
-    getModels(code, function (r) {
-      if (!imgs.length && !busy) setGlobal('引擎预热 ' + Math.round(r * 100) + '%');
-    }).then(function () {
-      modelReady[code] = true;
-      idleStatus();
-    }, function () {});
-    ensureWarm().catch(function () {});
-  }
-
-  function runWorker(buffer, w, h, params, it) {
-    /* worker 已经预热好（Init 过），拿到就直接发任务；没预热好时这里会等它初始化完 */
-    return takeWarm().then(function (wk) {
-      return new Promise(function (res, rej) {
-        var finished = false;
-        var timer = setTimeout(function () { fail('识别超时'); }, 180000);
-        function fail(msg) {
-          if (finished) return;
-          finished = true;
-          clearTimeout(timer);
-          try { wk.terminate(); } catch (e) {}
-          rej(new Error(msg));
-        }
-        function ok(items) {
-          if (finished) return;
-          finished = true;
-          clearTimeout(timer);
-          try { wk.terminate(); } catch (e) {}
-          res(items);
-        }
-        wk.onerror = function (e) { fail(e && e.message ? e.message : '引擎异常'); };
-        wk.onmessage = function (e) {
-          var d = e.data;
-          if (!Array.isArray(d)) return;
-          if (d[0] === 'progressCB') {
-            var stage = +d[1] || 0;
-            var p = Math.min(1, Math.max(0, (+d[2] || 0) / 100));
-            var r = Math.min(1, (stage + p) / 2);
-            it.prog = 30 + Math.round(r * 70);
-            paint(it);
-            return;
-          }
-          if (d[0] === 'runError') {
-            fail(String(d[1] || '识别失败'));
-            return;
-          }
-          if (d[0] === 'recFinish') {
-            var items;
-            try {
-              items = JSON.parse(d[3]);
-            } catch (err) {
-              fail('结果解析失败');
-              return;
-            }
-            ok(Array.isArray(items) ? items : []);
-          }
-        };
-        wk.postMessage({
-          cmd: 'rec', width: w, height: h, buffer: buffer, params: params,
-          unclipRadio: 1.6, limitSideLen: 960, splitThres: 1, splitOverlap: 64
-        }, [buffer]);
-      });
-    }, function (e) {
+      engineReady = false;
       throw new Error('引擎不可用：' + (e && e.message ? e.message : e));
     });
+  }
+
+  /* 预热期间投放区显示加载提示（收场后恢复原内容） */
+  var dropIdleHtml = null;
+  function setDropWarm(on) {
+    if (on) {
+      if (dropIdleHtml === null) dropIdleHtml = dropEl.innerHTML;
+      dropEl.innerHTML = '<b>OCR 引擎加载中…</b>'
+        + '<span>首次访问需下载引擎资源（约 40MB），完成后即可添加图片</span>'
+        + '<span class="tiny">资源走 CDN 加速，之后走浏览器缓存，无需重复下载</span>';
+      dropEl.style.pointerEvents = 'none';
+      dropEl.style.opacity = '.75';
+    } else if (dropIdleHtml !== null) {
+      dropEl.innerHTML = dropIdleHtml;
+      dropIdleHtml = null;
+      dropEl.style.pointerEvents = '';
+      dropEl.style.opacity = '';
+    }
+  }
+
+  function warmEngine() {
+    setGlobal('引擎加载中…');
+    addBtn.disabled = true;
+    setDropWarm(true);
+    var t0 = Date.now();
+    var timer = setInterval(function () {
+      if (!warmDone) setGlobal('引擎加载中… ' + Math.round((Date.now() - t0) / 1000) + ' 秒');
+      else clearInterval(timer);
+    }, 1000);
+    /* 看门狗：loader 的本地兜底 fetch 没有超时，连接卡住时 init() 可能永不 settle，
+       闸门就永远不放行（按钮 disabled + 投放区 pointerEvents:none，整个工具没法用）。
+       到点强制收场，宁可让识别时再失败一次，也不能把页面锁死。 */
+    var guard = setTimeout(function () {
+      if (warmDone) return;
+      warmDone = true;
+      clearInterval(timer);
+      addBtn.disabled = false;
+      setDropWarm(false);
+      setGlobal('引擎加载超时，添加图片后会再试一次');
+      console.warn('PP-OCR 预热超过 ' + Math.round((Date.now() - t0) / 1000) + ' 秒未收场，已强制放开闸门');
+    }, 180000);
+    ensureEngine().then(function (api) {
+      clearTimeout(guard);
+      warmDone = true;
+      clearInterval(timer);
+      addBtn.disabled = false;
+      setDropWarm(false);
+      idleStatus();
+      if (api && api.initMs) console.log('PP-OCR 引擎预热完成：' + api.initMs + 'ms');
+    }, function (e) {
+      clearTimeout(guard);
+      warmDone = true;
+      clearInterval(timer);
+      addBtn.disabled = false;
+      setDropWarm(false);
+      console.warn('PP-OCR 引擎预热失败（识别时会重试）：', e);
+      if (!imgs.length && !busy) setGlobal('引擎加载失败，识别时将重试');
+    });
+  }
+
+  /* 空闲时的状态文案：引擎就绪才写「就绪」 */
+  function idleStatus() {
+    if (imgs.length || busy) return;
+    if (engineReady) setGlobal('就绪');
+    else setGlobal('引擎预热中…');
   }
 
   /* 分块自适应拉伸（8×6 网格、2%~98% 分位）：修复光照不均/阴影下的浅色文字。
@@ -1088,12 +941,7 @@
     setGlobal('识别中…');
     syncButtons();
 
-    getModels(lang, function (r) {
-      it.prog = Math.round(r * 30);
-      paint(it);
-    }).then(function (params) {
-      it.prog = 30;
-      paint(it);
+    ensureEngine().then(function (api) {
       return loadImg(it.url).then(function (img) {
         var nw = img.naturalWidth || img.width;
         var nh = img.naturalHeight || img.height;
@@ -1112,11 +960,26 @@
         g.drawImage(img, 0, 0, w, h);
         var data = g.getImageData(0, 0, w, h);
         if (enhEl.checked) enhanceDoc(data);
-        var ab = new ArrayBuffer(data.data.length);
-        new Uint8Array(ab).set(data.data);
-        return runWorker(ab, w, h, params, it);
+        return api.detect({ data: data.data, width: w, height: h });
       });
-    }).then(function (items) {
+    }).then(function (res) {
+      /* 统一成页面内部格式：{text, score, rect:[{x,y}×4]}。
+         box 已被引擎缩放回输入图坐标系（与 it.rw/it.rh 同一空间），drawBoxes 直接用。 */
+      var items = ((res && res.texts) || []).map(function (l) {
+        return {
+          text: l.text || '',
+          score: typeof l.mean === 'number' ? l.mean : 0,
+          rect: (l.box || []).map(function (p) { return { x: p[0], y: p[1] }; })
+        };
+      });
+      /* 阅读顺序稳定化：按 box 中心 y（再按 x）排序，不依赖引擎返回顺序 */
+      items.sort(function (a, b) {
+        if (!a.rect.length || !b.rect.length) return 0;
+        var acy = (a.rect[0].y + a.rect[2].y) / 2, bcy = (b.rect[0].y + b.rect[2].y) / 2;
+        if (Math.abs(acy - bcy) > 6) return acy - bcy;
+        var acx = (a.rect[0].x + a.rect[2].x) / 2, bcx = (b.rect[0].x + b.rect[2].x) / 2;
+        return acx - bcx;
+      });
       it.items = items;
       it.text = assemble(items);
       it.ms = Date.now() - it.startAt;
@@ -1166,6 +1029,7 @@
   }
 
   function addFiles(list) {
+    if (!warmDone) { toast('OCR 引擎加载中，请稍候…'); return; }
     var added = [];
     for (var i = 0; i < list.length; i++) {
       var f = list[i];
@@ -1307,29 +1171,6 @@
     pump();
   }
 
-  /* ★ 切语言只换「下一次识别用哪套模型」，**不自动重跑**（用户 2026-10-21 要求）：
-     已经识别好的结果原样保留，是否用新语言重识别由用户点「重识别 / 全部重新识别」决定。
-     切换时立刻把新语言的模型包与引擎预热好，点重识别时就不用再等下载。 */
-  function onLangChange() {
-    lang = langEl.value;
-    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
-    if (!imgs.length) { warmFor(lang); syncButtons(); return; }
-    warmFor(lang);
-    var doneCount = 0;
-    imgs.forEach(function (x) { if (x.status === 'done') doneCount++; });
-    if (doneCount) {
-      toast('已切到' + langLabel(lang) + '，点「重识别」按新语言重跑');
-    }
-    syncButtons();
-  }
-
-  function langLabel(code) {
-    for (var i = 0; i < langEl.options.length; i++) {
-      if (langEl.options[i].value === code) return langEl.options[i].textContent;
-    }
-    return code;
-  }
-
   function fallbackCopy(txt) {
     var ta = document.createElement('textarea');
     ta.value = txt;
@@ -1382,7 +1223,10 @@
     setTimeout(function () { URL.revokeObjectURL(href); }, 2000);
   }
 
-  function openPicker() { fileEl.click(); }
+  function openPicker() {
+    if (!warmDone) { toast('OCR 引擎加载中，请稍候…'); return; }   /* 键盘路径双保险：addBtn 已禁、drop 区已锁点击 */
+    fileEl.click();
+  }
 
   fileEl.addEventListener('change', function () {
     addFiles(fileEl.files);
@@ -1403,7 +1247,6 @@
   copyBtn.addEventListener('click', copyText);
   expBtn.addEventListener('click', exportTxt);
   showBoxEl.addEventListener('change', drawBoxes);
-  langEl.addEventListener('change', onLangChange);
   enhEl.addEventListener('change', onEnhanceChange);
 
   outEl.addEventListener('input', function () {
@@ -1506,17 +1349,20 @@
   });
 
   try {
-    var saved = localStorage.getItem(LANG_KEY);
-    if (saved && LANGS.indexOf(saved) >= 0) lang = saved;
     if (localStorage.getItem(ENH_KEY) === '0') enhEl.checked = false;
   } catch (e) {}
-  langEl.value = lang;
 
-  /* ★ 打开页面就预热默认语言（用户 2026-10-21 要求）：模型包 + 一个引擎 worker 都提前备好。
-     以前是「第一次识别时才下 7MB 模型 + 跑 ~15s 的 wasm 初始化」，首次识别体感非常慢。
-     预热失败不弹错，只在顶栏写「引擎预热失败」，真正识别时会再试一次。 */
-  setGlobal('引擎预热中…');
-  warmFor(lang);
+  /* ★ 打开页面就预热引擎（用户 2026-11-02 要求）：引擎模块 + 模型全部提前加载。
+     首次访问要下约 40MB（国内 CDN 为主，之后走 HTTP 缓存）；
+     以前是「第一次识别时才开始下」，选完图还要干等下载 + wasm 初始化。
+     预热失败不弹错，只在顶栏写「引擎预热失败」，真正识别时会再试一次。
+     ★ 必须等 DOMContentLoaded：定义 window.__ppocr 的是 deferred module 脚本，
+     本 classic script 执行时它还没跑——直接调 warmEngine 必然「引擎不可用」。 */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', warmEngine);
+  } else {
+    warmEngine();
+  }
 
   renderList();
   renderPreview();

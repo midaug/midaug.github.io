@@ -96,6 +96,7 @@
      init 规则写在 disabled 之后 → 两者同时在时显示「初始化中…」。 */
   #up-btn::after { content: "图片识别"; }
   #up-btn[disabled]::after { content: "正在处理…"; }
+  #up-btn[warm][disabled]::after { content: "引擎加载中…"; }
   #up-btn[init]::after { content: "初始化中…"; }
   #up-btn:disabled { box-shadow: none; }
 
@@ -371,6 +372,21 @@
      识别上限不降（见 handleImage / effLongFor）。 -->
 <!-- <script src="https://fastly.jsdelivr.net/gh/midaug/dream-lottery/spider_data/ssq.js"></script> -->
 <script src="https://100180.xyz/ssq/data/ssq.js"></script>
+<!-- PP-OCR（PaddleOCR v4 ONNX）依赖 onnxruntime-web 的 ESM 裸引用，用 import map
+     把两个包名都映射到本地 ort.min.mjs（它 re-export 了 onnxruntime-common 的全部公开 API）。
+     ★ 引擎资源在本工具与 ocr 工具间共用，实体在 ../ocr/vendor/（2026-11-02 起，
+     两页引用同一份 URL 才能共享浏览器缓存；移动/重命名要两边同步改）。
+     import map 不被支持的老浏览器里 window.__ppocr 不会定义 → 自动走 Tesseract 兜底。 -->
+<script type="importmap">
+{"imports":{"onnxruntime-web":"../ocr/vendor/ort/ort.min.mjs","onnxruntime-common":"../ocr/vendor/ort/ort.min.mjs"}}
+</script>
+<script type="module">
+/* PP-OCR 引擎加载器：共享 loader 在 ../ocr/vendor/ppocr/ppocr-loader.mjs
+   （国内 npmmirror 优先 → unpkg 备用 → 本地兜底，详见 loader 文件头注释）。
+   init() reject（老浏览器无 import map / CDN 与本地全失败）→ 主脚本自动走 Tesseract 兜底。 */
+import { init } from '../ocr/vendor/ppocr/ppocr-loader.mjs';
+window.__ppocr = { init: init };
+</script>
 <script>
     var dataList = [];
     var dataMap = {};
@@ -465,7 +481,7 @@
     // 全局Tesseract worker变量
     let ocrWorker = null;
 
-    /* OCR 运行时资源（本地文件，见 ssq/vendor/ —— 约 18MB，只有本页在用）：
+    /* OCR 运行时资源（本地文件，见 ssq/vendor/ —— 约 16MB，只有本页在用）：
        - workerPath：worker 脚本本身
        - corePath  ：传「目录」，tesseract 会按设备能力自动挑
                      tesseract-core-relaxedsimd-lstm / -simd-lstm / -lstm 三个变体之一（都已下载）
@@ -495,6 +511,58 @@
         return ocrWorker;
     }
 
+    /* ===== 引擎预热闸门（用户 2026-11-02 要求：预热完成前不允许上传识别）=====
+       页面打开有两个异步：initApp（开奖数据加载）与 PP-OCR 预热（约 40MB 资源 + wasm
+       初始化，与 ocr 工具共用），完成顺序不定 —— 用 dataReady + warmState 协调，
+       两者都收场才放开放送区。warmState：
+         pending  预热进行中（按钮保持 disabled、显示「引擎加载中…」）
+         ok       预热成功，正常放行
+         failed   预热失败 —— 仍要放行（识别路径会自动重试 PP-OCR，或走 Tesseract 兜底）
+         skipped  无 __ppocr（老浏览器）或测试钩子 __forceOcrEngine='tess'，不预热直接放行 */
+    var dataReady = false;
+    var warmState = 'pending';
+    var warmTick = null;
+
+    var engineWarmHtml = '<div class="spinner" role="status" aria-label="引擎加载中"></div>'
+        + '<div class="ocr-timer" id="warmTimer" aria-live="polite">OCR 引擎加载中…</div>'
+        + '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">引擎资源走 CDN 加速（约 40MB），之后走浏览器缓存</div>';
+
+    function startWarmTimer() {
+        var t0 = window.performance.now();
+        warmTick = setInterval(function () {
+            var el = document.getElementById('warmTimer');
+            if (el) el.textContent = 'OCR 引擎加载中… 已用 ' + Math.round((window.performance.now() - t0) / 1000) + ' 秒';
+        }, 1000);
+    }
+    function stopWarmTimer() {
+        if (warmTick) { clearInterval(warmTick); warmTick = null; }
+    }
+
+    /* 数据加载与预热都收场后：放开上传按钮、显示投放区。
+       预热失败时附加提示（识别走备用引擎），不阻塞使用。 */
+    function maybeEnterIdle() {
+        if (!dataReady || warmState === 'pending') return;
+        stopWarmTimer();
+        $('#up-btn').removeAttr('warm');
+        $('#up-btn').removeAttr('disabled');
+        showIdle();
+        if (warmState === 'failed') {
+            dataContainer.append('<div class="alert err">OCR 引擎加载失败，识别将使用备用引擎（首次使用需额外加载），或刷新页面重试。</div>');
+        }
+    }
+
+    /* initApp 数据收场（成功或超时）后的 UI 分流：预热未完 → 预热面板；已完 → 直接进入空态 */
+    function enterPostDataState() {
+        if (warmState === 'pending') {
+            $('#up-btn').attr('warm', '');   /* 按钮文案「引擎加载中…」，闸门放行前保持 disabled */
+            dataContainer.html(engineWarmHtml);
+            $('#btnClearResult').attr('hidden', '');
+            startWarmTimer();
+        } else {
+            maybeEnterIdle();
+        }
+    }
+
     // 等待ssq.js加载完成并处理数据
     var initAppRetries = 0;
     async function initApp() {
@@ -503,8 +571,9 @@
             if (++initAppRetries > 100) { // 最多等待10秒
                 console.error('开奖数据加载超时');
                 dataContainer.html('<div class="alert warn">开奖数据加载失败，请刷新重试</div>');
-                $('#up-btn').removeAttr('disabled');
                 $('#up-btn').removeAttr('init');   /* 一并摘掉 init，否则按钮显示「初始化中…」 */
+                dataReady = true;
+                enterPostDataState();
                 return;
             }
             setTimeout(initApp, 100); // 如果还没加载完成，等待100ms后再次检查
@@ -559,13 +628,49 @@
            改为「首次上传时按需加载」——#up-btn 的 click 流程里已有
            await initTesseractWorker()，并且失败时会给出可见的 .alert.err，
            所以这里直接放开按钮即可，功能与错误提示都不丢。 */
-        $('#up-btn').removeAttr('disabled');
         $('#up-btn').removeAttr('init');
-        showIdle();
+        dataReady = true;
+        enterPostDataState();
     }
 
     $(document).ready(function () {
         initApp();
+
+        /* ★ 页面打开即后台预热 PP-OCR，且预热收场前锁住上传闸门（用户 2026-11-02 要求）：
+           引擎资源约 40MB（与 ocr 工具共用，走 HTTP 缓存），等用户上传时才开始下就太慢了。
+           skip 判断（无 __ppocr / 测试钩子强制 tess）必须同步做 —— requestIdleCallback
+           最多延迟 4 秒，不能让它卡住闸门。
+           挂到 requestIdleCallback 上，别跟首屏渲染抢主线程；失败也放行（识别路径会
+           自动重试 PP-OCR 或走 Tesseract 兜底），只是空态里附一条失败提示。 */
+        if (!window.__ppocr || window.__forceOcrEngine === 'tess') {
+            warmState = 'skipped';
+            maybeEnterIdle();
+        } else {
+            var warmPP = function () {
+                if (warmState !== 'pending') return;
+                /* 看门狗：loader 的本地兜底 fetch 没超时，连接卡住时 init() 可能永不 settle，
+                   闸门永不放行 → 上传按钮永久 disabled。到点强制收场，失败也会放行。 */
+                var guard = setTimeout(function () {
+                    if (warmState !== 'pending') return;
+                    warmState = 'failed';
+                    maybeEnterIdle();
+                    console.warn('PP-OCR 预热超时未收场，已强制放开上传闸门');
+                }, 180000);
+                window.__ppocr.init().then(function () {
+                    clearTimeout(guard);
+                    warmState = 'ok';
+                    maybeEnterIdle();
+                    console.log('PP-OCR 预热完成');
+                }, function (e) {
+                    clearTimeout(guard);
+                    warmState = 'failed';
+                    maybeEnterIdle();
+                    console.warn('PP-OCR 预热失败（识别时会重试）：', e);
+                });
+            };
+            if (window.requestIdleCallback) requestIdleCallback(warmPP, { timeout: 4000 });
+            else setTimeout(warmPP, 1500);
+        }
 
         /* 滚动容器是 main（顶栏 sticky、main 内部滚动），不是 window ——
            监听 window 的话触底事件永远不触发。 */
@@ -787,6 +892,8 @@
         html += '<span>预处理 ' + esc(fv(fileInfo.prepDims)) + ' ' + esc(fv(fileInfo.prepScale)) + '</span>';
         html += '<span>预处理耗时 ' + esc(fv(fileInfo.prepTime)) + '</span>';
         if (fileInfo.ocrPsm) html += '<span>稀疏模式重试(PSM ' + esc(fileInfo.ocrPsm) + ')</span>';
+        if (fileInfo.ocrEngine) html += '<span>引擎 ' + esc(fileInfo.ocrEngine)
+            + (fileInfo.engineLoad ? '（加载' + esc(fileInfo.engineLoad) + '）' : '') + '</span>';
         if (fileInfo.ocrSkipped) html += '<span>已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000)
             + ' 秒时限，截断剩余 ' + esc(fileInfo.ocrSkipped) + ' 档</span>';
         html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
@@ -2263,8 +2370,78 @@
             originalDims: w + '×' + h,
             prepDims: cw + '×' + ch,
             prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : (scale < 0.95 ? ('×' + scale.toFixed(2)) : '原大'),
-            prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒'
+            prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒',
+            prepNote: '灰度 + 红章抑制'
         };
+    }
+
+    /* ===== PP-OCR（PaddleOCR v4 本地 ONNX）主引擎 =====
+       2026-11-02 起为主识别引擎：对手机实拍（皱褶票面/深色背景/票面占比小/阴影）远稳于
+       Tesseract —— 同一张退化图 Tesseract 跑满 5 档仍「无法识别」，PP-OCR 单档 1.4 秒 12 行全对。
+       检测模型内部会把输入再缩到 ~960px，所以输入图可以放心压缩到 1600（用户点名的
+       「压缩大小」正是手机提速的关键）；彩色输入即可，不需要灰度/红章抑制（cp.jpg 红章票实测全对）。
+       Tesseract 整条梯保留为兜底：老浏览器（无 import map）、模型加载失败、或 PP-OCR 各档
+       质量全 0 且预算还有富余时才跑。 */
+    var PPOCR_TOP_LONG = 1600;    /* 压缩档：精度无损（检测内部自缩放），手机单档 ~2-4 秒 */
+    var PPOCR_MID_LONG = 2200;    /* 加大档：压缩档读不出关键字段时给更多像素 */
+    var ppocrApi = null;
+    var ppocrInitMs = 0;
+
+    async function initPPOCR() {
+        if (ppocrApi) return ppocrApi;
+        if (!window.__ppocr) return null;   /* 无 import map 的老浏览器 */
+        var api = await window.__ppocr.init();
+        ppocrApi = api;
+        ppocrInitMs = api.initMs;
+        return api;
+    }
+
+    /* PP-OCR 预处理：白底彩图画布（无逐像素处理），Blob 仅用于「识别用图」展示 */
+    async function prepareImageColor(bmp, effLong) {
+        const t0 = window.performance.now();
+        const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+        const long = Math.max(w, h);
+        const scale = effLong / long;
+        const cw = Math.round(w * scale), ch = Math.round(h * scale);
+        const c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, cw, ch);
+        g.drawImage(bmp, 0, 0, cw, ch);
+        const imageData = g.getImageData(0, 0, cw, ch);
+        const blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.9); });
+        return {
+            blob: blob,
+            imageData: imageData,
+            mpx: (cw * ch) / 1e6,
+            originalDims: w + '×' + h,
+            prepDims: cw + '×' + ch,
+            prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : (scale < 0.95 ? ('×' + scale.toFixed(2)) : '原大'),
+            prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒',
+            prepNote: '彩色压缩'
+        };
+    }
+
+    /* PP-OCR 行结果 → 解析器吃的纯文本：按 box 中心 y（再按 x）稳定排序。
+       PP-OCR 的 CTC 输出会把「红复:05070812142031」这类号码串成连续数字 ——
+       这正是 digitsToAscending 升序拆分设计输入的形态，无需再加工。 */
+    function ppocrLinesToText(texts) {
+        var lines = (texts || []).map(function (t) {
+            var y = null, x = null;
+            if (t.box && t.box.length) {
+                var ys = 0, xs = 0;
+                for (var i = 0; i < t.box.length; i++) { ys += t.box[i][1]; xs += t.box[i][0]; }
+                y = ys / t.box.length; x = xs / t.box.length;
+            }
+            return { text: String(t.text || '').trim(), y: y, x: x };
+        }).filter(function (l) { return l.text; });
+        if (lines.length && lines[0].y !== null) {
+            lines.sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+        }
+        return lines.map(function (l) { return l.text; }).join('\n');
     }
 
     /* 解析质量预判：0=不可解析 1=可解析但可能没读全 2=可解析且行数证据齐全。
@@ -2319,8 +2496,9 @@
 
     /* ===== 识别图片展示：让用户看到「识别的是哪张图」和「引擎实际看到的图」=====
        上传解码成功就先显示原图（识别进行中也有画面反馈，不再只是干转的 spinner）；
-       识别完成后追加「原图 / 识别用图」切换 —— 识别用图是灰度 + 红章抑制 + 缩放后
-       实际送入引擎的那张（bestPrep.blob），识别效果不对时一眼能看出是预处理环节的问题还是原图的问题。
+       识别完成后追加「原图 / 识别用图」切换 —— 识别用图是缩放后实际送入引擎的那张
+       （PP-OCR：彩色压缩画布；Tesseract 兜底：灰度 + 红章抑制画布），识别效果不对时
+       一眼能看出是预处理环节的问题还是原图的问题。
        点击缩略图开灯箱看全尺寸；blob URL 在换图 / 清除时 revoke，不留内存泄漏。 */
     var imgBox = document.getElementById('ocrImgBox');
     var imgLb = document.getElementById('imgLb');
@@ -2346,7 +2524,7 @@
         var cap = imgBox.querySelector('.ocr-img-cap');
         if (cap) cap.innerHTML = imgState.view === 'prep' && imgState.prepMeta
             ? '<b>识别用图</b> · ' + esc(imgState.prepMeta.prepDims) + ' · ' + esc(imgState.prepMeta.prepScale)
-              + ' · 灰度 + 红章抑制'
+              + ' · ' + esc(imgState.prepMeta.prepNote || '已预处理')
             : imgState.origCap;
         imgBox.querySelectorAll('.seg-btn').forEach(function (b) {
             b.classList.toggle('on', b.getAttribute('data-view') === imgState.view);
@@ -2435,84 +2613,157 @@
         releaseImgState();   /* 上一张的图先撤掉：新文件识别失败时不该还挂着旧图 */
 
         try {
-            const budgetT0 = window.performance.now();   /* 时限起点：从进入本函数起算（含解码/引擎初始化） */
+            let budgetT0 = window.performance.now();   /* 时限起点：从进入本函数起算（含图片解码） */
             const bmp = await loadBitmap(file);
             showOcrImage(file, bmp);   /* 解码成功立刻亮图：识别中用户能看到自己选的是哪张 */
             var fileInfo = { originalSize: formatFileSize(file.size) };
 
-            const t3 = window.performance.now();
-            const worker = await initTesseractWorker();
-            await worker.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
-
-            /* 原尺寸兜底档：源图长边超过梯顶（3000）时追加。正常走缩小档（快），
-               全失败才回原图重试 —— 识别上限与旧版「整条梯跑原图」持平，速度却是缩小档优先。
-               兜底长边上限 4096：iOS 画布约 16.7M 像素上限（4096×3072=12.6M 在限内）；
-               超限的原图旧版同样画不出，不属于可回退范围。
-               每档先换算成「有效长边」（effLongFor），再按 有效长边/psm 去重 ——
-               3200 的源图在 3000 档和兜底档都是原大，不去重就会把同一张图识别两遍。 */
             const bmpW = bmp.width || bmp.naturalWidth, bmpH = bmp.height || bmp.naturalHeight;
             const origLong = Math.max(bmpW, bmpH);
+
+            /* ===== 引擎选择：PP-OCR 主引擎，Tesseract 兜底 =====
+               __forceOcrEngine 测试钩子：'pp' / 'tess' 强制指定，缺省 auto。
+               PP-OCR 初始化失败（老浏览器无 import map / 模型加载失败）→ 整体回退 Tesseract。 */
+            const force = window.__forceOcrEngine;
+            var usePP = force !== 'tess';
+            var useTess = force !== 'pp';
+            var engineInitMs = 0;
+            if (usePP) {
+                const initBegin = window.performance.now();
+                try {
+                    await initPPOCR();
+                    engineInitMs = window.performance.now() - initBegin;
+                    /* 引擎一次性初始化（首次加载 ~25MB 模型）是跨会话缓存成本，与「这张图
+                       识别慢不慢」无关 —— 从预算里扣掉，12 秒时限继续管住解码后的识别全程。 */
+                    if (engineInitMs > 100) budgetT0 += engineInitMs;
+                } catch (e) {
+                    console.warn('PP-OCR 初始化失败，回退 Tesseract：', e);
+                    usePP = false;
+                }
+            }
+            const t3 = window.performance.now();
+
+            /* ===== 步骤序列：PP-OCR 压缩档优先（快且稳），Tesseract 整条梯垫底 =====
+               源图超长边时各追加原尺寸兜底档（上限 4096，iOS 画布限制内）。 */
             const fbLong = Math.min(origLong, 4096);
-            const rawSteps = origLong > OCR_LADDER_TOP
-                ? OCR_LADDER.concat([{ long: fbLong, psm: '6' }, { long: fbLong, psm: '11' }])
-                : OCR_LADDER;
-            const ladder = [];
+            const rawSteps = [];
+            if (usePP) {
+                rawSteps.push({ engine: 'pp', long: PPOCR_TOP_LONG });
+                if (origLong > PPOCR_TOP_LONG) rawSteps.push({ engine: 'pp', long: PPOCR_MID_LONG });
+                if (origLong > PPOCR_MID_LONG && force === 'pp') rawSteps.push({ engine: 'pp', long: fbLong });
+            }
+            if (useTess) {
+                OCR_LADDER.forEach(function (st) { rawSteps.push({ engine: 'tess', long: st.long, psm: st.psm }); });
+                if (origLong > OCR_LADDER_TOP) {
+                    rawSteps.push({ engine: 'tess', long: fbLong, psm: '6' });
+                    rawSteps.push({ engine: 'tess', long: fbLong, psm: '11' });
+                }
+            }
+            const steps = [];
             const seenStep = {};
             for (const st of rawSteps) {
                 const eff = effLongFor(origLong, st.long);
-                const key = eff + '/' + st.psm;
-                if (!seenStep[key]) { seenStep[key] = 1; ladder.push({ long: eff, psm: st.psm }); }
+                const key = st.engine + '/' + eff + '/' + (st.psm || '');
+                if (!seenStep[key]) { seenStep[key] = 1; steps.push(Object.assign({}, st, { long: eff })); }
             }
 
             const prepCache = {};
             let bestText = null, bestPrep = null, bestQuality = 0;
-            let lastMsPerMpx = 0, skippedByBudget = 0;
-            for (let i = 0; i < ladder.length; i++) {
-                const step = ladder[i];
-                /* 预算闸门（第 1 档必跑；放在预处理之前 —— 被跳过的档不该白付画布/PNG 编码时间）。
-                   本档像素按长边换算比估算：estMpx = 全图像素 × (effLong/origLong)²。 */
-                if (i > 0 && lastMsPerMpx > 0) {
-                    const s = step.long / origLong;
-                    const estMpx = bmpW * bmpH * s * s / 1e6;
-                    const est = OCR_EST_OVERHEAD_MS + lastMsPerMpx * estMpx * OCR_EST_MARGIN;
-                    const remaining = OCR_TIME_BUDGET_MS - (window.performance.now() - budgetT0);
-                    if (est > remaining) {
-                        skippedByBudget = ladder.length - i;
-                        console.log('识别梯预算截断: 已用 ' + Math.round(window.performance.now() - budgetT0)
-                            + 'ms，剩余 ' + Math.round(remaining) + 'ms，第 ' + (i + 1) + ' 档(' + step.long
-                            + '/psm' + step.psm + ')估算 ' + Math.round(est) + 'ms，截断剩余 ' + skippedByBudget + ' 档');
-                        break;
+            let skippedByBudget = 0;
+            const lastMsPerMpx = {};        /* 分引擎实测速度（ms/百万像素） */
+            let worker = null;              /* Tesseract 惰性初始化：PP-OCR 成功就完全不加载它 */
+            let ppBroken = false;           /* PP-OCR 运行中出错 → 剩余 pp 档跳过，交给 Tesseract */
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                if (step.engine === 'pp' && ppBroken) continue;
+                /* 预算闸门（第 1 档必跑；先于预处理 —— 被跳过的档不白付画布/编码时间）。
+                   本档像素按长边换算比估算：estMpx = 全图像素 × (effLong/origLong)²。
+                   分引擎测速：某引擎还没实测过时，用另一引擎实测 ×2.2 粗估（两引擎同像素
+                   耗时之比随设备在 1.5-4 倍间浮动，宁可少跑不超时）。 */
+                if (i > 0) {
+                    var mpm = lastMsPerMpx[step.engine];
+                    if (mpm == null) {
+                        var other = lastMsPerMpx.pp != null ? lastMsPerMpx.pp : lastMsPerMpx.tess;
+                        if (other != null) mpm = other * 2.2;
+                    }
+                    if (mpm != null) {
+                        const s = step.long / origLong;
+                        const estMpx = bmpW * bmpH * s * s / 1e6;
+                        const est = OCR_EST_OVERHEAD_MS + mpm * estMpx * OCR_EST_MARGIN;
+                        const remaining = OCR_TIME_BUDGET_MS - (window.performance.now() - budgetT0);
+                        if (est > remaining) {
+                            skippedByBudget = steps.length - i;
+                            console.log('识别梯预算截断: 已用 ' + Math.round(window.performance.now() - budgetT0)
+                                + 'ms，剩余 ' + Math.round(remaining) + 'ms，第 ' + (i + 1) + ' 档(' + step.engine
+                                + '/' + step.long + (step.psm ? '/psm' + step.psm : '') + ')估算 '
+                                + Math.round(est) + 'ms，截断剩余 ' + skippedByBudget + ' 档');
+                            break;
+                        }
                     }
                 }
-                if (!prepCache[step.long]) prepCache[step.long] = await prepareImageFromBitmap(bmp, step.long);
-                const prep = prepCache[step.long];
-                await worker.setParameters({ tessedit_pageseg_mode: step.psm });
+                const ck = step.engine + step.long;
+                if (!prepCache[ck]) {
+                    prepCache[ck] = step.engine === 'pp'
+                        ? await prepareImageColor(bmp, step.long)
+                        : await prepareImageFromBitmap(bmp, step.long);
+                }
+                const prep = prepCache[ck];
                 const t0 = window.performance.now();
-                const t = (await worker.recognize(prep.blob)).data.text;
+                var text;
+                if (step.engine === 'pp') {
+                    try {
+                        const r = await ppocrApi.detect({
+                            data: prep.imageData.data, width: prep.imageData.width, height: prep.imageData.height
+                        });
+                        text = ppocrLinesToText(r.texts);
+                    } catch (e) {
+                        console.warn('PP-OCR 档位失败，本档弃用：', e);
+                        ppBroken = true;
+                        prep.imageData = null;
+                        continue;
+                    }
+                    prep.imageData = null;   /* 10MB 级像素缓冲，用完即弃 */
+                } else {
+                    if (!worker) {
+                        worker = await initTesseractWorker();
+                        await worker.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
+                    }
+                    await worker.setParameters({ tessedit_pageseg_mode: step.psm });
+                    text = (await worker.recognize(prep.blob)).data.text;
+                }
                 const dt = window.performance.now() - t0;
-                if (prep.mpx > 0) lastMsPerMpx = dt / prep.mpx;   /* 实测单像素耗时，供后续档估算 */
-                const q = ocrParseQuality(t);
-                console.log('识别梯档位:', step.long, 'psm' + step.psm,
+                if (prep.mpx > 0) lastMsPerMpx[step.engine] = dt / prep.mpx;
+                const q = ocrParseQuality(text);
+                console.log('识别梯档位:', step.engine, step.long, step.psm ? 'psm' + step.psm : '',
                     '质量' + q, Math.round(dt) + 'ms');
                 if (q > bestQuality) {
-                    bestText = t; bestPrep = prep; bestQuality = q;
-                    if (step.psm === '11') fileInfo.ocrPsm = '11'; else delete fileInfo.ocrPsm;
+                    bestText = text; bestPrep = prep; bestQuality = q;
+                    if (step.engine === 'pp') {
+                        fileInfo.ocrEngine = 'PP-OCR';
+                        delete fileInfo.ocrPsm;
+                    } else {
+                        fileInfo.ocrEngine = 'Tesseract';
+                        if (step.psm === '11') fileInfo.ocrPsm = '11'; else delete fileInfo.ocrPsm;
+                    }
                 }
                 if (bestQuality >= 2) break;   /* 行数证据齐全，无需继续 */
             }
             stopOcrTimer();   /* loadingHtml 即将被结果替换，计时 interval 必须先停 */
-            /* 四档都没读出可解析的文字（空白图 / 完全不是票面 / 糊到读不出）：
-               以前 bestPrep 还是 null，下一行立刻抛 "Cannot read properties of null
-               (reading 'originalDims')"，用户看到的是 JS 报错而不是「没识别到」 */
+            /* 所有档都没读出可解析的文字（空白图 / 完全不是票面 / 糊到读不出）：
+               bestPrep 为 null 时直接出「没识别到」，不能抛 JS 报错 */
             if (!bestText || !bestPrep) {
                 var timeoutNote = skippedByBudget > 0
-                    ? ' 已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000) + ' 秒时限（截断剩余 ' + skippedByBudget + ' 档），可重试一次或换更清晰的照片。'
+                    ? ' 已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000) + ' 秒时限（截断剩余 ' + skippedByBudget
+                      + ' 档）；建议票面摆平、光线均匀、让票面占满画面后重拍。'
                     : '';
                 showData('<div class="alert err">没读到可识别的文字：图片可能太糊、太小，或者不是彩票票面。' + timeoutNote + '</div>');
                 $('#up-btn').removeAttr('disabled');
                 return;
             }
             if (skippedByBudget > 0) fileInfo.ocrSkipped = skippedByBudget;
+            if (fileInfo.ocrEngine === 'PP-OCR' && engineInitMs > 100) {
+                fileInfo.engineLoad = (engineInitMs / 1000).toFixed(1) + '秒';
+            }
             fileInfo.originalDims = bestPrep.originalDims;
             fileInfo.prepDims = bestPrep.prepDims;
             fileInfo.prepScale = bestPrep.prepScale;
