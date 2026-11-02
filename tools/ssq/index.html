@@ -903,7 +903,7 @@ window.__ppocr = { init: init };
             html += '<span>分阶段 解码 ' + pf.decodeMs + 'ms · 引擎 ' + pf.engineMs + 'ms';
             (pf.steps || []).forEach(function (s) {
                 html += ' · ' + s.engine + '@' + s.long + ' ' + s.run + 'ms';
-                if (s.lines) html += '（' + s.lines + '行/' + Math.round(s.run / s.lines) + 'ms）';
+                if (s.lines) html += '（检出' + s.lines + '行）';
             });
             if (pf.threads) html += ' · 线程 ' + pf.threads + (pf.isolated ? '' : '(未隔离)');
             html += '</span>';
@@ -2432,6 +2432,13 @@ window.__ppocr = { init: init };
         try { return /[?&]notess=1(&|$)/.test(location.search); } catch (e) { return false; }
     })();
 
+    /* `?blank=1`：把送检图整张涂白，只测「检测模型 + 后处理」这一段，不含识别。
+       用来把 pp@N 那一个总耗时拆成「检测」与「识别」两半 —— 光看总耗时无法判断该优化谁。
+       与 ?notess=1 自动等价（空白图跑 Tesseract 毫无意义还拖慢）。 */
+    var OCR_BLANK = (function () {
+        try { return /[?&]blank=1(&|$)/.test(location.search); } catch (e) { return false; }
+    })();
+
     var ppocrApi = null;
     var ppocrInitMs = 0;
 
@@ -2459,6 +2466,9 @@ window.__ppocr = { init: init };
         g.fillStyle = '#fff';
         g.fillRect(0, 0, cw, ch);
         g.drawImage(bmp, 0, 0, cw, ch);
+        /* ?blank=1：整张涂白，检测模型仍按同样尺寸完整跑一遍，但找不到任何文本行
+           → 这一档的耗时 = 纯检测成本（含后处理），不含识别。 */
+        if (OCR_BLANK) { g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); }
         const imageData = g.getImageData(0, 0, cw, ch);
         /* 不再在这里 await toBlob：JPEG 编码 1600² 在手机上要 0.2-0.4 秒，而这份 blob
            只给结果页的「识别用图」用，识别路径一个字节都不读它 —— 多跑一档就白编一次。
@@ -2691,7 +2701,7 @@ window.__ppocr = { init: init };
                PP-OCR 初始化失败（老浏览器无 import map / 模型加载失败）→ 整体回退 Tesseract。 */
             const force = window.__forceOcrEngine;
             var usePP = force !== 'tess';
-            var useTess = force !== 'pp' && !OCR_NO_TESS;   /* ?notess=1 只做 PP-OCR 对比 */
+            var useTess = force !== 'pp' && !OCR_NO_TESS && !OCR_BLANK;   /* ?notess=1 只做 PP-OCR 对比 */
             var engineInitMs = 0;
             if (usePP) {
                 const initBegin = window.performance.now();
@@ -2833,6 +2843,18 @@ window.__ppocr = { init: init };
             /* 所有档都没读出可解析的文字（空白图 / 完全不是票面 / 糊到读不出）：
                bestPrep 为 null 时直接出「没识别到」，不能抛 JS 报错 */
             if (!bestText || !bestPrep) {
+                if (OCR_BLANK && perf.steps.length) {   /* ?blank=1：空白图读不出字是预期结果，这里要的是耗时 */
+                    var pl = '检测耗时（整图涂白，不含识别）：';
+                    perf.steps.forEach(function (s) {
+                        pl += s.engine + '@' + s.long + ' ' + s.run + 'ms';
+                        if (s.prep) pl += '（预处理 ' + s.prep + 'ms）';
+                        pl += '；';
+                    });
+                    if (perf.threads) pl += ' 线程 ' + perf.threads + (perf.isolated ? '' : '(未隔离)');
+                    showData('<div class="alert warn">' + esc(pl) + '</div>');
+                    $('#up-btn').removeAttr('disabled');
+                    return;
+                }
                 var timeoutNote = skippedByBudget > 0
                     ? ' 已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000) + ' 秒时限（截断剩余 ' + skippedByBudget
                       + ' 档）；建议票面摆平、光线均匀、让票面占满画面后重拍。'
