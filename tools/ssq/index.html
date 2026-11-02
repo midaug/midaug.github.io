@@ -897,6 +897,15 @@ window.__ppocr = { init: init };
         if (fileInfo.ocrSkipped) html += '<span>已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000)
             + ' 秒时限，截断剩余 ' + esc(fileInfo.ocrSkipped) + ' 档</span>';
         html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
+        /* ?perf=1 才显示：解码 / 引擎初始化 / 每档推理的实测耗时（定位慢在哪一步用） */
+        if (OCR_PERF && fileInfo.perf) {
+            var pf = fileInfo.perf;
+            html += '<span>分阶段 解码 ' + pf.decodeMs + 'ms · 引擎 ' + pf.engineMs + 'ms';
+            (pf.steps || []).forEach(function (s) {
+                html += ' · ' + s.engine + '@' + s.long + ' ' + s.run + 'ms';
+            });
+            html += '</span>';
+        }
         html += '</div>';
 
         showData(html);
@@ -2378,12 +2387,42 @@ window.__ppocr = { init: init };
     /* ===== PP-OCR（PaddleOCR v4 本地 ONNX）主引擎 =====
        2026-11-02 起为主识别引擎：对手机实拍（皱褶票面/深色背景/票面占比小/阴影）远稳于
        Tesseract —— 同一张退化图 Tesseract 跑满 5 档仍「无法识别」，PP-OCR 单档 1.4 秒 12 行全对。
-       检测模型内部会把输入再缩到 ~960px，所以输入图可以放心压缩到 1600（用户点名的
-       「压缩大小」正是手机提速的关键）；彩色输入即可，不需要灰度/红章抑制（cp.jpg 红章票实测全对）。
+       彩色输入即可，不需要灰度/红章抑制（cp.jpg 红章票实测全对）。
        Tesseract 整条梯保留为兜底：老浏览器（无 import map）、模型加载失败、或 PP-OCR 各档
-       质量全 0 且预算还有富余时才跑。 */
-    var PPOCR_TOP_LONG = 1600;    /* 压缩档：精度无损（检测内部自缩放），手机单档 ~2-4 秒 */
-    var PPOCR_MID_LONG = 2200;    /* 加大档：压缩档读不出关键字段时给更多像素 */
+       质量全 0 且预算还有富余时才跑。
+
+       ★ 2026-11-02 复核引擎源码，推翻了原先「检测内部会自缩到 960」的假设
+       （vendor/ppocr/guten-ocr.js 尾部 det 的 run()）：
+         · `D.resize(OE(D))` —— OE 的签名是 `function OE(A,{maxSize:I}={})`，调用方
+           从不传 maxSize，所以里面那行按 I 缩放的 if 永远不成立；它只把长宽
+           向上取整到 32 的倍数（DI=32）。即 **检测模型按我们给的分辨率全量跑**。
+         · `recognition.run()` 里每行是 `image.resize({height:48})` —— 识别输入恒为
+           48px 高，**与送进去的图多清晰无关（等比缩放，纵横比不变）**。
+       两个推论直接决定耗时结构：
+         ① 耗时 ≈ 检测像素数，档位长边翻倍 = 算力 ×(倍率)²（1600² → 2200² 是 ×1.9）；
+         ② 第二档（2200）对「单行读得准不准」几乎无增益（rec 反正压到 48px），
+            它只提升检测召回（能不能多框出几行）。所以它是 1.9 倍算力换召回率。
+       因此这两个数字是本页速度的唯一定价器，动之前必须真机实测（见 ?sides=）。 */
+    var PPOCR_SIDES = [1600, 2200];   /* 默认两档：压缩档 / 加大档（升序，长边像素） */
+
+    /* 真机实测钩子：`?sides=1600` 只跑一档、`?sides=1280,1800` 换档，不改代码即可对比
+       「识别是否正确 + 快多少」。非法值（<640 或 >4096）自动丢弃，全非法则回落默认。 */
+    function ppocrSideList() {
+        var q = null;
+        try { q = new URLSearchParams(location.search).get('sides'); } catch (e) { q = null; }
+        if (!q) return PPOCR_SIDES;
+        var arr = q.split(',').map(function (s) { return parseInt(s, 10); })
+            .filter(function (n) { return n >= 640 && n <= 4096; })
+            .sort(function (a, b) { return a - b; });
+        return arr.length ? arr : PPOCR_SIDES;
+    }
+
+    /* `?perf=1`：结果卡片里多打一行分阶段耗时（解码/每档预处理/每档推理），用来定位
+       慢在哪一步；正常访问不显示。 */
+    var OCR_PERF = (function () {
+        try { return /[?&]perf=1(&|$)/.test(location.search); } catch (e) { return false; }
+    })();
+
     var ppocrApi = null;
     var ppocrInitMs = 0;
 
@@ -2412,9 +2451,12 @@ window.__ppocr = { init: init };
         g.fillRect(0, 0, cw, ch);
         g.drawImage(bmp, 0, 0, cw, ch);
         const imageData = g.getImageData(0, 0, cw, ch);
-        const blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.9); });
+        /* 不再在这里 await toBlob：JPEG 编码 1600² 在手机上要 0.2-0.4 秒，而这份 blob
+           只给结果页的「识别用图」用，识别路径一个字节都不读它 —— 多跑一档就白编一次。
+           改成梯子跑完后对最终采用那档懒编码一次（encodePrepBlob）。 */
         return {
-            blob: blob,
+            blob: null,
+            canvas: c,               /* 留着懒编码用；非最终档会在收尾时释放 */
             imageData: imageData,
             mpx: (cw * ch) / 1e6,
             originalDims: w + '×' + h,
@@ -2423,6 +2465,17 @@ window.__ppocr = { init: init };
             prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒',
             prepNote: '彩色压缩'
         };
+    }
+
+    /* 懒编码：把某一档的画布编成 JPEG blob（仅结果页展示用）。失败返回 null，不抛。 */
+    function encodePrepBlob(prep) {
+        if (!prep) return Promise.resolve(null);
+        if (prep.blob || !prep.canvas) return Promise.resolve(prep.blob || null);
+        return new Promise(function (res) {
+            try {
+                prep.canvas.toBlob(function (b) { prep.blob = b; res(b); }, 'image/jpeg', 0.9);
+            } catch (e) { res(null); }
+        });
     }
 
     /* PP-OCR 行结果 → 解析器吃的纯文本：按 box 中心 y（再按 x）稳定排序。
@@ -2614,7 +2667,10 @@ window.__ppocr = { init: init };
 
         try {
             let budgetT0 = window.performance.now();   /* 时限起点：从进入本函数起算（含图片解码） */
+            const tDecode = window.performance.now();
             const bmp = await loadBitmap(file);
+            /* 分阶段计时（?perf=1 时显示）：只统计，不参与任何决策 */
+            const perf = { decodeMs: Math.round(window.performance.now() - tDecode), engineMs: 0, steps: [] };
             showOcrImage(file, bmp);   /* 解码成功立刻亮图：识别中用户能看到自己选的是哪张 */
             var fileInfo = { originalSize: formatFileSize(file.size) };
 
@@ -2642,15 +2698,20 @@ window.__ppocr = { init: init };
                 }
             }
             const t3 = window.performance.now();
+            perf.engineMs = Math.round(engineInitMs);
 
             /* ===== 步骤序列：PP-OCR 压缩档优先（快且稳），Tesseract 整条梯垫底 =====
-               源图超长边时各追加原尺寸兜底档（上限 4096，iOS 画布限制内）。 */
+               源图超长边时各追加原尺寸兜底档（上限 4096，iOS 画布限制内）。
+               PP 档位来自 ppocrSideList()：默认 [1600, 2200]，`?sides=` 可覆盖做真机实测。
+               保持旧语义：第 1 档必跑，之后仅当源图长边大于前一档时才追加（小图不白放大）。 */
             const fbLong = Math.min(origLong, 4096);
             const rawSteps = [];
+            const ppSides = ppocrSideList();
             if (usePP) {
-                rawSteps.push({ engine: 'pp', long: PPOCR_TOP_LONG });
-                if (origLong > PPOCR_TOP_LONG) rawSteps.push({ engine: 'pp', long: PPOCR_MID_LONG });
-                if (origLong > PPOCR_MID_LONG && force === 'pp') rawSteps.push({ engine: 'pp', long: fbLong });
+                for (let si = 0; si < ppSides.length; si++) {
+                    if (si === 0 || origLong > ppSides[si - 1]) rawSteps.push({ engine: 'pp', long: ppSides[si] });
+                }
+                if (force === 'pp' && origLong > ppSides[ppSides.length - 1]) rawSteps.push({ engine: 'pp', long: fbLong });
             }
             if (useTess) {
                 OCR_LADDER.forEach(function (st) { rawSteps.push({ engine: 'tess', long: st.long, psm: st.psm }); });
@@ -2702,12 +2763,14 @@ window.__ppocr = { init: init };
                     }
                 }
                 const ck = step.engine + step.long;
+                const tPrep = window.performance.now();
                 if (!prepCache[ck]) {
                     prepCache[ck] = step.engine === 'pp'
                         ? await prepareImageColor(bmp, step.long)
                         : await prepareImageFromBitmap(bmp, step.long);
                 }
                 const prep = prepCache[ck];
+                const prepMs = Math.round(window.performance.now() - tPrep);
                 const t0 = window.performance.now();
                 var text;
                 if (step.engine === 'pp') {
@@ -2734,8 +2797,12 @@ window.__ppocr = { init: init };
                 const dt = window.performance.now() - t0;
                 if (prep.mpx > 0) lastMsPerMpx[step.engine] = dt / prep.mpx;
                 const q = ocrParseQuality(text);
+                perf.steps.push({
+                    engine: step.engine, long: step.long, psm: step.psm || '',
+                    mpx: +prep.mpx.toFixed(2), prep: prepMs, run: Math.round(dt), q: q
+                });
                 console.log('识别梯档位:', step.engine, step.long, step.psm ? 'psm' + step.psm : '',
-                    '质量' + q, Math.round(dt) + 'ms');
+                    '质量' + q, Math.round(dt) + 'ms', '（预处理 ' + prepMs + 'ms）');
                 if (q > bestQuality) {
                     bestText = text; bestPrep = prep; bestQuality = q;
                     if (step.engine === 'pp') {
@@ -2769,6 +2836,20 @@ window.__ppocr = { init: init };
             fileInfo.prepScale = bestPrep.prepScale;
             fileInfo.prepTime = bestPrep.prepTime;
             fileInfo.recognitionTime = ((window.performance.now() - t3) / 1000).toFixed(3) + '秒';
+            fileInfo.perf = perf;
+            if (OCR_PERF) {
+                console.log('[OCR perf] 解码 ' + perf.decodeMs + 'ms · 引擎 ' + perf.engineMs + 'ms · '
+                    + perf.steps.map(function (s) {
+                        return s.engine + '@' + s.long + '(' + s.mpx + 'Mpx) 预处理' + s.prep
+                            + 'ms 推理' + s.run + 'ms 质量' + s.q;
+                    }).join(' | '));
+            }
+            /* 释放非最终档的画布（每张 1600² ≈ 7MB），只给展示那档做一次懒编码 */
+            Object.keys(prepCache).forEach(function (k) {
+                var p = prepCache[k];
+                if (p && p !== bestPrep) p.canvas = null;
+            });
+            try { await encodePrepBlob(bestPrep); } catch (e) { /* 展示图失败不影响结果 */ }
             attachPrepImage(bestPrep);   /* 识别用图 = 实际送入引擎的那张，供用户切换查看 */
             processOCRResult(bestText, fileInfo);
         } catch (error) {
