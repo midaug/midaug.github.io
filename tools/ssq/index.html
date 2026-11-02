@@ -214,6 +214,38 @@
   }
   .privacy .lock { width: 13px; height: 13px; flex: none; color: var(--ok); }
 
+  /* ===== 识别图片展示：上传的原图 + 实际送入 OCR 的预处理图 =====
+     缩略图放在有边框的「底片井」里居中，票面照片多为白底，与卡片背景区分开 */
+  #ocrImgBox { margin-bottom: 12px; }
+  #ocrImgBox[hidden] { display: none; }
+  .ocr-img-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-bottom: 6px; font-size: 11px; color: var(--text-3);
+  }
+  .ocr-img-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ocr-img-cap b { color: var(--text-2); font-weight: 600; }
+  .seg { display: inline-flex; flex: none; border: 1px solid var(--border-2); border-radius: 7px; overflow: hidden; }
+  .seg-btn {
+    appearance: none; border: 0; background: var(--panel-2); color: var(--text-2);
+    font: inherit; font-size: 11px; padding: 3px 10px; cursor: pointer;
+  }
+  .seg-btn + .seg-btn { border-left: 1px solid var(--border-2); }
+  .seg-btn.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .ocr-img-wrap {
+    display: flex; justify-content: center;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px;
+  }
+  .ocr-img { display: block; max-width: 100%; max-height: 300px; border-radius: 4px; cursor: zoom-in; }
+
+  /* 灯箱：点缩略图看全尺寸。z-index 99 > header 的 10 */
+  #imgLb {
+    position: fixed; inset: 0; z-index: 99; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(15, 18, 24, .78); cursor: zoom-out;
+  }
+  #imgLb[hidden] { display: none; }
+  #imgLb img { max-width: 100%; max-height: 100%; border-radius: 6px; box-shadow: 0 12px 48px rgba(0, 0, 0, .45); }
+
   /* ===== 空态：铺满卡片的拖拽上传区 =====
      早期空态只是一行左对齐的短文案，宽屏下右侧会空出一大片、像没渲染完。
      改成整宽的虚线投放区，内容居中，空间被「有意图地留白」占满。 */
@@ -261,6 +293,8 @@
     .ssq-grid { gap: 8px; }
     .ssq-item { padding: 9px 10px; }
     .dropzone { min-height: 116px; padding: 14px; gap: 4px; }
+    /* 识别图缩略图窄屏压低一点，别把识别结果顶出首屏 */
+    .ocr-img { max-height: 210px; }
     /* 触屏下输入框字号提到 16px（低于 16px 时 iOS 聚焦会放大整页） */
     #searchCode { min-height: 34px; }
   }
@@ -284,6 +318,8 @@
     <h2>识别结果 <span class="hint">上传投注票截图后，自动识别期号与号码并核对中奖情况</span>
       <span class="right"><button class="mini" id="btnClearResult" hidden>清除</button></span>
     </h2>
+    <!-- 当前识别的图片：上传解码成功即显示原图，识别完成后可切换「识别用图」（实际送入 OCR 的预处理图） -->
+    <div id="ocrImgBox" hidden></div>
     <div id="dataBody"></div>
     <p class="privacy">
       <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
@@ -310,6 +346,9 @@
   </section>
 </main>
 
+<!-- 灯箱：识别图片点击放大 -->
+<div id="imgLb" hidden role="dialog" aria-modal="true" aria-label="图片大图预览"><img alt=""></div>
+
 <!-- 前端库已本地化到 vendor/（jquery 3.6.4 / tesseract.js 7.0.0；Compressor.js 1.2.1 已于
      2026-10-20 随「去掉预压缩」一起删除，不要按旧清单去找它）。
      策略：本地优先，文件缺失或损坏时才回退 CDN（同样锁版本）—— 两个方向都保住。
@@ -320,8 +359,10 @@
 <script>window.jQuery || document.write('<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"><\/script>');</script>
 <script src='vendor/tesseract-7.0.0.min.js'></script>
 <script>window.Tesseract || document.write('<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"><\/script>');</script>
-<!-- 图片不再预压缩：压缩（800px/JPEG）会让票据小字粘连、小图更糊，是识别准确率的最大杀手。
-     改为 canvas 自适应预处理：小图放大到目标长边、大图原样保留，并抑制红色印章/红框干扰。 -->
+<!-- 图片「预压缩」压的是像素尺寸而不是文件体积：让 OCR 慢的是 12M 像素（手机原图 4032×3024），
+     不是 5MB 的文件。源图超过梯顶（3000）才按档位目标缩小（幅度 ≥1.25 倍才生效），≤3000 维持
+     旧口径原样识别；压到 800px 才是当年粘连的元凶。预处理仍做红章/红框抑制；原尺寸兜底档保证
+     识别上限不降（见 handleImage / effLongFor）。 -->
 <!-- <script src="https://fastly.jsdelivr.net/gh/midaug/dream-lottery/spider_data/ssq.js"></script> -->
 <script src="https://100180.xyz/ssq/data/ssq.js"></script>
 <script>
@@ -601,6 +642,7 @@
     function showIdle() {
         dataContainer.html(idleHtml);
         $('#btnClearResult').attr('hidden', '');
+        releaseImgState();   /* 清除 = 连图片一起清，回归「上传新票」的空态 */
     }
 
     /* 手工按期号查询：识别不一定能读出期号，这里让用户直接查任意一期。
@@ -2114,12 +2156,16 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(Math.max(0, dm))) + ' ' + sizes[i];
     }
 
-    /* ===== 图片预处理（替代原先的 Compressor 800px 压缩）=====
+    /* ===== 图片预处理（像素尺寸预压缩 + 红章抑制）=====
        实测（2026-10-20，3 轮 × 4 张真实票面矩阵实验）：
        - 压到 800px 会让相邻号码粘连（"3 19"→"319"），是解析失败的头号原因；
        - 小图（长边 <900）放大到 ~1700 后识别质量大幅提升（232px 缩略图红球 7/7 全对）；
-       - 红色印章/红框抑制（红主导像素→白）不影响黑色数字，能救回被红框粘连的蓝球；
-       - 大图不缩不压，原样进引擎（长边 ≤1700 已在引擎舒适区）。 */
+       - 红色印章/红框抑制（红主导像素→白）不影响黑色数字，能救回被红框粘连的蓝球。
+       2026-11-02 恢复「预压缩」，压的是像素尺寸：手机原图（4032×3024、5MB+）旧逻辑
+       四档全部按原尺寸跑（12.2M 像素 ×4 档），识别极慢；现在源图超过梯顶（3000）才
+       缩到档位目标长边再进引擎（幅度 ≥1.25 才缩，≤3000 一律原样），常见票面第一档即过。
+       缩小下限是梯子第一档 1830 —— 远高于 800px，不碰粘连红线；原尺寸兜底档见
+       handleImage，识别上限与旧版持平。 */
     async function loadBitmap(file) {
         if (window.createImageBitmap) {
             try { return await createImageBitmap(file); } catch (e) { /* 老浏览器兜底 */ }
@@ -2137,16 +2183,26 @@
        2026-10-21 复查发现 OCR_TARGET_LONG_SIDE 声明后从未被读取，属死代码。 */
     const OCR_MAX_SCALE = 4;             /* 放大上限：232px 缩略图 ×4 足够，再大只添噪 */
 
-    function ocrScaleFor(longSide, targetLong) {
-        if (longSide >= targetLong) return 1;              /* 只放大、不缩小 */
-        return Math.min(OCR_MAX_SCALE, targetLong / longSide);
+    /* 档位「有效长边」：返回这一档实际用的长边，prepareImage 按它算缩放。
+       - 源 ≤ 梯顶（3000）：旧口径，只放大不缩小（×4 封顶）——这个区间的图本就是梯子的
+         设计输入域，不缩没有速度损失；cp.jpg（1919）实测哪怕 ×0.95 的轻微缩小都会改变
+         OCR 输出（"45:05" 里的 05 丢失 → 复式 7 红降级成单注 6 红），绝不碰。
+       - 源 > 梯顶（手机原图 4032+）：整条梯跑原图是 12.2M 像素 ×4 档、识别极慢的根因，
+         缩到档位目标（速度收益 3-4 倍起）；但缩小幅度 ≥1.25 倍才生效 —— 轻微缩小的
+         收益小、改变输出的风险大；全失败时还有原尺寸兜底档保住识别上限。 */
+    function effLongFor(origLong, targetLong) {
+        if (origLong <= OCR_LADDER_TOP) {
+            return origLong >= targetLong ? origLong : Math.min(targetLong, origLong * OCR_MAX_SCALE);
+        }
+        if (origLong <= targetLong) return Math.min(targetLong, origLong * OCR_MAX_SCALE);
+        return origLong / targetLong >= 1.25 ? targetLong : origLong;
     }
 
-    async function prepareImageFromBitmap(bmp, targetLong) {
+    async function prepareImageFromBitmap(bmp, effLong) {
         const t0 = window.performance.now();
         const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
         const long = Math.max(w, h);
-        const scale = ocrScaleFor(long, targetLong);
+        const scale = effLong / long;   /* effLong 已由 effLongFor 定档，缩放比恒在 [0.25, 4] */
         const cw = Math.round(w * scale), ch = Math.round(h * scale);
         const c = document.createElement('canvas');
         c.width = cw; c.height = ch;
@@ -2170,7 +2226,7 @@
             blob: blob,
             originalDims: w + '×' + h,
             prepDims: cw + '×' + ch,
-            prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : '原大',
+            prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : (scale < 0.95 ? ('×' + scale.toFixed(2)) : '原大'),
             prepTime: ((window.performance.now() - t0) / 1000).toFixed(3) + '秒'
         };
     }
@@ -2198,29 +2254,146 @@
 
     /* 识别梯：同一张图按「分辨率 × PSM」多档尝试，解析通过即停（2026-10-20 实测定档）。
        1830 档对多数票一次通过；3000 档专救红框票（1080px 票 ×2.2 才能把 "5 7" 读全）；
-       psm11 稀疏模式专救被印章干扰的「开奖期」行。 */
+       psm11 稀疏模式专救被印章干扰的「开奖期」行。
+       档位 long 先经 effLongFor 换算成「有效长边」再识别（≤3000 的源原样/放大，
+       >3000 的源且幅度 ≥1.25 才缩小，见 effLongFor 注释）。 */
     const OCR_LADDER = [
         { long: 1830, psm: '6' },
         { long: 1830, psm: '11' },
         { long: 3000, psm: '6' },
         { long: 3000, psm: '11' }
     ];
+    const OCR_LADDER_TOP = Math.max.apply(null, OCR_LADDER.map(function (s) { return s.long; }));   /* 3000 */
+
+    /* ===== 识别图片展示：让用户看到「识别的是哪张图」和「引擎实际看到的图」=====
+       上传解码成功就先显示原图（识别进行中也有画面反馈，不再只是干转的 spinner）；
+       识别完成后追加「原图 / 识别用图」切换 —— 识别用图是灰度 + 红章抑制 + 缩放后
+       实际送入引擎的那张（bestPrep.blob），识别效果不对时一眼能看出是预处理环节的问题还是原图的问题。
+       点击缩略图开灯箱看全尺寸；blob URL 在换图 / 清除时 revoke，不留内存泄漏。 */
+    var imgBox = document.getElementById('ocrImgBox');
+    var imgLb = document.getElementById('imgLb');
+    var imgState = { origUrl: null, prepUrl: null, origCap: '', prepMeta: null, view: 'orig' };
+
+    function releaseImgState() {
+        if (imgState.origUrl) URL.revokeObjectURL(imgState.origUrl);
+        if (imgState.prepUrl) URL.revokeObjectURL(imgState.prepUrl);
+        imgState.origUrl = imgState.prepUrl = null;
+        imgState.origCap = '';
+        imgState.prepMeta = null;
+        imgState.view = 'orig';
+        imgBox.hidden = true;
+        imgBox.innerHTML = '';
+        closeImgLb();
+    }
+
+    function renderImgView() {
+        var img = imgBox.querySelector('img.ocr-img');
+        if (!img) return;
+        img.src = (imgState.view === 'prep' && imgState.prepUrl) ? imgState.prepUrl : imgState.origUrl;
+        img.alt = imgState.view === 'prep' ? 'OCR 实际识别用图' : '上传的原图';
+        var cap = imgBox.querySelector('.ocr-img-cap');
+        if (cap) cap.innerHTML = imgState.view === 'prep' && imgState.prepMeta
+            ? '<b>识别用图</b> · ' + esc(imgState.prepMeta.prepDims) + ' · ' + esc(imgState.prepMeta.prepScale)
+              + ' · 灰度 + 红章抑制'
+            : imgState.origCap;
+        imgBox.querySelectorAll('.seg-btn').forEach(function (b) {
+            b.classList.toggle('on', b.getAttribute('data-view') === imgState.view);
+        });
+    }
+
+    function showOcrImage(file, bmp) {
+        releaseImgState();
+        imgState.origUrl = URL.createObjectURL(file);
+        imgState.origCap = '<b>原图</b> · ' + esc(file.name || '图片') + ' · '
+            + (bmp.width || bmp.naturalWidth) + '×' + (bmp.height || bmp.naturalHeight)
+            + ' · ' + formatFileSize(file.size);
+        imgBox.innerHTML = '<div class="ocr-img-head"><span class="ocr-img-cap">' + imgState.origCap + '</span></div>'
+            + '<div class="ocr-img-wrap"><img class="ocr-img" src="' + imgState.origUrl + '"></div>';
+        imgBox.hidden = false;
+    }
+
+    /* 识别确定采用某一档预处理后调用：追加「原图 / 识别用图」切换 */
+    function attachPrepImage(prep) {
+        if (!prep || !prep.blob || !imgState.origUrl) return;
+        if (imgState.prepUrl) URL.revokeObjectURL(imgState.prepUrl);
+        imgState.prepUrl = URL.createObjectURL(prep.blob);
+        imgState.prepMeta = prep;
+        var head = imgBox.querySelector('.ocr-img-head');
+        if (head && !head.querySelector('.seg')) {
+            head.insertAdjacentHTML('beforeend',
+                '<span class="seg" role="tablist" aria-label="切换查看图片">'
+                + '<button type="button" class="seg-btn on" data-view="orig">原图</button>'
+                + '<button type="button" class="seg-btn" data-view="prep">识别用图</button>'
+                + '</span>');
+        }
+        renderImgView();
+    }
+
+    /* 灯箱：点击缩略图看全尺寸，点击任意处 / Esc 关闭；滚动容器 main 加锁防背景滚动 */
+    function openImgLb(src, alt) {
+        imgLb.querySelector('img').src = src;
+        imgLb.querySelector('img').alt = alt || '';
+        imgLb.hidden = false;
+        var m = document.querySelector('main');
+        if (m) { imgLb.__mainOverflow = m.style.overflow; m.style.overflow = 'hidden'; }
+    }
+    function closeImgLb() {
+        if (imgLb.hidden) return;
+        imgLb.hidden = true;
+        imgLb.querySelector('img').src = '';
+        var m = document.querySelector('main');
+        if (m) m.style.overflow = imgLb.__mainOverflow || '';
+    }
+
+    imgBox.addEventListener('click', function (e) {
+        var btn = e.target.closest('.seg-btn');
+        if (btn) {
+            imgState.view = (btn.getAttribute('data-view') === 'prep' && imgState.prepUrl) ? 'prep' : 'orig';
+            renderImgView();
+            return;
+        }
+        var img = e.target.closest('img.ocr-img');
+        if (img && img.src) openImgLb(img.src, img.alt);
+    });
+    imgLb.addEventListener('click', closeImgLb);
+    $(document).on('keydown', function (e) { if (e.key === 'Escape') closeImgLb(); });
 
     async function handleImage(file) {
         $('#up-btn').attr('disabled', 'disabled');
         dataContainer.html(loadingHtml);
+        releaseImgState();   /* 上一张的图先撤掉：新文件识别失败时不该还挂着旧图 */
 
         try {
             const bmp = await loadBitmap(file);
+            showOcrImage(file, bmp);   /* 解码成功立刻亮图：识别中用户能看到自己选的是哪张 */
             var fileInfo = { originalSize: formatFileSize(file.size) };
 
             const t3 = window.performance.now();
             const worker = await initTesseractWorker();
             await worker.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
 
+            /* 原尺寸兜底档：源图长边超过梯顶（3000）时追加。正常走缩小档（快），
+               全失败才回原图重试 —— 识别上限与旧版「整条梯跑原图」持平，速度却是缩小档优先。
+               兜底长边上限 4096：iOS 画布约 16.7M 像素上限（4096×3072=12.6M 在限内）；
+               超限的原图旧版同样画不出，不属于可回退范围。
+               每档先换算成「有效长边」（effLongFor），再按 有效长边/psm 去重 ——
+               3200 的源图在 3000 档和兜底档都是原大，不去重就会把同一张图识别两遍。 */
+            const origLong = Math.max(bmp.width || bmp.naturalWidth, bmp.height || bmp.naturalHeight);
+            const fbLong = Math.min(origLong, 4096);
+            const rawSteps = origLong > OCR_LADDER_TOP
+                ? OCR_LADDER.concat([{ long: fbLong, psm: '6' }, { long: fbLong, psm: '11' }])
+                : OCR_LADDER;
+            const ladder = [];
+            const seenStep = {};
+            for (const st of rawSteps) {
+                const eff = effLongFor(origLong, st.long);
+                const key = eff + '/' + st.psm;
+                if (!seenStep[key]) { seenStep[key] = 1; ladder.push({ long: eff, psm: st.psm }); }
+            }
+
             const prepCache = {};
             let bestText = null, bestPrep = null, bestQuality = 0;
-            for (const step of OCR_LADDER) {
+            for (const step of ladder) {
                 if (!prepCache[step.long]) prepCache[step.long] = await prepareImageFromBitmap(bmp, step.long);
                 const prep = prepCache[step.long];
                 await worker.setParameters({ tessedit_pageseg_mode: step.psm });
@@ -2248,6 +2421,7 @@
             fileInfo.prepScale = bestPrep.prepScale;
             fileInfo.prepTime = bestPrep.prepTime;
             fileInfo.recognitionTime = ((window.performance.now() - t3) / 1000).toFixed(3) + '秒';
+            attachPrepImage(bestPrep);   /* 识别用图 = 实际送入引擎的那张，供用户切换查看 */
             processOCRResult(bestText, fileInfo);
         } catch (error) {
             console.error('OCR识别失败:', error);
