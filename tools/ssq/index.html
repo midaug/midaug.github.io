@@ -903,7 +903,9 @@ window.__ppocr = { init: init };
             html += '<span>分阶段 解码 ' + pf.decodeMs + 'ms · 引擎 ' + pf.engineMs + 'ms';
             (pf.steps || []).forEach(function (s) {
                 html += ' · ' + s.engine + '@' + s.long + ' ' + s.run + 'ms';
+                if (s.lines) html += '（' + s.lines + '行/' + Math.round(s.run / s.lines) + 'ms）';
             });
+            if (pf.threads) html += ' · 线程 ' + pf.threads + (pf.isolated ? '' : '(未隔离)');
             html += '</span>';
         }
         html += '</div>';
@@ -2706,6 +2708,7 @@ window.__ppocr = { init: init };
             }
             const t3 = window.performance.now();
             perf.engineMs = Math.round(engineInitMs);
+            if (ppocrApi) { perf.threads = ppocrApi.threads || 1; perf.isolated = !!ppocrApi.isolated; }
 
             /* ===== 步骤序列：PP-OCR 压缩档优先（快且稳），Tesseract 整条梯垫底 =====
                源图超长边时各追加原尺寸兜底档（上限 4096，iOS 画布限制内）。
@@ -2780,11 +2783,13 @@ window.__ppocr = { init: init };
                 const prepMs = Math.round(window.performance.now() - tPrep);
                 const t0 = window.performance.now();
                 var text;
+                var ppLines = 0;   /* 本档检出的文本行数（= 识别模型被串行调用的次数），仅诊断用 */
                 if (step.engine === 'pp') {
                     try {
                         const r = await ppocrApi.detect({
                             data: prep.imageData.data, width: prep.imageData.width, height: prep.imageData.height
                         });
+                        ppLines = (r.texts && r.texts.length) || 0;
                         text = ppocrLinesToText(r.texts);
                     } catch (e) {
                         console.warn('PP-OCR 档位失败，本档弃用：', e);
@@ -2806,10 +2811,12 @@ window.__ppocr = { init: init };
                 const q = ocrParseQuality(text);
                 perf.steps.push({
                     engine: step.engine, long: step.long, psm: step.psm || '',
-                    mpx: +prep.mpx.toFixed(2), prep: prepMs, run: Math.round(dt), q: q
+                    mpx: +prep.mpx.toFixed(2), prep: prepMs, run: Math.round(dt), q: q, lines: ppLines
                 });
                 console.log('识别梯档位:', step.engine, step.long, step.psm ? 'psm' + step.psm : '',
-                    '质量' + q, Math.round(dt) + 'ms', '（预处理 ' + prepMs + 'ms）');
+                    '质量' + q, Math.round(dt) + 'ms',
+                    ppLines ? '（' + ppLines + ' 行 / ' + (dt / ppLines).toFixed(0) + 'ms 每行）' : '',
+                    '（预处理 ' + prepMs + 'ms）');
                 if (q > bestQuality) {
                     bestText = text; bestPrep = prep; bestQuality = q;
                     if (step.engine === 'pp') {

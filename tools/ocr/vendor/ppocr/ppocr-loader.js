@@ -221,7 +221,27 @@ function modelsFromTar(f) {
   };
 }
 
+/* 线程数：ORT 只在 crossOriginIsolated（需 COOP+COEP 响应头）成立时才会真正开线程，
+   否则内部把 numThreads 静默改成 1（不报错，只是慢）。`?threads=N` 用于真机 A/B，
+   不写则沿用 ORT 默认（隔离态下 = min(4, ceil(核数/2))）。 */
+function wantedThreads() {
+  try {
+    const m = /[?&]threads=(\d{1,2})(&|$)/.exec(location.search);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    return (n >= 1 && n <= 8) ? n : null;
+  } catch (e) { return null; }
+}
+
 async function build(Ocr, ort, t0, forceLocal) {
+  const want = wantedThreads();
+  if (want) ort.env.wasm.numThreads = want;      /* 必须在首次 initializeWebAssembly 之前 */
+  const isolated = (typeof self !== 'undefined' && self.crossOriginIsolated === true);
+  const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 1;
+  if (want > 1 && !isolated) {
+    console.warn('请求 ' + want + ' 线程但页面未处于跨源隔离态（缺 COOP/COEP 头），将回落到单线程');
+  }
+
   const w = forceLocal
     ? { buf: await fetchBytes(LOCAL.wasm), src: 'local', host: '' }
     : await acquireWasm();
@@ -236,10 +256,19 @@ async function build(Ocr, ort, t0, forceLocal) {
   const ocr = await Ocr.create({ models: m.models });
   const src = w.src === m.src ? w.src : 'mixed';
   const host = w.host === m.host ? w.host : [w.host, m.host].filter(Boolean).join('+');
+  /* ORT 在初始化时可能已经把 numThreads 改写回 1，这里读的是**生效值** */
+  const threads = (ort.env && ort.env.wasm && ort.env.wasm.numThreads) || 1;
   console.log('PP-OCR 资源来源: wasm=' + w.src + ' models=' + m.src + (host ? ' host=' + host : ''));
+  console.log('ORT 线程: 生效 ' + threads +
+    ' / 请求 ' + (want || '默认') +
+    ' / 核数 ' + cores +
+    ' / 跨源隔离 ' + (isolated ? '是' : '否'));
   return {
     initMs: Math.round(performance.now() - t0),
     src: src,
+    threads: threads,
+    cores: cores,
+    isolated: isolated,
     detect: function (imageData) { return ocr.detect(imageData); }
   };
 }
