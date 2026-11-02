@@ -2423,6 +2423,13 @@ window.__ppocr = { init: init };
         try { return /[?&]perf=1(&|$)/.test(location.search); } catch (e) { return false; }
     })();
 
+    /* `?notess=1`：关掉 Tesseract 兜底，只留 PP-OCR。专供「换分辨率做速度/准确率对比」用——
+       否则某一档质量没到 2 时会继续跑 Tesseract 整条梯，把对比数据搅浑。
+       正常访问绝不带这个参数。 */
+    var OCR_NO_TESS = (function () {
+        try { return /[?&]notess=1(&|$)/.test(location.search); } catch (e) { return false; }
+    })();
+
     var ppocrApi = null;
     var ppocrInitMs = 0;
 
@@ -2682,7 +2689,7 @@ window.__ppocr = { init: init };
                PP-OCR 初始化失败（老浏览器无 import map / 模型加载失败）→ 整体回退 Tesseract。 */
             const force = window.__forceOcrEngine;
             var usePP = force !== 'tess';
-            var useTess = force !== 'pp';
+            var useTess = force !== 'pp' && !OCR_NO_TESS;   /* ?notess=1 只做 PP-OCR 对比 */
             var engineInitMs = 0;
             if (usePP) {
                 const initBegin = window.performance.now();
