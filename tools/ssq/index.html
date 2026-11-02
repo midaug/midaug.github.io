@@ -373,18 +373,18 @@
 <!-- <script src="https://fastly.jsdelivr.net/gh/midaug/dream-lottery/spider_data/ssq.js"></script> -->
 <script src="https://100180.xyz/ssq/data/ssq.js"></script>
 <!-- PP-OCR（PaddleOCR v4 ONNX）依赖 onnxruntime-web 的 ESM 裸引用，用 import map
-     把两个包名都映射到本地 ort.min.mjs（它 re-export 了 onnxruntime-common 的全部公开 API）。
+     把两个包名都映射到本地 ort.min.js（它 re-export 了 onnxruntime-common 的全部公开 API）。
      ★ 引擎资源在本工具与 ocr 工具间共用，实体在 ../ocr/vendor/（2026-11-02 起，
      两页引用同一份 URL 才能共享浏览器缓存；移动/重命名要两边同步改）。
      import map 不被支持的老浏览器里 window.__ppocr 不会定义 → 自动走 Tesseract 兜底。 -->
 <script type="importmap">
-{"imports":{"onnxruntime-web":"../ocr/vendor/ort/ort.min.mjs","onnxruntime-common":"../ocr/vendor/ort/ort.min.mjs"}}
+{"imports":{"onnxruntime-web":"../ocr/vendor/ort/ort.min.js","onnxruntime-common":"../ocr/vendor/ort/ort.min.js"}}
 </script>
 <script type="module">
-/* PP-OCR 引擎加载器：共享 loader 在 ../ocr/vendor/ppocr/ppocr-loader.mjs
+/* PP-OCR 引擎加载器：共享 loader 在 ../ocr/vendor/ppocr/ppocr-loader.js
    （国内 npmmirror 优先 → unpkg 备用 → 本地兜底，详见 loader 文件头注释）。
    init() reject（老浏览器无 import map / CDN 与本地全失败）→ 主脚本自动走 Tesseract 兜底。 */
-import { init } from '../ocr/vendor/ppocr/ppocr-loader.mjs';
+import { init } from '../ocr/vendor/ppocr/ppocr-loader.js';
 window.__ppocr = { init: init };
 </script>
 <script>

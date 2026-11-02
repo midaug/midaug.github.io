@@ -315,19 +315,19 @@
 <div class="toast" id="toast"></div>
 
 <!-- PP-OCR（PaddleOCR v4 ONNX，PaddleOCR 为百度开源引擎，Apache-2.0）依赖 onnxruntime-web
-     的 ESM 裸引用，用 import map 把包名映射到本地 ort.min.mjs（它 re-export 了
+     的 ESM 裸引用，用 import map 把包名映射到本地 ort.min.js（它 re-export 了
      onnxruntime-common 的全部公开 API）。import map 不被支持的老浏览器里
      window.__ppocr 不会定义 → 页面报「引擎不可用」。
      ★ 这份引擎资源与 ssq 工具共用（ssq 引用 ../ocr/vendor/，两页同 URL 才共享浏览器缓存；
      移动/重命名要两边同步改）。2026-11-02 起替换掉 PearOCR 引擎（闭源，且数字识别不可靠）。 -->
 <script type="importmap">
-{"imports":{"onnxruntime-web":"./vendor/ort/ort.min.mjs","onnxruntime-common":"./vendor/ort/ort.min.mjs"}}
+{"imports":{"onnxruntime-web":"./vendor/ort/ort.min.js","onnxruntime-common":"./vendor/ort/ort.min.js"}}
 </script>
 <script type="module">
-/* PP-OCR 引擎加载器：共享 loader 在 ./vendor/ppocr/ppocr-loader.mjs
+/* PP-OCR 引擎加载器：共享 loader 在 ./vendor/ppocr/ppocr-loader.js
    （国内 npmmirror 优先 → unpkg 备用 → 本地兜底，详见 loader 文件头注释）。
    init() reject（老浏览器无 import map / CDN 与本地全失败）→ 顶栏显示引擎加载失败，识别时重试。 */
-import { init } from './vendor/ppocr/ppocr-loader.mjs';
+import { init } from './vendor/ppocr/ppocr-loader.js';
 window.__ppocr = { init: init };
 </script>
 <script>

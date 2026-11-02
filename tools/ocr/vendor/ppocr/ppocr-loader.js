@@ -7,7 +7,7 @@
      ② unpkg.com（境外，单文件，CORS *）
      ③ 本地 ../ort/ 与同目录 vendor 文件（永不失败）
    （腾讯云镜像也验证过可用，但它只有 registry 接口、取 wasm 要整包下 34.6MB，按用户要求去掉。）
-   guten-ocr.mjs（10MB 自定义 bundle）与 glue mjs（24KB）：始终本地。
+   guten-ocr.js（10MB 自定义 bundle）与 glue mjs（24KB）：始终本地。
    为什么模型走 tarball：npmmirror 的 files 接口是**白名单制**（cnpm/unpkg-white-list），
    onnxruntime-web 在内，@gutenye/ocr-models 不在（403）；而 tarball 接口对所有包开放且带 CORS，
    故用 DecompressionStream + 极简 tar 解析取出三个文件，生成 blob URL 交给引擎
@@ -16,10 +16,10 @@
    （探测用 Range: bytes=0-0），不能拿 HEAD 判断可用性——踩过这个坑。
 
    升级注意：
-     - CDN 的 ort 版本(1.31.1)必须与本地 ort.min.mjs 的版本严格一致（JS 与 wasm 不匹配会崩）
+     - CDN 的 ort 版本(1.31.1)必须与本地 ort.min.js 的版本严格一致（JS 与 wasm 不匹配会崩）
      - CDN 的模型版本(1.4.2)必须与本地 onnx 同源（npm @gutenye/ocr-models 的 assets）
-   依赖页面 <script type="importmap">：onnxruntime-web / onnxruntime-common → ort.min.mjs
-   （本加载器与 guten-ocr.mjs 的外部 import 共享同一 ORT 模块实例，env 设置才能生效）。 */
+   依赖页面 <script type="importmap">：onnxruntime-web / onnxruntime-common → ort.min.js
+   （本加载器与 guten-ocr.js 的外部 import 共享同一 ORT 模块实例，env 设置才能生效）。 */
 
 const ORT_VER = '1.31.1';
 const MODELS_VER = '1.4.2';
@@ -137,7 +137,7 @@ export function init() {
 async function load() {
   const t0 = performance.now();
   const ort = await import('onnxruntime-web');       /* 走页面 import map */
-  const mod = await import(new URL('./guten-ocr.mjs', here).href);   /* 10MB，始终本地 */
+  const mod = await import(new URL('./guten-ocr.js', here).href);   /* 10MB，始终本地 */
   const Ocr = mod.default;
 
   try {
@@ -226,7 +226,7 @@ async function build(Ocr, ort, t0, forceLocal) {
     ? { buf: await fetchBytes(LOCAL.wasm), src: 'local', host: '' }
     : await acquireWasm();
   ort.env.wasm.wasmBinary = w.buf;
-  ort.env.wasm.wasmPaths = { mjs: new URL('ort-wasm-simd-threaded.mjs', ortDir).href };
+  ort.env.wasm.wasmPaths = { mjs: new URL('ort-wasm-simd-threaded.js', ortDir).href };
 
   /* wasm 都走本地了说明 CDN 整体不可信，模型不再单独去试 */
   const m = (forceLocal || w.src === 'local')
