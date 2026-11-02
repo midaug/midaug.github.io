@@ -282,6 +282,12 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
 
+  /* 识别进行中的实时计时（loadingHtml 内），给「还要等多久」一个直观反馈 */
+  .ocr-timer {
+    text-align: center; font-size: 12px; color: var(--text-3);
+    padding-bottom: 16px; font-variant-numeric: tabular-nums;
+  }
+
   /* ===== 窄屏 ===== */
   @media (max-width: 600px) {
     header { padding: 8px 10px; gap: 6px 8px; }
@@ -375,6 +381,10 @@
     /* 加载指示用内联 CSS spinner，不再引 gh/<repo> 浮动地址上的 loading.gif
        （MEMORY.md：CDN 资源一律锁版本，禁 gh/master 浮动路径） */
     var loadingHtml = '<div class="spinner" role="status" aria-label="加载中"></div>';
+    /* OCR 专用加载态 = spinner + 实时计时（#ocrTimer 由 startOcrTimer 驱动）。
+       数据加载路径（initApp）继续用不带计时的 loadingHtml。 */
+    var ocrLoadingHtml = '<div class="spinner" role="status" aria-label="识别中"></div>'
+        + '<div class="ocr-timer" id="ocrTimer" aria-live="polite">正在准备…</div>';
     /* 空态 = 铺满卡片的投放区（可点击、可拖放）。不要退回成一行短文案：
        整宽卡片里左对齐的一行字会让右侧空一大片。 */
     var idleHtml = '<div class="dropzone" id="dropzone" role="button" tabindex="0"'
@@ -777,6 +787,8 @@
         html += '<span>预处理 ' + esc(fv(fileInfo.prepDims)) + ' ' + esc(fv(fileInfo.prepScale)) + '</span>';
         html += '<span>预处理耗时 ' + esc(fv(fileInfo.prepTime)) + '</span>';
         if (fileInfo.ocrPsm) html += '<span>稀疏模式重试(PSM ' + esc(fileInfo.ocrPsm) + ')</span>';
+        if (fileInfo.ocrSkipped) html += '<span>已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000)
+            + ' 秒时限，截断剩余 ' + esc(fileInfo.ocrSkipped) + ' 档</span>';
         html += '<span>识别耗时 ' + esc(fv(fileInfo.recognitionTime)) + '</span>';
         html += '</div>';
 
@@ -1457,9 +1469,12 @@
             return { t: isLabel ? 'break' : '', v: '', lead: lead };
         }
         /* 时间 "19:57:31"（带秒）整体丢弃；"19:57"（无秒）仅当时段 ≤23 才算时间丢弃——
-           「红复:05」在原版高清票上会误读成 "45:05"，45 不可能是小时，必须落下去把 05 救回 */
+           「红复:05」在原版高清票上会误读成 "45:05"，45 不可能是小时，必须落下去把 05 救回。
+           2026-11-02 再收紧：小时必须两位 —— 票面时间要么带秒要么零填充（"19:49"/"09:30"），
+           「«4:05」这类 1 位小时 + 球值其实是「乱标签 + 值段」误读（00cp2 实测，首红 05
+           被当时间丢弃 → 7 红只剩 6 红），落下去走标签值段救回。 */
         if (/^\d{1,2}[:：]\d{2}[:：]\d{2}$/.test(tok)) return { t: '', v: '', lead: lead };
-        if (/^\d{1,2}[:：]\d{2}$/.test(tok) && parseInt(tok, 10) <= 23) return { t: '', v: '', lead: lead };
+        if (/^\d{2}[:：]\d{2}$/.test(tok) && parseInt(tok, 10) <= 23) return { t: '', v: '', lead: lead };
         const ci = tok.search(/[:：;；]/);
         if (ci >= 0) {
             const label = tok.slice(0, ci);
@@ -1526,9 +1541,19 @@
         return results;
     }
 
-    function digitsToAscending(digits, minCount, maxCount, maxVal) {
+    function digitsToAscending(digits, minCount, maxCount, maxVal, tailSkip) {
         if (!digits) return null;
-        const sols = splitDigitsAscending(digits, minCount, maxCount, maxVal);
+        let sols = splitDigitsAscending(digits, minCount, maxCount, maxVal);
+        /* 行尾噪点容差（2026-11-02 实测 00cp2.jpg）：标签捕获的数字串末尾常粘上背景噪点
+           （"红复:05 07 08 12 14 20 31␣␣␣2" —— 褶皱/底纹被 OCR 成孤数字），15 位奇数串
+           全量拆分必然失败，整行 7 个红球全丢。号码恒为两位，末尾孤位本来就不可能是
+           完整号码，全量失败时依次丢弃末尾 1-2 位重试；只动尾巴不碰头部，
+           且必须仍拆出 ≥minCount 个合法升序号，伪造空间极小。 */
+        if (!sols.length && tailSkip) {
+            for (let k = 1; k <= 2 && !sols.length && digits.length - k >= minCount; k++) {
+                sols = splitDigitsAscending(digits.slice(0, digits.length - k), minCount, maxCount, maxVal);
+            }
+        }
         if (!sols.length) return null;
         return sols[0].map(function (v) { return String(v).padStart(2, '0'); });
     }
@@ -1536,18 +1561,25 @@
     function parseOCRSpec(text) {
         console.log("解析OCR格式复式投注:", text);
 
-        /* 路径一：标签锚定（红复/红单/红球/蓝复/蓝单/蓝球/zw/ax/wm/blue…可读时） */
+        /* 路径一：标签锚定（红复/红单/红球/蓝复/蓝单/蓝球/zw/ax/wm/blue…可读时）。
+           anchored = 红球来自标签锚定（证据强）：无锚点、恰好 6+1 的结构化结果有伪造风险
+           （00cp2 实测：psm11 噪声文本被拼成 6红+蓝05，标签锚定的真票文本因行尾噪点
+           拆分失败得 0 分，假结果反以 2 分胜出 —— 见 ocrParseQuality 的降级闸门）。 */
+        var anchored = false;
         var redMatch = text.match(/(?:zw|ax|red|红\s*[复单球])[:：;\s；]*([\d\s]+)/i);
         var blueMatch = text.match(/(?:wm|blue|蓝\s*[复单球])[:：;\s；]*([\d\s]+)/i);
         var redNumbers = null, blueNumbers = null;
 
         if (redMatch) {
             /* 不再按 \d{1,2} 硬切（会把 "11217" 切成 11/21/7 拼出假号码）；
-               整段数字串交给升序拆分，拆不出合法序列就当没有这段 */
-            redNumbers = digitsToAscending(redMatch[1].replace(/\D/g, ''), 6, 18, 33);
+               整段数字串交给升序拆分，拆不出合法序列就当没有这段。
+               tailSkip：捕获组会吞掉行尾渗入的噪点（日期 "26-10-29" 的 2 / 底纹孤数字），
+               全量拆分失败时丢末尾 1-2 位重试（见 digitsToAscending）。 */
+            redNumbers = digitsToAscending(redMatch[1].replace(/\D/g, ''), 6, 18, 33, true);
+            if (redNumbers) anchored = true;
         }
         if (blueMatch) {
-            blueNumbers = digitsToAscending(blueMatch[1].replace(/\D/g, ''), 1, 16, 16);
+            blueNumbers = digitsToAscending(blueMatch[1].replace(/\D/g, ''), 1, 16, 16, true);
         }
 
         /* 路径二：结构化兜底 —— 标签经常被印章/红框搅成 "wg:"/"uu:"（实测），锚定失败时
@@ -1581,6 +1613,7 @@
                 redBalls: redNumbers,
                 blueBalls: [],
                 isCompound: redNumbers.length > 6,
+                anchored: anchored,
                 incomplete: '识别到红球，但没读出蓝球'
             };
         }
@@ -1596,7 +1629,8 @@
             return {
                 redBalls: redNumbers,
                 blueBalls: blueNumbers,
-                isCompound: true
+                isCompound: true,
+                anchored: anchored
             };
         }
 
@@ -1605,7 +1639,8 @@
             return {
                 redBalls: redNumbers.slice(0, 6),
                 blueBalls: [blueNumbers[0]],
-                isCompound: false
+                isCompound: false,
+                anchored: anchored
             };
         }
 
@@ -1633,7 +1668,7 @@
             }
             /* ≥6 个 token 或 ≥12 位数字（整行粘连成一个长串）才可能是红球段 */
             if (j - i < 6 && digits.length < 12) { i = j - 1; continue; }
-            const reds = digitsToAscending(digits, 6, 18, 33);
+            const reds = digitsToAscending(digits, 6, 18, 33, true);
             if (!reds) { i = j - 1; continue; }
             let blues = null;
             for (let k = j; k < Math.min(ctoks.length, j + 15) && !blues; k++) {
@@ -2224,6 +2259,7 @@
         const blob = await new Promise(function (res) { c.toBlob(res, 'image/png'); });
         return {
             blob: blob,
+            mpx: (cw * ch) / 1e6,   /* 画布像素数（百万）：闸门用「实测耗时/像素」外推后续档耗时 */
             originalDims: w + '×' + h,
             prepDims: cw + '×' + ch,
             prepScale: scale > 1.05 ? ('×' + scale.toFixed(1)) : (scale < 0.95 ? ('×' + scale.toFixed(2)) : '原大'),
@@ -2245,9 +2281,14 @@
             return 1;
         }
         /* 复式：蓝球缺失（incomplete）只算「可解析但没读全」，让识别梯继续换档，
-           而不是像以前那样判 2 提前收工、或直接抛异常中断整条梯子 */
+           而不是像以前那样判 2 提前收工、或直接抛异常中断整条梯子。
+           ★ 无标签锚定的 6+1（structuralParse 的「标准单注」形态）同样只判 1：
+             00cp2 实测，psm11 噪声文本被拼成 6红+蓝05（蓝球来自下方噪点 token、
+             首红被乱码标签吞掉）而拿到 2 分，压过了因行尾噪点拆分失败的好文本 ——
+             假结果一旦先到 2 分梯子就停，错号被当真。≥7 球的复式或标签锚定的结果
+             才有资格判 2 提前停。 */
         var sp = parseOCRSpec(text);
-        if (sp) return sp.incomplete ? 1 : 2;
+        if (sp) return (sp.incomplete || (!sp.isCompound && !sp.anchored)) ? 1 : 2;
         const cleanText = text.replace(/[^\w\d\s\-\:\#\*\$\.\,\;]/gi, ' ');
         return findAllPatterns(cleanText, /[A-E][\d\#\*\$]+/g).length > 0 ? 1 : 0;
     }
@@ -2264,6 +2305,17 @@
         { long: 3000, psm: '11' }
     ];
     const OCR_LADDER_TOP = Math.max.apply(null, OCR_LADDER.map(function (s) { return s.long; }));   /* 3000 */
+
+    /* ===== 识别梯总时限（2026-11-02）：手机实测整条梯跑完要 2 分钟，「总体 12 秒没结束都无法接受」=====
+       时限从进入 handleImage 起算（含图片解码、引擎初始化），闸门设在每档开始前：
+       估算本档耗时 = 固定开销 + 最近一档实测的单像素耗时 × 本档像素 × 余量系数。
+       梯子按有效长边升序排列，本档放不进剩余时间 ⇒ 后面更大的档全放不下，整段截断，
+       交出已拿到的最好结果（质量 ≥1 照常出结果并标注截断；全无结果才报错并提示超时）。
+       第 1 档必跑（先跑出实测速度才有估算依据）；桌面整条梯 2-4 秒，时限从不生效。
+       声明为 var（非 const）：测试脚本能整体调小时限来验证闸门，不必真等 12 秒。 */
+    var OCR_TIME_BUDGET_MS = 12000;
+    const OCR_EST_OVERHEAD_MS = 350;   /* 每次 recognize 的固定开销 + setParameters 往返 */
+    const OCR_EST_MARGIN = 1.2;        /* 跨档外推余量：像素-耗时非线性 + 预处理（画布/PNG 编码）耗时 */
 
     /* ===== 识别图片展示：让用户看到「识别的是哪张图」和「引擎实际看到的图」=====
        上传解码成功就先显示原图（识别进行中也有画面反馈，不再只是干转的 spinner）；
@@ -2358,12 +2410,32 @@
     imgLb.addEventListener('click', closeImgLb);
     $(document).on('keydown', function (e) { if (e.key === 'Escape') closeImgLb(); });
 
+    /* 识别计时器：#ocrTimer 每 250ms 刷一次「已用 X 秒」。元素随 loadingHtml 一起被
+       showData 替换掉，但 interval 必须显式清 —— 否则定时器一直挂着空转。 */
+    var ocrTimerId = null;
+    function startOcrTimer() {
+        stopOcrTimer();
+        var el = document.getElementById('ocrTimer');
+        if (!el) return;
+        var t0 = window.performance.now();
+        var tick = function () {
+            el.textContent = '识别中… 已用 ' + ((window.performance.now() - t0) / 1000).toFixed(1) + ' 秒';
+        };
+        tick();
+        ocrTimerId = setInterval(tick, 250);
+    }
+    function stopOcrTimer() {
+        if (ocrTimerId) { clearInterval(ocrTimerId); ocrTimerId = null; }
+    }
+
     async function handleImage(file) {
         $('#up-btn').attr('disabled', 'disabled');
-        dataContainer.html(loadingHtml);
+        dataContainer.html(ocrLoadingHtml);
+        startOcrTimer();
         releaseImgState();   /* 上一张的图先撤掉：新文件识别失败时不该还挂着旧图 */
 
         try {
+            const budgetT0 = window.performance.now();   /* 时限起点：从进入本函数起算（含解码/引擎初始化） */
             const bmp = await loadBitmap(file);
             showOcrImage(file, bmp);   /* 解码成功立刻亮图：识别中用户能看到自己选的是哪张 */
             var fileInfo = { originalSize: formatFileSize(file.size) };
@@ -2378,7 +2450,8 @@
                超限的原图旧版同样画不出，不属于可回退范围。
                每档先换算成「有效长边」（effLongFor），再按 有效长边/psm 去重 ——
                3200 的源图在 3000 档和兜底档都是原大，不去重就会把同一张图识别两遍。 */
-            const origLong = Math.max(bmp.width || bmp.naturalWidth, bmp.height || bmp.naturalHeight);
+            const bmpW = bmp.width || bmp.naturalWidth, bmpH = bmp.height || bmp.naturalHeight;
+            const origLong = Math.max(bmpW, bmpH);
             const fbLong = Math.min(origLong, 4096);
             const rawSteps = origLong > OCR_LADDER_TOP
                 ? OCR_LADDER.concat([{ long: fbLong, psm: '6' }, { long: fbLong, psm: '11' }])
@@ -2393,29 +2466,53 @@
 
             const prepCache = {};
             let bestText = null, bestPrep = null, bestQuality = 0;
-            for (const step of ladder) {
+            let lastMsPerMpx = 0, skippedByBudget = 0;
+            for (let i = 0; i < ladder.length; i++) {
+                const step = ladder[i];
+                /* 预算闸门（第 1 档必跑；放在预处理之前 —— 被跳过的档不该白付画布/PNG 编码时间）。
+                   本档像素按长边换算比估算：estMpx = 全图像素 × (effLong/origLong)²。 */
+                if (i > 0 && lastMsPerMpx > 0) {
+                    const s = step.long / origLong;
+                    const estMpx = bmpW * bmpH * s * s / 1e6;
+                    const est = OCR_EST_OVERHEAD_MS + lastMsPerMpx * estMpx * OCR_EST_MARGIN;
+                    const remaining = OCR_TIME_BUDGET_MS - (window.performance.now() - budgetT0);
+                    if (est > remaining) {
+                        skippedByBudget = ladder.length - i;
+                        console.log('识别梯预算截断: 已用 ' + Math.round(window.performance.now() - budgetT0)
+                            + 'ms，剩余 ' + Math.round(remaining) + 'ms，第 ' + (i + 1) + ' 档(' + step.long
+                            + '/psm' + step.psm + ')估算 ' + Math.round(est) + 'ms，截断剩余 ' + skippedByBudget + ' 档');
+                        break;
+                    }
+                }
                 if (!prepCache[step.long]) prepCache[step.long] = await prepareImageFromBitmap(bmp, step.long);
                 const prep = prepCache[step.long];
                 await worker.setParameters({ tessedit_pageseg_mode: step.psm });
                 const t0 = window.performance.now();
                 const t = (await worker.recognize(prep.blob)).data.text;
+                const dt = window.performance.now() - t0;
+                if (prep.mpx > 0) lastMsPerMpx = dt / prep.mpx;   /* 实测单像素耗时，供后续档估算 */
                 const q = ocrParseQuality(t);
                 console.log('识别梯档位:', step.long, 'psm' + step.psm,
-                    '质量' + q, Math.round(window.performance.now() - t0) + 'ms');
+                    '质量' + q, Math.round(dt) + 'ms');
                 if (q > bestQuality) {
                     bestText = t; bestPrep = prep; bestQuality = q;
                     if (step.psm === '11') fileInfo.ocrPsm = '11'; else delete fileInfo.ocrPsm;
                 }
                 if (bestQuality >= 2) break;   /* 行数证据齐全，无需继续 */
             }
+            stopOcrTimer();   /* loadingHtml 即将被结果替换，计时 interval 必须先停 */
             /* 四档都没读出可解析的文字（空白图 / 完全不是票面 / 糊到读不出）：
                以前 bestPrep 还是 null，下一行立刻抛 "Cannot read properties of null
                (reading 'originalDims')"，用户看到的是 JS 报错而不是「没识别到」 */
             if (!bestText || !bestPrep) {
-                showData('<div class="alert err">没读到可识别的文字：图片可能太糊、太小，或者不是彩票票面。</div>');
+                var timeoutNote = skippedByBudget > 0
+                    ? ' 已达 ' + Math.round(OCR_TIME_BUDGET_MS / 1000) + ' 秒时限（截断剩余 ' + skippedByBudget + ' 档），可重试一次或换更清晰的照片。'
+                    : '';
+                showData('<div class="alert err">没读到可识别的文字：图片可能太糊、太小，或者不是彩票票面。' + timeoutNote + '</div>');
                 $('#up-btn').removeAttr('disabled');
                 return;
             }
+            if (skippedByBudget > 0) fileInfo.ocrSkipped = skippedByBudget;
             fileInfo.originalDims = bestPrep.originalDims;
             fileInfo.prepDims = bestPrep.prepDims;
             fileInfo.prepScale = bestPrep.prepScale;
@@ -2424,6 +2521,7 @@
             attachPrepImage(bestPrep);   /* 识别用图 = 实际送入引擎的那张，供用户切换查看 */
             processOCRResult(bestText, fileInfo);
         } catch (error) {
+            stopOcrTimer();
             console.error('OCR识别失败:', error);
             showData('<div class="alert err">OCR识别失败: ' + esc(error && error.message ? error.message : error) + '</div>');
             $('#up-btn').removeAttr('disabled');
