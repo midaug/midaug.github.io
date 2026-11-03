@@ -43,7 +43,7 @@
                             "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
                             "width":  3200 ,
                             "height":  2048 
-                        }],"genre": "posts","keywords": "Markdown, 语法测试, Hugo, LoveIt, KaTeX","wordcount":  6717 ,
+                        }],"genre": "posts","keywords": "Markdown, 语法测试, Hugo, LoveIt, KaTeX","wordcount":  6816 ,
         "url": "https:\/\/midaug.100180.xyz\/posts\/20171220\/","datePublished": "2017-12-20T17:11:34+00:00","dateModified": "2026-11-03T14:40:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
@@ -131,7 +131,7 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Markdown 语法测试</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/%E6%B5%8B%E8%AF%95/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>测试</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2017-12-20">2017-12-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;6717 words&nbsp;
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2017-12-20">2017-12-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;6816 words&nbsp;
                 <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;14 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
@@ -233,7 +233,7 @@
   </ul>
 </nav></div>
             </div><div class="content" id="content"><p>这是一份<strong>语法自检页</strong>：把 Markdown（Hugo Goldmark + LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。</p>
-<p>页面里的图片全部是<strong>文章自带资源</strong>（page bundle，放在 <code>content/posts/博文转载/20171220/</code>），跟着仓库一起发布，不依赖任何图床。这也是这篇重写的直接原因：它最早是 2017 年从 Cmd Markdown 复制过来的，正文里的图全挂在外链上，图床下线后整页裂图；现在改成 <code>index.md</code> + 同目录图片的结构，图片再也不会因为别人关站而失效。</p>
+<p>页面里的图片全部放在 <code>static/images/post/20171220/</code> 下，用站内绝对路径 <code>/images/post/20171220/文件名</code> 引用，跟着仓库一起发布，不依赖任何图床。这也是这篇重写的直接原因：它最早是 2017 年从 Cmd Markdown 复制过来的，正文里的图全挂在外链上，图床下线后整页裂图；现在图片跟着仓库走，再也不会因为别人关站而失效。</p>
 <p>当前站点实际配置（<code>config/_default/config.toml</code>）：goldmark 的 <code>unsafe</code>、<code>footnote</code>、<code>definitionList</code>、<code>strikethrough</code>、<code>table</code>、<code>taskList</code>、<code>typographer</code>、<code>linkify</code>、<code>passthrough</code> 全部开启；语法高亮走 chroma（带行号、带复制按钮、超 50 行折叠）；TOC 取 <code>startLevel=2</code> 到 <code>endLevel=6</code>。</p>
 <h2 id="一标题层级-h1h6">一、标题层级 H1–H6</h2>
 <p>下面六级标题是真实渲染，同时会按层级出现在右侧目录里（H1 会进目录，因为本页 <code>startLevel</code> 从 2 起算，H1 反而不进）。</p>
@@ -344,79 +344,79 @@
 <p>主题行为：外链会自动加 <code>target=&quot;_blank&quot;</code> 和外链图标；站内链接不加。上面前两个链接应该能看到右上角的小箭头。</p>
 </blockquote>
 <h2 id="五图片">五、图片</h2>
-<p>图片是本次重写的重点：<strong>全部使用页面资源</strong>，路径写相对文件名即可，Hugo 会自动解析成带指纹的 URL。</p>
+<p>图片是本次重写的重点：<strong>全部放在 <code>static/images/post/20171220/</code> 下</strong>，正文用站内绝对路径引用。这是本仓库的统一约定——文章文件按 id 命名（<code>20171220.md</code>），图片按 id 分目录（<code>static/images/post/20171220/</code>），两者不混在一起。</p>
 <h3 id="51-基本图片无标题">5.1 基本图片（无标题）</h3>
 <p><img
         class="lazyload"
         src="/svg/loading.min.svg"
-        data-src="/posts/20171220/demo-landscape.png"
-        data-srcset="/posts/20171220/demo-landscape.png, /posts/20171220/demo-landscape.png 1.5x, /posts/20171220/demo-landscape.png 2x"
+        data-src="/images/post/20171220/demo-landscape.png"
+        data-srcset="/images/post/20171220/demo-landscape.png, /images/post/20171220/demo-landscape.png 1.5x, /images/post/20171220/demo-landscape.png 2x"
         data-sizes="auto"
-        alt="/posts/20171220/demo-landscape.png"
-        title="PNG 渐变测试图" width="1200" height="675" /></p>
+        alt="/images/post/20171220/demo-landscape.png"
+        title="PNG 渐变测试图" /></p>
 <h3 id="52-带标题的图片会变成-figure--figcaption">5.2 带标题的图片（会变成 figure + figcaption）</h3>
-<p><figure><a class="lightgallery" href="/posts/20171220/demo-photo.jpg" title="JPEG 照片格式测试" data-thumbnail="/posts/20171220/demo-photo.jpg" data-sub-html="<h2>图 1：`demo-photo.jpg`，由 PNG 转 JPEG，用来对比有损压缩</h2><p>JPEG 照片格式测试</p>">
+<p><figure><a class="lightgallery" href="/images/post/20171220/demo-photo.jpg" title="JPEG 照片格式测试" data-thumbnail="/images/post/20171220/demo-photo.jpg" data-sub-html="<h2>图 1：`demo-photo.jpg`，由 PNG 转 JPEG，用来对比有损压缩</h2><p>JPEG 照片格式测试</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
-            data-src="/posts/20171220/demo-photo.jpg"
-            data-srcset="/posts/20171220/demo-photo.jpg, /posts/20171220/demo-photo.jpg 1.5x, /posts/20171220/demo-photo.jpg 2x"
+            data-src="/images/post/20171220/demo-photo.jpg"
+            data-srcset="/images/post/20171220/demo-photo.jpg, /images/post/20171220/demo-photo.jpg 1.5x, /images/post/20171220/demo-photo.jpg 2x"
             data-sizes="auto"
-            alt="/posts/20171220/demo-photo.jpg" width="1200" height="675" />
+            alt="/images/post/20171220/demo-photo.jpg" />
     </a><figcaption class="image-caption">图 1：`demo-photo.jpg`，由 PNG 转 JPEG，用来对比有损压缩</figcaption>
     </figure></p>
 <blockquote>
 <p>注意：Markdown 的图片「标题」在 LoveIt 里不是 <code>title</code> 提示，而是<strong>图注</strong>。写法是 <code>![alt](src &quot;图注&quot;)</code>。</p>
 </blockquote>
 <h3 id="53-矢量图-svg">5.3 矢量图 SVG</h3>
-<p><figure><a class="lightgallery" href="/images/20171220/demo-icon.svg" title="SVG 矢量图" data-thumbnail="/images/20171220/demo-icon.svg" data-sub-html="<h2>图 2：SVG 用 `&lt;img&gt;` 引用，放大不糊</h2><p>SVG 矢量图</p>">
+<p><figure><a class="lightgallery" href="/images/post/20171220/demo-icon.svg" title="SVG 矢量图" data-thumbnail="/images/post/20171220/demo-icon.svg" data-sub-html="<h2>图 2：SVG 用 `&lt;img&gt;` 引用，放大不糊</h2><p>SVG 矢量图</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
-            data-src="/images/20171220/demo-icon.svg"
-            data-srcset="/images/20171220/demo-icon.svg, /images/20171220/demo-icon.svg 1.5x, /images/20171220/demo-icon.svg 2x"
+            data-src="/images/post/20171220/demo-icon.svg"
+            data-srcset="/images/post/20171220/demo-icon.svg, /images/post/20171220/demo-icon.svg 1.5x, /images/post/20171220/demo-icon.svg 2x"
             data-sizes="auto"
-            alt="/images/20171220/demo-icon.svg" />
+            alt="/images/post/20171220/demo-icon.svg" />
     </a><figcaption class="image-caption">图 2：SVG 用 `<img>` 引用，放大不糊</figcaption>
     </figure></p>
 <blockquote>
-<p><strong>踩坑记录（重要）</strong>：SVG 不能和上面几张图一样放在文章目录里。LoveIt 的 <code>plugin/img.html</code> 会对页面资源调用 <code>.Width</code>，而 Hugo 的 <code>.Width</code> 只支持位图，遇到 SVG 会直接<strong>构建失败</strong>：</p>
+<p><strong>踩坑记录（重要）</strong>：本文最初是 page bundle 结构（<code>20171220/index.md</code> + 同目录图片），SVG 放在文章目录里会让<strong>构建直接失败</strong>。LoveIt 的 <code>plugin/img.html</code> 会对页面资源调用 <code>.Width</code>，而 Hugo 的 <code>.Width</code> 只支持位图：</p>
 <p><code>error calling Width: this method is only available for raster images</code></p>
-<p>所以 SVG 要放在 <code>static/images/20171220/</code> 下，用站内绝对路径引用（就像上面这样），这样模板查不到页面资源，就不会去取宽高。</p>
+<p>现在统一改成 <code>static/images/post/20171220/</code> + 绝对路径，模板查不到页面资源、不会去取宽高，SVG 自然没问题，也和仓库里其它文章的图片组织方式一致了。</p>
 </blockquote>
 <h3 id="54-透明通道-png">5.4 透明通道 PNG</h3>
 <p><img
         class="lazyload"
         src="/svg/loading.min.svg"
-        data-src="/posts/20171220/demo-alpha.png"
-        data-srcset="/posts/20171220/demo-alpha.png, /posts/20171220/demo-alpha.png 1.5x, /posts/20171220/demo-alpha.png 2x"
+        data-src="/images/post/20171220/demo-alpha.png"
+        data-srcset="/images/post/20171220/demo-alpha.png, /images/post/20171220/demo-alpha.png 1.5x, /images/post/20171220/demo-alpha.png 2x"
         data-sizes="auto"
-        alt="/posts/20171220/demo-alpha.png"
-        title="透明渐变" width="480" height="240" /></p>
+        alt="/images/post/20171220/demo-alpha.png"
+        title="透明渐变" /></p>
 <h3 id="55-棋盘格检查缩放与边框">5.5 棋盘格（检查缩放与边框）</h3>
-<p><figure><a class="lightgallery" href="/posts/20171220/demo-checker.png" title="棋盘格" data-thumbnail="/posts/20171220/demo-checker.png" data-sub-html="<h2>图 3：40px 棋盘格，用来判断图片是否被拉伸变形</h2><p>棋盘格</p>">
+<p><figure><a class="lightgallery" href="/images/post/20171220/demo-checker.png" title="棋盘格" data-thumbnail="/images/post/20171220/demo-checker.png" data-sub-html="<h2>图 3：40px 棋盘格，用来判断图片是否被拉伸变形</h2><p>棋盘格</p>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
-            data-src="/posts/20171220/demo-checker.png"
-            data-srcset="/posts/20171220/demo-checker.png, /posts/20171220/demo-checker.png 1.5x, /posts/20171220/demo-checker.png 2x"
+            data-src="/images/post/20171220/demo-checker.png"
+            data-srcset="/images/post/20171220/demo-checker.png, /images/post/20171220/demo-checker.png 1.5x, /images/post/20171220/demo-checker.png 2x"
             data-sizes="auto"
-            alt="/posts/20171220/demo-checker.png" width="600" height="600" />
+            alt="/images/post/20171220/demo-checker.png" />
     </a><figcaption class="image-caption">图 3：40px 棋盘格，用来判断图片是否被拉伸变形</figcaption>
     </figure></p>
 <h3 id="56-图片-shortcode可指定宽高与说明">5.6 图片 shortcode（可指定宽高与说明）</h3>
-<figure><a class="lightgallery" href="/posts/20171220/demo-landscape.png" title="shortcode 图片" data-thumbnail="/posts/20171220/demo-landscape.png" data-sub-html="<h2>图 4：image shortcode，可传 width / height / linked</h2>">
+<figure><a class="lightgallery" href="/images/post/20171220/demo-landscape.png" title="shortcode 图片" data-thumbnail="/images/post/20171220/demo-landscape.png" data-sub-html="<h2>图 4：image shortcode，可传 width / height / linked</h2>">
         <img
             class="lazyload"
             src="/svg/loading.min.svg"
-            data-src="/posts/20171220/demo-landscape.png"
-            data-srcset="/posts/20171220/demo-landscape.png, /posts/20171220/demo-landscape.png 1.5x, /posts/20171220/demo-landscape.png 2x"
+            data-src="/images/post/20171220/demo-landscape.png"
+            data-srcset="/images/post/20171220/demo-landscape.png, /images/post/20171220/demo-landscape.png 1.5x, /images/post/20171220/demo-landscape.png 2x"
             data-sizes="auto"
-            alt="shortcode 图片" width="520" height="675" />
+            alt="shortcode 图片" width="520" />
     </a><figcaption class="image-caption">图 4：<code>image</code> shortcode，可传 width / height / linked</figcaption>
     </figure>
 <blockquote>
-<p>关于外链图片：博客页只下发了 COOP、没有 COEP，所以技术上可以贴外链图；但本文 2017 年的旧版就是反例——5 张图全在 <code>zybuluo.com</code> 上，图床一下线就只剩破图图标。<strong>图片尽量放进文章目录</strong>，它会跟仓库一起备份、一起发布。</p>
+<p>关于外链图片：博客页只下发了 COOP、没有 COEP，所以技术上可以贴外链图；但本文 2017 年的旧版就是反例——5 张图全在 <code>zybuluo.com</code> 上，图床一下线就只剩破图图标。<strong>图片统一放 <code>static/images/post/&lt;id&gt;/</code></strong>，它会跟仓库一起备份、一起发布。</p>
 </blockquote>
 <h2 id="六列表">六、列表</h2>
 <h3 id="61-无序列表">6.1 无序列表</h3>
@@ -937,7 +937,7 @@
 </ul>
 </details>
 <figure>
-  <img src="demo-checker.png" alt="原生 figure" width="220">
+  <img src="/images/post/20171220/demo-checker.png" alt="原生 figure" width="220">
   <figcaption>原生 <code>&lt;figure&gt;</code> + <code>&lt;figcaption&gt;</code></figcaption>
 </figure>
 <p style="color:#e83e8c;font-weight:600;">带内联样式的段落（不推荐在正文大量使用，但确实生效）。</p>
@@ -1194,7 +1194,7 @@ $$
 </tr>
 <tr>
 <td>图片</td>
-<td>4 张位图正常显示，带标题的变成 figure + 图注，SVG 单独放 static</td>
+<td>5 张图正常显示，带标题的变成 figure + 图注，路径均为 <code>/images/post/20171220/</code></td>
 </tr>
 <tr>
 <td>宽表格</td>
