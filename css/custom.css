@@ -100,14 +100,15 @@
 /* ============================================================
    KaTeX 块级公式防溢出
    问题：KaTeX 公式永不换行，`.katex-display` 默认 overflow: visible，
-   窄屏上一个 \qquad 串多公式的 display 公式会直接撑破容器，
-   把整个页面撑出横向滚动。
+   窄屏上超宽的 display 公式会直接撑破容器，把整个页面撑出横向滚动。
    方案：让公式块自己在内部横向滚动，而不是撑破页面。
+   注意：本页 KaTeX 自带 CSS 在 custom.css 之后加载，同名选择器
+   `.katex-display` 会被它覆盖回 block，因此这里提级到 #content 下。
    ============================================================ */
 
-.katex-display {
+#content .katex-display {
     max-width: 100%;
-    /* KaTeX 默认是 text-align: center 的普通块；改成 flex 才能精确控制溢出对齐 */
+    /* 改成 flex 才能精确控制溢出时的对齐方式 */
     display: flex;
     justify-content: center;
     /* 支持的浏览器溢出时自动转为起点对齐，保证左侧内容也能滚动到 */
@@ -117,13 +118,48 @@
     -webkit-overflow-scrolling: touch;
     /* 给横向滚动条留出空间，不贴住下一行文字 */
     padding: .25rem 0 .5rem;
+    /* 桌面端滚动条细一点，公式块不显突兀 */
+    scrollbar-width: thin;
 }
 
-/* 桌面端滚动条细一点，公式块不显突兀 */
-.katex-display::-webkit-scrollbar {
+#content .katex-display::-webkit-scrollbar {
     height: 6px;
 }
 
-.katex-display {
-    scrollbar-width: thin;
+/* ============================================================
+   代码块防溢出（页面被撑宽的主凶）
+   主题 CSS 只给 `.table-wrapper` 定义了 overflow-x: auto，但本站
+   chroma 代码块输出的是 `.highlight > .chroma > table.lntable`，
+   既没有 wrapper 也没有任何滚动包装；pre 又被主题设为
+   min-width: max-content（永不折行），长代码行会直接撑破正文、
+   撑宽整个 body，手机上表现为整页横向滚动/布局异常。
+   ============================================================ */
+
+.single .content .highlight {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.single .content .highlight::-webkit-scrollbar {
+    height: 6px;
+}
+
+/* ============================================================
+   普通表格防溢出
+   主题虽然有 `.table-wrapper { overflow-x: auto }` 的规则，但本站
+   表格 HTML 里根本没有 wrapper（主题既没有 render hook 也没有
+   JS 包装逻辑），表格是裸的 <table>。单元格里有不可折行的内容
+   （长行内代码、KaTeX 行内公式）时，表格 min-content 会顶破
+   max-width: 100% 撑宽页面。用 Bootstrap table-responsive 的
+   通用方案：table 转 block + 内部横向滚动。
+   ============================================================ */
+
+.single .content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.single .content table::-webkit-scrollbar {
+    height: 6px;
 }
