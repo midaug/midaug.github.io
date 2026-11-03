@@ -1,3 +1,32 @@
+/* 页面最大宽度 */
 .page {
-    max-width: 1280px;    
+    max-width: 1280px;
+}
+
+/* 正文标题与上方内容的间距
+   主题默认是 h2~h6 { margin: 1.2rem 0 }，代码块/表格/段落之后接标题会显得很挤。
+   这里只加大标题的上边距，下边距保持主题原值。 */
+#content > h2 {
+    margin-top: 2.75rem;
+}
+
+#content > h3 {
+    margin-top: 2.25rem;
+}
+
+#content > h4 {
+    margin-top: 1.75rem;
+}
+
+/* 标题紧跟标题时（h2 下面直接是 h3）不需要那么大空隙 */
+#content > h2 + h3,
+#content > h3 + h4 {
+    margin-top: 1rem;
+}
+
+/* 正文第一个标题贴着容器顶部，不需要额外上边距 */
+#content > h2:first-child,
+#content > h3:first-child,
+#content > h4:first-child {
+    margin-top: 0;
 }
