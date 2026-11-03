@@ -96,3 +96,34 @@
         margin-top: 1.5rem;
     }
 }
+
+/* ============================================================
+   KaTeX 块级公式防溢出
+   问题：KaTeX 公式永不换行，`.katex-display` 默认 overflow: visible，
+   窄屏上一个 \qquad 串多公式的 display 公式会直接撑破容器，
+   把整个页面撑出横向滚动。
+   方案：让公式块自己在内部横向滚动，而不是撑破页面。
+   ============================================================ */
+
+.katex-display {
+    max-width: 100%;
+    /* KaTeX 默认是 text-align: center 的普通块；改成 flex 才能精确控制溢出对齐 */
+    display: flex;
+    justify-content: center;
+    /* 支持的浏览器溢出时自动转为起点对齐，保证左侧内容也能滚动到 */
+    justify-content: safe center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* 给横向滚动条留出空间，不贴住下一行文字 */
+    padding: .25rem 0 .5rem;
+}
+
+/* 桌面端滚动条细一点，公式块不显突兀 */
+.katex-display::-webkit-scrollbar {
+    height: 6px;
+}
+
+.katex-display {
+    scrollbar-width: thin;
+}
