@@ -7,7 +7,7 @@
         <title>Markdown 语法测试 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/20171220/">
   <meta property="og:site_name" content="MidAug&#39;s  Blog">
   <meta property="og:title" content="Markdown 语法测试">
-  <meta property="og:description" content="这是一份语法自检页：把 Markdown（Hugo Goldmark &#43; LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。 页面里的图片">
+  <meta property="og:description" content="这是一份语法自检页：把 Markdown（Hugo Goldmark &#43; LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。 一、标题层级">
   <meta property="og:locale" content="en">
   <meta property="og:type" content="article">
   <meta property="article:section" content="posts">
@@ -21,7 +21,7 @@
     <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="Markdown 语法测试">
-<meta name="twitter:description" content="这是一份语法自检页：把 Markdown（Hugo Goldmark &#43; LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。 页面里的图片">
+<meta name="twitter:description" content="这是一份语法自检页：把 Markdown（Hugo Goldmark &#43; LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。 一、标题层级">
 <meta name="application-name" content="MidAug&#39;s  Blog">
 <meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -43,7 +43,7 @@
                             "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
                             "width":  3200 ,
                             "height":  2048 
-                        }],"genre": "posts","keywords": "Markdown, 语法测试, Hugo, LoveIt, KaTeX","wordcount":  6816 ,
+                        }],"genre": "posts","keywords": "Markdown, 语法测试, Hugo, LoveIt, KaTeX","wordcount":  6419 ,
         "url": "https:\/\/midaug.100180.xyz\/posts\/20171220\/","datePublished": "2017-12-20T17:11:34+00:00","dateModified": "2026-11-03T14:40:00+00:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
             "@type": "Organization",
             "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
@@ -131,8 +131,8 @@
             <div class="toc-content" id="toc-content-auto"></div>
         </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Markdown 语法测试</h1><div class="post-meta">
             <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/%E6%B5%8B%E8%AF%95/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>测试</a></span></div>
-            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2017-12-20">2017-12-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;6816 words&nbsp;
-                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;14 minutes&nbsp;</div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2017-12-20">2017-12-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;6419 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;13 minutes&nbsp;</div>
         </div><div class="details toc" id="toc-static"  data-kept="">
                 <div class="details-summary toc-title">
                     <span>Contents</span>
@@ -233,8 +233,6 @@
   </ul>
 </nav></div>
             </div><div class="content" id="content"><p>这是一份<strong>语法自检页</strong>：把 Markdown（Hugo Goldmark + LoveIt 扩展）和主题的扩展能力逐项列出来，用来确认「源码怎么写 → 页面上长什么样」。</p>
-<p>页面里的图片全部放在 <code>static/images/post/20171220/</code> 下，用站内绝对路径 <code>/images/post/20171220/文件名</code> 引用，跟着仓库一起发布，不依赖任何图床。这也是这篇重写的直接原因：它最早是 2017 年从 Cmd Markdown 复制过来的，正文里的图全挂在外链上，图床下线后整页裂图；现在图片跟着仓库走，再也不会因为别人关站而失效。</p>
-<p>当前站点实际配置（<code>config/_default/config.toml</code>）：goldmark 的 <code>unsafe</code>、<code>footnote</code>、<code>definitionList</code>、<code>strikethrough</code>、<code>table</code>、<code>taskList</code>、<code>typographer</code>、<code>linkify</code>、<code>passthrough</code> 全部开启；语法高亮走 chroma（带行号、带复制按钮、超 50 行折叠）；TOC 取 <code>startLevel=2</code> 到 <code>endLevel=6</code>。</p>
 <h2 id="一标题层级-h1h6">一、标题层级 H1–H6</h2>
 <p>下面六级标题是真实渲染，同时会按层级出现在右侧目录里（H1 会进目录，因为本页 <code>startLevel</code> 从 2 起算，H1 反而不进）。</p>
 <h1 id="h1-一级标题">H1 一级标题</h1>
@@ -344,7 +342,7 @@
 <p>主题行为：外链会自动加 <code>target=&quot;_blank&quot;</code> 和外链图标；站内链接不加。上面前两个链接应该能看到右上角的小箭头。</p>
 </blockquote>
 <h2 id="五图片">五、图片</h2>
-<p>图片是本次重写的重点：<strong>全部放在 <code>static/images/post/20171220/</code> 下</strong>，正文用站内绝对路径引用。这是本仓库的统一约定——文章文件按 id 命名（<code>20171220.md</code>），图片按 id 分目录（<code>static/images/post/20171220/</code>），两者不混在一起。</p>
+<p>图片统一用站内绝对路径引用（<code>/images/post/20171220/文件名</code>）。</p>
 <h3 id="51-基本图片无标题">5.1 基本图片（无标题）</h3>
 <p><img
         class="lazyload"
