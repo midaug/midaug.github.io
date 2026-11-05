@@ -516,7 +516,7 @@
     <!-- 试听 demo：整段实时合成，不加载任何音频文件。
          每个音符各自带一个 PannerNode，方位逐音符指定，所以「声音从哪来」是确定的，
          比现成立体声音乐更容易分辨方向。 -->
-    <div class="sub-h">试听 demo<span class="hint">点一下即播放，声音会绕着你走</span></div>
+    <div class="sub-h">试听 demo<span class="hint">点一下即播放，再点一次停止；环绕类声音会绕着你走</span></div>
     <div class="demo-list" id="demoList"></div>
 
     <div class="split">
@@ -1458,8 +1458,8 @@
   }
 
   /* ================= demo 试听 =================
-     三段 demo 全部实时合成，不加载任何音频文件。
-     每个音符各自挂一个 PannerNode，方位逐音符指定 —— 这比现成立体声音乐更容易分辨方向：
+     四段 demo 全部实时合成，不加载任何音频文件。
+     环绕类每个音符各自挂一个 PannerNode，方位逐音符指定 —— 这比现成立体声音乐更容易分辨方向：
      音乐里的空间信息是混音师定死的，而这里「这个音符在哪个方位」是确定的。 */
 
   /* C 大调五声音阶（无半音），听感自然不刺耳 */
@@ -1576,7 +1576,85 @@
     o.onended = function () { try { o.disconnect(); g.disconnect(); pn.disconnect(); } catch (e) {} };
   }
 
+  /* ④ 一段旋律：欢乐颂主题（公版），测蓝牙耳机「出不出声」最直观。
+     与其它 demo 的差异是「长」：stop 时已调度的几十个音符收不回来，
+     光把 demoGain 拉零还不够 —— 下次点任何 demo 它会被恢复的音量「复活」。
+     所以所有音符挂进独立的 musicGain，stopDemo 直接 disconnect 切断，
+     残留节点变成孤儿交给 GC。 */
+  var musicCut = null;
+  /* [midi, 拍数]，C 大调，两乐句各 4 小节；1.5/.5 是原曲的附点节奏 */
+  var SONG = [
+    [64,1],[64,1],[65,1],[67,1],
+    [67,1],[65,1],[64,1],[62,1],
+    [60,1],[60,1],[62,1],[64,1],
+    [64,1.5],[62,.5],[62,2],
+    [64,1],[64,1],[65,1],[67,1],
+    [67,1],[65,1],[64,1],[62,1],
+    [60,1],[60,1],[62,1],[64,1],
+    [62,1.5],[60,.5],[60,2]
+  ];
+
+  function buildMusic(t0) {
+    var mg = au.createGain();
+    mg.gain.value = 1;
+    mg.connect(demoGain);
+    musicCut = function () { try { mg.disconnect(); } catch (e) {} };
+
+    var BEAT = 0.42;
+    /* 单音：拨弦式包络，音色由 type 指定（旋律 sine、低音 triangle） */
+    function tone(t, midi, dur, vol, type) {
+      var o = au.createOscillator();
+      o.type = type || "sine";
+      o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+      var g = au.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.018);
+      g.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(mg);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+      o.onended = function () { try { o.disconnect(); g.disconnect(); } catch (e) {} };
+    }
+
+    var BASS = [48, 43, 48, 43];      /* 每小节一个根音：C3 G2 C3 G2 */
+    var t = t0;
+
+    /* 两遍主题：第一遍中音区 + 低音；第二遍高八度 + 琶音，让低中高频都出声 */
+    for (var pass = 0; pass < 2; pass++) {
+      var oct = pass === 0 ? 0 : 12;
+      var bt = t;
+      for (var bar = 0; bar < 8; bar++) {
+        tone(bt + bar * 4 * BEAT, BASS[bar], BEAT * 1.6, 0.17, "triangle");
+        tone(bt + (bar * 4 + 2) * BEAT, BASS[bar], BEAT * 1.6, 0.14, "triangle");
+        /* 第二遍加琶音轻铺，避免重复段太单调 */
+        if (pass === 1) {
+          var root = BASS[bar];
+          for (var s = 0; s < 4; s++) {
+            tone(bt + (bar * 4 + s) * BEAT, root, BEAT * 0.85, 0.075, "sine");
+            tone(bt + (bar * 4 + s + 0.5) * BEAT, root + 7, BEAT * 0.85, 0.06, "sine");
+          }
+        }
+      }
+      var nt = t;
+      for (var i = 0; i < SONG.length; i++) {
+        var nd = SONG[i][1] * BEAT;
+        tone(nt, SONG[i][0] + oct, nd * 0.92, pass === 0 ? 0.30 : 0.26, "sine");
+        nt += nd;
+      }
+      t += 32 * BEAT;
+    }
+
+    /* 尾奏：琶音上行收在一个 C 大三和弦上 */
+    var fin = [48, 52, 55, 60, 64, 67, 72];
+    for (var f = 0; f < fin.length; f++) tone(t + f * 0.13, fin[f], 0.5, 0.2, "sine");
+    var chord = [60, 64, 67, 72];
+    for (var c = 0; c < chord.length; c++) tone(t + 1.1, chord[c], 1.3, 0.16, "sine");
+  }
+
   var DEMOS = [
+    { key: "music", name: "音乐 · 出声测试", desc: "欢乐颂旋律 30 秒，测蓝牙耳机有无声音", dur: 30.5, build: buildMusic },
     { key: "lr",    name: "左右声道交替", desc: "左 → 右 → 双声道，查接线是否接反", dur: 5.6, build: buildLR },
     { key: "orbit", name: "环绕旋转一圈", desc: "声音绕头一周，感受方位连续性",     dur: 6.5, build: buildOrbit },
     { key: "fb",    name: "前后穿行",     desc: "正前 ↔ 正后，HRTF 定位测试",       dur: 5.0, build: buildFB }
@@ -1643,6 +1721,9 @@
   function stopDemo() {
     clearInterval(demoTimer);
     demoTimer = 0;
+    /* 音乐 demo 的切断钩子：disconnect 掉它的独立增益，
+       否则已调度的几十个音符要等自然结束，还会在下次播放时被恢复的音量复活 */
+    if (musicCut) { musicCut(); musicCut = null; }
     /* 已经调度出去的音符收不回来，靠总增益拉 0 静音；下次播放前再设回 1 */
     if (demoGain && au) {
       try {
