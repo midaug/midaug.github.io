@@ -235,6 +235,14 @@
     position: absolute; right: 12px; top: 0; height: var(--row); margin-left: 0;
     display: flex; align-items: center; justify-content: flex-end;
   }
+  /* 非 wrap 模式：行高同样按内容放开（默认单行时仍等于 --row）。
+     「展开换行」打开后，值里的真实换行会把行撑成多行 —— 若保持 height: var(--row)
+     固定，多行内容会溢出行盒、与下一行重叠。行高本来就是每行实测 offsetHeight
+     驱动的，放开后虚拟滚动的偏移量自然跟着变。 */
+  #viewport:not(.wrap) .row {
+    height: auto; min-height: var(--row);
+    align-items: flex-start;
+  }
   .k { color: var(--key); }
   /* 冒号后面直接跟一个真实空格（复制出来是 ": "，符合 JSON 惯例），
      因此这里不再需要额外右边距 */
@@ -352,6 +360,7 @@
     </label>
     <label class="stat optional"><input type="checkbox" id="sortKeys" /> 排序键</label>
     <label class="stat optional" title="把内容本身是 JSON 的字符串字段也解析成嵌套结构"><input type="checkbox" id="nested" /> 嵌套解析</label>
+    <label class="stat optional" title="字符串值里的 \n、\r\n、\r 显示为真实换行；字面的 \\n 不会被误判"><input type="checkbox" id="xnl" checked /> 展开换行</label>
     <label class="stat optional"><input type="checkbox" id="wrap" checked /> 自动换行</label>
       <span class="sep hide-sm"></span>
     <span class="stat privacy-stat">全部在本地浏览器内完成，JSON 不会上传</span>
@@ -427,6 +436,7 @@
 
   /* 结果区换行模式：行高不再固定，改用「每行实测高度 + 累积偏移」驱动虚拟滚动 */
   let wrapMode = true, lastAvail = 0;
+  let nlExpand = true;   // 「展开换行」：字符串值里的 \n 渲染成真实换行（与 #xnl 同步，改这个无效）
   /* 当前是否「整篇渲染」（行数 ≤ FULL_LIMIT），由 render() 维护；滚动时据此决定要不要重渲染 */
   let fullMode = false;
   /* 真实缩进字符（随「缩进」下拉变化），写进 .ind 供框选复制带走 */
@@ -1018,8 +1028,17 @@
     } else if (n.raw === null) {
       v.className = "v nl"; v.textContent = "null"; v.title = "";
     } else if (typeof n.raw === "string") {
-      v.className = "v s";
-      v.textContent = JSON.stringify(n.raw);   // 用 JSON 转义，不能用 HTML 转义
+      // 用 JSON 转义，不能用 HTML 转义
+      const s = JSON.stringify(n.raw);
+      /* 展开换行：把 JSON 转义文本里的 \r\n / \n / \r 替换成真实换行。
+         正则交替的顺序不能乱（经验来自 text-kit 换行符 tab，踩过的坑）：
+         \r\n 必须排在 \n、\r 之前（否则被拆成两个转义各自还原）；
+         \\ 必须保留原样 —— 字面的 \\n（反斜杠+n）才会原样显示，不会被误判成换行。 */
+      let x = null;
+      if (nlExpand && (s.indexOf("\\n") >= 0 || s.indexOf("\\r") >= 0))
+        x = s.replace(/\\r\\n|\\n|\\r|\\\\/g, m => (m === "\\\\") ? m : "\n");
+      v.className = "v s" + (x ? " xnl" : "");
+      v.textContent = x || s;
       v.title = "";
     } else if (typeof n.raw === "number") {
       v.className = "v num"; v.textContent = String(n.raw); v.title = "";
@@ -1380,6 +1399,12 @@
   $("indent").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
   $("sortKeys").onchange = () => { if (input.value.trim()) $("btnFormat").click(); };
   $("nested").onchange = () => { if (input.value.trim()) parseAndRender(); };
+  /* 展开换行只影响渲染（flat 结构不变），不用重新 parse；
+     startBuild(true) 走锚点保滚动，长文档里切开关不跳顶 */
+  $("xnl").onchange = e => {
+    nlExpand = e.target.checked;
+    if (input.value.trim()) startBuild(true);
+  };
 
   let idle;
   function scheduleParse() {
