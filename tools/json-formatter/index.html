@@ -360,7 +360,7 @@
     </label>
     <label class="stat optional"><input type="checkbox" id="sortKeys" /> 排序键</label>
     <label class="stat optional" title="把内容本身是 JSON 的字符串字段也解析成嵌套结构"><input type="checkbox" id="nested" /> 嵌套解析</label>
-    <label class="stat optional" title="字符串值里的 \n、\r\n、\r 显示为真实换行；字面的 \\n 不会被误判"><input type="checkbox" id="xnl" checked /> 展开换行</label>
+    <label class="stat optional" title="字符串值里的 \n、\r\n、\r 显示为真实换行；字面的 \\n 不会被误判"><input type="checkbox" id="xnl" /> 展开换行</label>
     <label class="stat optional"><input type="checkbox" id="wrap" checked /> 自动换行</label>
       <span class="sep hide-sm"></span>
     <span class="stat privacy-stat">全部在本地浏览器内完成，JSON 不会上传</span>
@@ -436,7 +436,7 @@
 
   /* 结果区换行模式：行高不再固定，改用「每行实测高度 + 累积偏移」驱动虚拟滚动 */
   let wrapMode = true, lastAvail = 0;
-  let nlExpand = true;   // 「展开换行」：字符串值里的 \n 渲染成真实换行（与 #xnl 同步，改这个无效）
+  let nlExpand = false;  // 「展开换行」：字符串值里的 \n 渲染成真实换行（与 #xnl 的 checked 保持一致，默认关）
   /* 当前是否「整篇渲染」（行数 ≤ FULL_LIMIT），由 render() 维护；滚动时据此决定要不要重渲染 */
   let fullMode = false;
   /* 真实缩进字符（随「缩进」下拉变化），写进 .ind 供框选复制带走 */
