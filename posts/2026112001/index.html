@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noodp" />
+        <title>Docker Mirror Gateway：一个地址搞定所有容器镜像加速 - MidAug&#39;s  Blog</title><meta name="Description" content="MidAug blog java docker hugo"><meta property="og:url" content="https://midaug.100180.xyz/posts/2026112001/">
+  <meta property="og:site_name" content="MidAug&#39;s  Blog">
+  <meta property="og:title" content="Docker Mirror Gateway：一个地址搞定所有容器镜像加速">
+  <meta property="og:description" content="一、前言 拉镜像这件事，难点从来不是「拉」，而是「从哪拉」。加速源今天能用明天 403，GHCR、Quay、K8s 每类仓库还得单独找地址单独配。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+  <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-11-20T11:00:00+08:00">
+    <meta property="article:modified_time" content="2026-11-20T11:00:00+08:00">
+    <meta property="article:tag" content="Docker">
+    <meta property="article:tag" content="镜像加速">
+    <meta property="article:tag" content="容器">
+    <meta property="article:tag" content="镜像源">
+    <meta property="article:tag" content="开源项目">
+    <meta property="article:tag" content="Go">
+    <meta property="og:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://midaug.100180.xyz/images/whoami/avatar.jpg"><meta name="twitter:title" content="Docker Mirror Gateway：一个地址搞定所有容器镜像加速">
+<meta name="twitter:description" content="一、前言 拉镜像这件事，难点从来不是「拉」，而是「从哪拉」。加速源今天能用明天 403，GHCR、Quay、K8s 每类仓库还得单独找地址单独配。">
+<meta name="application-name" content="MidAug&#39;s  Blog">
+<meta name="apple-mobile-web-app-title" content="MidAug&#39;s  Blog"><meta name="theme-color" content="#ffffff"><meta name="msapplication-TileColor" content="#da532c"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5"><link rel="manifest" href="/site.webmanifest"><link rel="canonical" href="https://midaug.100180.xyz/posts/2026112001/" /><link rel="prev" href="https://midaug.100180.xyz/posts/2026101002/" /><link rel="stylesheet" href="/css/style.min.css"><link rel="preload" href="/lib/fontawesome-free/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/fontawesome-free/all.min.css"></noscript><link rel="preload" href="/lib/animate/animate.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+        <noscript><link rel="stylesheet" href="/lib/animate/animate.min.css"></noscript>
+    <link rel="stylesheet" href="/css/custom.css">
+<script type="application/ld+json">
+    {
+        "@context": "http://schema.org",
+        "@type": "BlogPosting",
+        "headline": "Docker Mirror Gateway：一个地址搞定所有容器镜像加速",
+        "inLanguage": "en",
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": "https:\/\/midaug.100180.xyz\/posts\/2026112001\/"
+        },"image": [{
+                            "@type": "ImageObject",
+                            "url": "https:\/\/midaug.100180.xyz\/images\/Apple-Devices-Preview.png",
+                            "width":  3200 ,
+                            "height":  2048 
+                        }],"genre": "posts","keywords": "Docker, 镜像加速, 容器, 镜像源, 开源项目, Go","wordcount":  4592 ,
+        "url": "https:\/\/midaug.100180.xyz\/posts\/2026112001\/","datePublished": "2026-11-20T11:00:00+08:00","dateModified": "2026-11-20T11:00:00+08:00","license": "This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.","publisher": {
+            "@type": "Organization",
+            "name": "MidAug","logo": "https:\/\/midaug.100180.xyz\/images\/whoami\/avatar.jpg"},"author": {
+                "@type": "Person",
+                "name": "MidAug"
+            },"description": ""
+    }
+    </script></head>
+    <body data-header-desktop="fixed" data-header-mobile="auto"><script type="text/javascript">(window.localStorage && localStorage.getItem('theme') ? localStorage.getItem('theme') === 'dark' : ('auto' === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : 'auto' === 'dark')) && document.body.setAttribute('theme', 'dark');</script>
+
+        <div id="mask"></div><div class="wrapper"><header class="desktop" id="header-desktop">
+    <div class="header-wrapper">
+        <div class="header-title">
+            <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-1" class="typeit"></span></a>
+        </div>
+        <div class="menu">
+            <div class="menu-inner"><a class="menu-item" href="/posts/"> Posts </a><a class="menu-item" href="/tags/"> Tags </a><a class="menu-item" href="/categories/"> Categories </a><a class="menu-item" href="/about/"> About </a><a class="menu-item" href="/disclaimer/"> Disclaimer </a><a class="menu-item" href="/tools/" title="八月半的工具箱"><i class='fas fa-toolbox fa-fw' aria-hidden='true'></i>  </a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i>  </a><span class="menu-item delimiter"></span><span class="menu-item search" id="search-desktop">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-desktop">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-desktop" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-desktop" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-desktop">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </span><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                    <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+                </a></div>
+        </div>
+    </div>
+</header><header class="mobile" id="header-mobile">
+    <div class="header-container">
+        <div class="header-wrapper">
+            <div class="header-title">
+                <a href="/" title="MidAug&#39;s  Blog"><img
+        class="lazyload logo"
+        src="/svg/loading.min.svg"
+        data-src="/favicon/apple-icon-60x60.png"
+        data-srcset="/favicon/apple-icon-60x60.png, /favicon/apple-icon-60x60.png 1.5x, /favicon/apple-icon-60x60.png 2x"
+        data-sizes="auto"
+        alt="/favicon/apple-icon-60x60.png"
+        title="/favicon/apple-icon-60x60.png" /><span id="id-2" class="typeit"></span></a>
+            </div>
+            <div class="menu-toggle" id="menu-toggle-mobile">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="menu" id="menu-mobile"><div class="search-wrapper">
+                    <div class="search mobile" id="search-mobile">
+                        <input type="text" placeholder="Search titles or contents..." id="search-input-mobile">
+                        <a href="javascript:void(0);" class="search-button search-toggle" id="search-toggle-mobile" title="Search">
+                            <i class="fas fa-search fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="search-button search-clear" id="search-clear-mobile" title="Clear">
+                            <i class="fas fa-times-circle fa-fw" aria-hidden="true"></i>
+                        </a>
+                        <span class="search-button search-loading" id="search-loading-mobile">
+                            <i class="fas fa-spinner fa-fw fa-spin" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                    <a href="javascript:void(0);" class="search-cancel" id="search-cancel-mobile">
+                        Cancel
+                    </a>
+                </div><a class="menu-item" href="/posts/" title="">Posts</a><a class="menu-item" href="/tags/" title="">Tags</a><a class="menu-item" href="/categories/" title="">Categories</a><a class="menu-item" href="/about/" title="">About</a><a class="menu-item" href="/disclaimer/" title="">Disclaimer</a><a class="menu-item" href="/tools/" title="八月半的工具箱"><i class='fas fa-toolbox fa-fw' aria-hidden='true'></i></a><a class="menu-item" href="https://github.com/midaug" title="GitHub" rel="noopener noreffer" target="_blank"><i class='fab fa-github fa-fw' aria-hidden='true'></i></a><a href="javascript:void(0);" class="menu-item theme-switch" title="Switch Theme">
+                <i class="fas fa-adjust fa-fw" aria-hidden="true"></i>
+            </a></div>
+    </div>
+</header><div class="search-dropdown desktop">
+        <div id="search-dropdown-desktop"></div>
+    </div>
+    <div class="search-dropdown mobile">
+        <div id="search-dropdown-mobile"></div>
+    </div><main class="main">
+                <div class="container"><div class="toc" id="toc-auto">
+            <h2 class="toc-title">Contents</h2>
+            <div class="toc-content" id="toc-content-auto"></div>
+        </div><article class="page single"><h1 class="single-title animate__animated animate__flipInX">Docker Mirror Gateway：一个地址搞定所有容器镜像加速</h1><div class="post-meta">
+            <div class="post-meta-line"><span class="post-author"><a href="/" title="Author" rel="author" class="author"><i class="fas fa-user-circle fa-fw" aria-hidden="true"></i>MidAug</a></span>&nbsp;<span class="post-category">included in <a href="/categories/docker/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>Docker</a>&nbsp;<a href="/categories/%E4%BB%A3%E7%90%86%E8%BD%AC%E5%8F%91/"><i class="far fa-folder fa-fw" aria-hidden="true"></i>代理转发</a></span></div>
+            <div class="post-meta-line"><i class="far fa-calendar-alt fa-fw" aria-hidden="true"></i>&nbsp;<time datetime="2026-11-20">2026-11-20</time>&nbsp;<i class="fas fa-pencil-alt fa-fw" aria-hidden="true"></i>&nbsp;4592 words&nbsp;
+                <i class="far fa-clock fa-fw" aria-hidden="true"></i>&nbsp;10 minutes&nbsp;</div>
+        </div><div class="details toc" id="toc-static"  data-kept="">
+                <div class="details-summary toc-title">
+                    <span>Contents</span>
+                    <span><i class="details-icon fas fa-angle-right" aria-hidden="true"></i></span>
+                </div>
+                <div class="details-content toc-content" id="toc-content-static"><nav id="TableOfContents">
+  <ul>
+    <li><a href="#一前言">一、前言</a></li>
+    <li><a href="#二解决什么问题">二、解决什么问题</a></li>
+    <li><a href="#三主要功能">三、主要功能</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-多仓库聚合">1. 多仓库聚合</a></li>
+            <li><a href="#2-按速度选源">2. 按速度选源</a></li>
+            <li><a href="#3-latest-新旧优先">3. latest 新旧优先</a></li>
+            <li><a href="#4-三种路由方式">4. 三种路由方式</a></li>
+            <li><a href="#5-健康检查与故障转移">5. 健康检查与故障转移</a></li>
+            <li><a href="#6-pull-through-缓存">6. pull-through 缓存</a></li>
+            <li><a href="#7-源级代理与安全">7. 源级代理与安全</a></li>
+            <li><a href="#8-监控通知与控制台">8. 监控通知与控制台</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#四界面预览">四、界面预览</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-控制台总览">1. 控制台总览</a></li>
+            <li><a href="#2-镜像搜索">2. 镜像搜索</a></li>
+            <li><a href="#3-资源占用">3. 资源占用</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#五下载与安装">五、下载与安装</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-直接下载">1. 直接下载</a></li>
+            <li><a href="#2-docker-compose">2. Docker Compose</a></li>
+            <li><a href="#3-本地运行">3. 本地运行</a></li>
+            <li><a href="#4-接入-docker">4. 接入 Docker</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#六技术实现">六、技术实现</a></li>
+    <li><a href="#七更新日志">七、更新日志</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-v0022026-11-19">1. v0.0.2（2026-11-19）</a></li>
+            <li><a href="#2-v001">2. v0.0.1</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#八小结">八、小结</a></li>
+  </ul>
+</nav></div>
+            </div><div class="content" id="content"><h2 id="一前言">一、前言</h2>
+<blockquote>
+<p>拉镜像这件事，难点从来不是「拉」，而是「从哪拉」。加速源今天能用明天 403，GHCR、Quay、K8s 每类仓库还得单独找地址单独配。这个工具就是来收拾这些事的。</p>
+</blockquote>
+<p>在境内拉容器镜像，几乎每个环节都有坑：官方源直连超时；公共加速源随时失效；好不容易配了个快的源，又因为同步滞后拉到了旧版 <code>latest</code>；CI 反复拉同一批镜像，回源带宽白白浪费。</p>
+<p>把 <code>registry-mirrors</code> 指向某一个加速地址，只能解决其中一部分问题——而且那个地址一旦挂了，所有机器一起挂。</p>
+<p>我把自己这套流程做成了一个自托管的镜像加速网关：<strong>Docker Mirror Gateway</strong>。它把多个镜像源聚合成一个地址，按健康度和实测速度自动选源，可选本地缓存，一个实例同时服务 Docker Hub、GHCR、Quay、MCR、K8s、GCR、Elastic、NVCR。</p>
+<ul>
+<li>项目地址：<a href="https://github.com/midaug/docker-mirror-gateway" target="_blank" rel="noopener noreffer ">https://github.com/midaug/docker-mirror-gateway</a></li>
+<li>开源协议：MIT</li>
+<li>当前版本：v0.0.2（2026-11-19）</li>
+</ul>
+<!-- more -->
+<h2 id="二解决什么问题">二、解决什么问题</h2>
+<p>一句话概括：<strong>它不是又一个加速地址，而是把「选哪个地址」这件事自动化了。</strong></p>
+<p><strong>加速源会挂，那就别只用一个。</strong> 一个分组下可以挂多个互为镜像的加速地址，健康检查连续失败自动降级，拉取时逐源重试，切换对客户端无感。</p>
+<p><strong>每类仓库都要单独配，那就合成一个入口。</strong> Hub / GHCR / Quay / MCR / K8s / GCR / Elastic / NVCR 共用同一地址，路径前缀、子域名、自动判定三种路由适配 Docker CLI、containerd、K8s 各种用法。</p>
+<p><strong>最快的源未必是最新的。</strong> 拉取 <code>latest</code> 这类浮动标签时并发比较各源的构建时间，内容一样才看速度，避免拉到旧镜像。</p>
+<p><strong>静态优先级会过期。</strong> 吞吐数据来自真实拉取（零成本）加定期探测，谁下载体验好就用谁。</p>
+<p><strong>官方源要挂代理，但代理又慢又不能拖累整体。</strong> 每个源可以单独配 socks5/http 代理作兜底，加速源直连主力；健康探测与真实拉取走同一个代理，不会出现「探测通过但拉不动」。</p>
+<p><strong>CI 反复拉同一批镜像。</strong> 可选的 pull-through 缓存，本地磁盘或 S3，blob 边传边校验 sha256。</p>
+<p><strong>源挂了没人知道。</strong> 分组健康跌破阈值时通过 webhook（飞书、企微、自建服务都能适配）或邮件告警，恢复自动通知。</p>
+<p><strong>Nexus / Harbor 太重。</strong> 单二进制约 12 MB，只有两个直接依赖，不依赖数据库、Redis 或 JVM，<code>docker compose up</code> 一键起。</p>
+<h2 id="三主要功能">三、主要功能</h2>
+<h4 id="1-多仓库聚合">1. 多仓库聚合</h4>
+<p>一个分组下多个互为镜像的加速地址共享同一入口，已内置 8 个分组、35 个境内公共加速源，开箱即用。配置里给出的初始顺序只是出厂值，运行起来后会按实测吞吐动态重排。</p>
+<table>
+<thead>
+<tr>
+<th>分组</th>
+<th>初始源（按序）</th>
+<th>实测吞吐</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dockerhub</td>
+<td>sparkcr → 1ms → daocloud → 1panel → 官方</td>
+<td>3.4 MB/s</td>
+</tr>
+<tr>
+<td>ghcr</td>
+<td>南京大学 → sparkcr → dockerproxy → 官方</td>
+<td>19 MB/s</td>
+</tr>
+<tr>
+<td>quay</td>
+<td>南京大学 → sparkcr → dockerproxy → daocloud → 官方</td>
+<td>6.8 MB/s</td>
+</tr>
+<tr>
+<td>mcr</td>
+<td>sparkcr → dockerproxy → daocloud → 官方</td>
+<td>22 MB/s</td>
+</tr>
+<tr>
+<td>k8s</td>
+<td>南京大学 → sparkcr → daocloud → dockerproxy → 官方</td>
+<td>4.1 MB/s</td>
+</tr>
+<tr>
+<td>gcr</td>
+<td>南京大学 → sparkcr → daocloud → dockerproxy → 官方</td>
+<td>1.6 MB/s</td>
+</tr>
+<tr>
+<td>elastic</td>
+<td>sparkcr → daocloud → 官方</td>
+<td>9.0 MB/s</td>
+</tr>
+<tr>
+<td>nvcr</td>
+<td>南京大学 → sparkcr → daocloud → 官方</td>
+<td>30 MB/s</td>
+</tr>
+</tbody>
+</table>
+<p>官方源一律放在兜底优先级：通常不可直连，但配上代理后是内容绝对正确的退路。这些都是第三方免费服务，可能限速或下线，健康检查会自动降级，也可以照格式换成自己的源或私有 registry。</p>
+<h4 id="2-按速度选源">2. 按速度选源</h4>
+<p>默认策略 <code>speed</code>，排序规则按优先级依次是：</p>
+<ol>
+<li>健康的上游永远排在失效源之前，失效源只作最后兜底；</li>
+<li>吞吐高者优先；</li>
+<li>吞吐相差在 <code>speedTolerance</code>（默认 25%）以内视为持平，此时比较延迟；</li>
+<li>仍持平则比 <code>priority</code>。</li>
+</ol>
+<p>吞吐来自真实拉取与主动探测两路。小样本（&lt; 64KB）不参与计算，计时只覆盖 body 传输。另外有个 <code>trafficWindow</code>（默认 2 分钟）：窗口内处理过成功真实拉取的上游会跳过定时探测——真实流量已经测出延迟、喂了吞吐样本、并由成败维护着健康状态，再发探测请求是纯开销。</p>
+<h4 id="3-latest-新旧优先">3. latest 新旧优先</h4>
+<p>各加速源同步上游有延迟，最快的源未必有最新的 <code>latest</code>。开启 <code>selection.preferFresh</code> 后，拉取浮动标签时会并发比较各健康上游的镜像构建时间：</p>
+<ul>
+<li>各源 manifest digest 完全一致 → 内容相同，直接按速度选，不再下载配置；</li>
+<li>否则构建时间新的优先，差异小于 <code>freshnessTolerance</code> 时才比速度；</li>
+<li>有效样本少于两个 → 退回速度排序。</li>
+</ul>
+<p>探测结果缓存 10 分钟，常见情况下只多花几百毫秒。超过 0.8 秒还没返回的源（例如挂在代理后面的官方源，单次 manifest 就要 1~3 秒）不会拖住这次请求：本次按原策略选源，探测转到后台继续跑，跑完写入缓存，后续十分钟内就能参与比较。版本号标签默认不参与比较。</p>
+<h4 id="4-三种路由方式">4. 三种路由方式</h4>
+<p>解析优先级从高到低：路径首段别名 → 请求 Host → 路由缓存 → 自动判定 → 兜底分组。</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>示例</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>路径前缀</td>
+<td><code>mirror.example.com/ghcr.io/owner/app:1.0</code></td>
+<td>Docker CLI、CI、临时拉取</td>
+</tr>
+<tr>
+<td>域名</td>
+<td><code>ghcr.mirror.example.com/owner/app:1.0</code></td>
+<td>containerd / K8s / 多域名</td>
+</tr>
+<tr>
+<td>自动判定</td>
+<td><code>mirror.example.com/owner/app:1.0</code></td>
+<td>单域名且不带前缀</td>
+</tr>
+</tbody>
+</table>
+<p><code>ghcr.io/stefanprodan/podinfo</code> 本身就是合法的 repository 名（允许点号），Docker 不需要额外配置。两个线索都没有时，会并发询问各分组「有没有这个仓库」，结果按 <code>routeTTL</code>（默认 30 分钟）缓存，不存在的仓库走负缓存，后续请求零成本。同名仓库存在于多个源时由 <code>routing.strategy</code> 决胜。响应头 <code>X-Mirror-Gateway-Group</code> 与 <code>X-Mirror-Gateway-Upstream</code> 会标明实际使用的分组和源。</p>
+<h4 id="5-健康检查与故障转移">5. 健康检查与故障转移</h4>
+<p>后台定期探测 <code>/v2/</code> 与探针镜像的 manifest（验证 token 与拉取链路）。连续失败 <code>failThreshold</code> 次标记不可用，成功一次立即恢复；真实流量中的 5xx / 429 / 超时也计入失败，404 / 401 / 403 不计入。一次拉取中若当前源返回 5xx 或连不上，会立刻尝试下一个源，客户端无感知。</p>
+<h4 id="6-pull-through-缓存">6. pull-through 缓存</h4>
+<p>默认关闭，需要提速或省回源带宽时再开，后端可选本地磁盘或 S3。blob 用 <code>io.TeeReader</code> 边传边校验 sha256，通过才落盘；客户端中断则丢弃临时文件。manifest 缓存键包含分组名与 Accept 变体，避免不同仓库的同名镜像、多架构清单与单平台清单互相覆盖。tag 有 TTL，digest 永久有效；超过容量上限按最久未访问淘汰到 85%。S3 后端适配 MinIO、OSS、COS、OBS 等兼容服务，blob 校验通过后异步上传，上传慢不影响客户端。</p>
+<h4 id="7-源级代理与安全">7. 源级代理与安全</h4>
+<p>每个上游可单独指定 <code>http(s)://</code>、<code>socks5://</code> 代理或 <code>direct</code> 强制直连，支持认证、密码走环境变量。代理只作用于配置它的那个上游，改不了整个分组的走向——挂了代理的官方源通常比境内加速源慢，只有在 <code>latest</code> 更新或其它源不可用时才会被选中。</p>
+<p>安全方面：拉取与管理端口分离（管理端口只绑回环地址），IP 白名单，<code>adminToken</code>；每个源独立选择「配置账号自动认证」或「客户端凭证透传」，默认不透传，公网多域名部署可为官方源开启透传；透传源的拉取不写共享缓存，避免私有内容进入匿名缓存。</p>
+<h4 id="8-监控通知与控制台">8. 监控通知与控制台</h4>
+<p>分组健康跌破阈值时经模板化 webhook 或邮件告警，恢复自动通知。webhook 协议无关，<code>url</code> 与 <code>body</code> 都是模板，飞书、企业微信或任何自定义协议都能适配；状态变化始终立即通知，持续异常期间按 <code>interval</code> 重发提醒，不刷屏。</p>
+<h2 id="四界面预览">四、界面预览</h2>
+<h4 id="1-控制台总览">1. 控制台总览</h4>
+<p>顶部四个指标卡：上游健康、进行中的拉取、累计出站流量、缓存占用；下方五个子标签页分别是拉取监控、镜像搜索、上游镜像源、分组与路由、接入方式。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026112001/dashboard.png"
+        data-srcset="/images/post/2026112001/dashboard.png, /images/post/2026112001/dashboard.png 1.5x, /images/post/2026112001/dashboard.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026112001/dashboard.png"
+        title="控制台总览" /></p>
+<h4 id="2-镜像搜索">2. 镜像搜索</h4>
+<p>搜 Docker Hub、Quay 与 MCR，结果带 Star、拉取量、最新版本号与更新时间，任意列可排序，每行还能一键复制拉取命令。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026112001/search.png"
+        data-srcset="/images/post/2026112001/search.png, /images/post/2026112001/search.png 1.5x, /images/post/2026112001/search.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026112001/search.png"
+        title="镜像搜索" /></p>
+<h4 id="3-资源占用">3. 资源占用</h4>
+<p>Go 编译的静态单二进制，无 JVM、无数据库进程；转发大文件走流式零缓冲，内存不随镜像体积增长。这是 <code>docker stats</code> 的实测数据：空载 CPU 0.15%、内存约 19.5 MiB、PIDS 8，小规格 VPS、NAS、树莓派都放得下。</p>
+<p><img
+        class="lazyload"
+        src="/svg/loading.min.svg"
+        data-src="/images/post/2026112001/stats.png"
+        data-srcset="/images/post/2026112001/stats.png, /images/post/2026112001/stats.png 1.5x, /images/post/2026112001/stats.png 2x"
+        data-sizes="auto"
+        alt="/images/post/2026112001/stats.png"
+        title="资源占用" /></p>
+<h2 id="五下载与安装">五、下载与安装</h2>
+<h4 id="1-直接下载">1. 直接下载</h4>
+<p>从 <a href="https://github.com/midaug/docker-mirror-gateway/releases/latest" target="_blank" rel="noopener noreffer ">Releases</a> 取对应平台的压缩包，解压即用，提供 Linux（amd64 / arm64 / armv7 / 386）、macOS（Intel / Apple Silicon）、Windows（x64 / ARM64 / x86）。服务端部署推荐 Linux amd64 / arm64；桌面平台产物主要用于本地调试管理命令。</p>
+<p>也可以直接用 Docker 镜像 <code>midaug/docker-mirror-gateway</code>，支持 <code>linux/amd64</code>、<code>linux/arm64</code>、<code>linux/arm/v7</code>、<code>linux/386</code>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker pull midaug/docker-mirror-gateway:latest
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">cp config.example.yaml config.yaml   <span class="c1"># 先准备配置，再挂载进容器</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">docker run -d --name docker-mirror-gateway <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -p 8080:8080 -p 127.0.0.1:8081:8081 <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -v docker-mirror-gateway:/var/lib/docker-mirror-gateway <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  -v ./config.yaml:/etc/docker-mirror-gateway/config.yaml:ro <span class="se">\
+</span></span></span><span class="line"><span class="cl"><span class="se"></span>  midaug/docker-mirror-gateway:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="2-docker-compose">2. Docker Compose</h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">cp config.example.yaml config.yaml   <span class="c1"># 从示例配置开始，按需修改 groups 与镜像源</span>
+</span></span><span class="line"><span class="cl">docker compose up -d --build
+</span></span><span class="line"><span class="cl">docker compose logs -f docker-mirror-gateway
+</span></span><span class="line"><span class="cl">curl -s http://127.0.0.1:8081/api/v1/status <span class="p">|</span> jq .groups
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>镜像拉取：<code>http://127.0.0.1:8080/v2/</code></li>
+<li>控制台：<a href="http://127.0.0.1:8081/" target="_blank" rel="noopener noreffer ">http://127.0.0.1:8081/</a>（compose 默认只映射到宿主机回环地址）</li>
+</ul>
+<p>国内构建镜像时可指定 Go 模块代理：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker compose build --build-arg <span class="nv">GOPROXY</span><span class="o">=</span>https://goproxy.cn,direct
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="3-本地运行">3. 本地运行</h4>
+<p>需要 Go 1.23+：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">go run ./cmd/docker-mirror-gateway -config config.yaml
+</span></span><span class="line"><span class="cl"><span class="c1"># 或者</span>
+</span></span><span class="line"><span class="cl">make build <span class="o">&amp;&amp;</span> ./bin/docker-mirror-gateway -config config.yaml
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>不带 <code>-config</code> 时依次查找 <code>./config.yaml</code>、<code>/etc/docker-mirror-gateway/config.yaml</code>，都没有则使用内置默认配置（仅官方 Docker Hub）。</p>
+<h4 id="4-接入-docker">4. 接入 Docker</h4>
+<p>编辑 <code>/etc/docker/daemon.json</code>，重启 Docker 后 <code>docker pull alpine:latest</code> 自动走 dockerhub 组：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;registry-mirrors&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;http://127.0.0.1:8080&#34;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;insecure-registries&#34;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&#34;127.0.0.1:8080&#34;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>registry-mirrors</code> 只对 Docker Hub 生效；GHCR、Quay 等用路径前缀（Docker CLI）或域名（containerd）。网关只监听 HTTP，需要对外提供 HTTPS 时，TLS 交给反向代理，Caddy 配一个泛域名证书即可，管理后台单独走内网域名并限制来源 IP。</p>
+<h2 id="六技术实现">六、技术实现</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>语言</td>
+<td>Go 1.23，静态单二进制</td>
+</tr>
+<tr>
+<td>直接依赖</td>
+<td><code>gopkg.in/yaml.v3</code>、<code>github.com/minio/minio-go/v7</code>（仅 2 个）</td>
+</tr>
+<tr>
+<td>缓存</td>
+<td>本地磁盘 / S3 兼容对象存储（minio-go）</td>
+</tr>
+<tr>
+<td>配置</td>
+<td>YAML，全部字段支持环境变量覆盖</td>
+</tr>
+<tr>
+<td>前端</td>
+<td>内置控制台，无外部资源</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>二进制、Docker 镜像、Docker Compose</td>
+</tr>
+</tbody>
+</table>
+<p>代码按职责拆在 <code>internal/</code> 下：<code>registry</code> 处理 registry 协议与拉取转发，<code>server</code> 是 HTTP 层与路由，<code>config</code> 管配置加载，<code>cache</code> 是磁盘 / S3 两套后端，<code>notify</code> 负责 webhook 与邮件，<code>search</code> 做控制台的镜像搜索，<code>activity</code> 记录拉取历史，<code>metrics</code> 输出 Prometheus 指标，<code>access</code> 处理访问控制。</p>
+<p><code>config.example.yaml</code> 里所有字段都带注释，改完重启进程生效；数据目录统一到一个 <code>data.dir</code>，Docker 部署只需挂载这一个目录。健康检查、选源、通知、缓存、访问控制各自独立配置，默认都是保守值——缓存和通知默认关闭，适合先跑起来看一段时间再按需打开。</p>
+<h2 id="七更新日志">七、更新日志</h2>
+<h4 id="1-v0022026-11-19">1. v0.0.2（2026-11-19）</h4>
+<p><strong>新增</strong></p>
+<ul>
+<li>可选的凭证透传（<code>auth: passthrough</code>），适配公网多域名部署</li>
+<li>统一数据目录，拉取监控记录可选落盘，重启不丢</li>
+</ul>
+<p><strong>修复</strong></p>
+<ul>
+<li>把上游返回的 401、包装成 500 的 404、仓库白名单 403 归类为仓库级策略，不再误判为源故障</li>
+<li>健康源都没有对应 manifest 时优先报 404，502 响应补上缺失仓库的上下文</li>
+<li>发布前评审与控制台体验改进</li>
+</ul>
+<h4 id="2-v001">2. v0.0.1</h4>
+<p>首个可用版本：多仓库聚合、按速度选源、健康检查与故障转移、三种路由、镜像搜索控制台。</p>
+<h2 id="八小结">八、小结</h2>
+<p>做这个工具的起因很直接：境内拉镜像这件事，每个环节都有坑，而现成的镜像站又都是单点。与其维护一串随时会失效的加速地址，不如把它们交给一个网关来管——健康检查、按速度选源、新旧优先、故障转移都自动化，客户端只需要记住一个地址。</p>
+<p>项目还在早期，<code>config.example.yaml</code> 里的公共镜像源仅作示例，生产环境请替换为你有权使用、且服务条款允许的源，并遵守对应仓库的速率与使用政策。有问题或者想要的功能，欢迎到 GitHub 上提 issue。</p>
+<ul>
+<li>仓库：<a href="https://github.com/midaug/docker-mirror-gateway" target="_blank" rel="noopener noreffer ">https://github.com/midaug/docker-mirror-gateway</a></li>
+<li>下载：<a href="https://github.com/midaug/docker-mirror-gateway/releases/latest" target="_blank" rel="noopener noreffer ">https://github.com/midaug/docker-mirror-gateway/releases/latest</a></li>
+<li>文档：<a href="https://github.com/midaug/docker-mirror-gateway#%e6%96%87%e6%a1%a3" target="_blank" rel="noopener noreffer ">https://github.com/midaug/docker-mirror-gateway#文档</a></li>
+<li>协议：MIT</li>
+</ul>
+</div><div class="post-footer" id="post-footer">
+    <div class="post-info">
+        <div class="post-info-line">
+            <div class="post-info-mod">
+                <span>Updated on 2026-11-20</span>
+            </div></div>
+        <div class="post-info-line">
+            <div class="post-info-md"></div>
+            <div class="post-info-share">
+                <span><a href="javascript:void(0);" title="Share on Twitter" data-sharer="twitter" data-url="https://midaug.100180.xyz/posts/2026112001/" data-title="Docker Mirror Gateway：一个地址搞定所有容器镜像加速" data-hashtags="Docker,镜像加速,容器,镜像源,开源项目,Go"><i class="fab fa-twitter fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Facebook" data-sharer="facebook" data-url="https://midaug.100180.xyz/posts/2026112001/" data-hashtag="Docker"><i class="fab fa-facebook-square fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Linkedin" data-sharer="linkedin" data-url="https://midaug.100180.xyz/posts/2026112001/"><i class="fab fa-linkedin fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 微博" data-sharer="weibo" data-url="https://midaug.100180.xyz/posts/2026112001/" data-title="Docker Mirror Gateway：一个地址搞定所有容器镜像加速"><i class="fab fa-weibo fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on 百度" data-sharer="baidu" data-url="https://midaug.100180.xyz/posts/2026112001/" data-title="Docker Mirror Gateway：一个地址搞定所有容器镜像加速"><i data-svg-src="/lib/simple-icons/icons/baidu.min.svg" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Evernote" data-sharer="evernote" data-url="https://midaug.100180.xyz/posts/2026112001/" data-title="Docker Mirror Gateway：一个地址搞定所有容器镜像加速"><i class="fab fa-evernote fa-fw" aria-hidden="true"></i></a><a href="javascript:void(0);" title="Share on Skype" data-sharer="skype" data-url="https://midaug.100180.xyz/posts/2026112001/" data-title="Docker Mirror Gateway：一个地址搞定所有容器镜像加速"><i class="fab fa-skype fa-fw" aria-hidden="true"></i></a></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="post-info-more">
+        <section class="post-tags"><i class="fas fa-tags fa-fw" aria-hidden="true"></i>&nbsp;<a href="/tags/docker/">Docker</a>,&nbsp;<a href="/tags/%E9%95%9C%E5%83%8F%E5%8A%A0%E9%80%9F/">镜像加速</a>,&nbsp;<a href="/tags/%E5%AE%B9%E5%99%A8/">容器</a>,&nbsp;<a href="/tags/%E9%95%9C%E5%83%8F%E6%BA%90/">镜像源</a>,&nbsp;<a href="/tags/%E5%BC%80%E6%BA%90%E9%A1%B9%E7%9B%AE/">开源项目</a>,&nbsp;<a href="/tags/go/">Go</a></section>
+        <section>
+            <span><a href="javascript:void(0);" onclick="window.history.back();">Back</a></span>&nbsp;|&nbsp;<span><a href="/">Home</a></span>
+        </section>
+    </div>
+
+    <div class="post-nav"><a href="/posts/2026101002/" class="prev" rel="prev" title="SSH Tunnel：用图形界面管理多条 SSH 隧道"><i class="fas fa-angle-left fa-fw" aria-hidden="true"></i>SSH Tunnel：用图形界面管理多条 SSH 隧道</a></div>
+</div>
+</article></div>
+            </main><footer class="footer">
+        <div class="footer-container"><div class="footer-line" itemscope itemtype="http://schema.org/CreativeWork"><i class="far fa-copyright fa-fw" aria-hidden="true"></i><span itemprop="copyrightYear">2017 - 2026</span><span class="author" itemprop="copyrightHolder">&nbsp;<a href="/" target="_blank">MidAug</a></span>&nbsp;|&nbsp;<span class="license"><a rel="license external nofollow noopener noreffer" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a></span></div>
+        </div>
+    </footer></div>
+
+        <div id="fixed-buttons"><a href="#" id="back-to-top" class="fixed-button" title="Back to Top">
+                <i class="fas fa-arrow-up fa-fw" aria-hidden="true"></i>
+            </a><a href="#" id="view-comments" class="fixed-button" title="View Comments">
+                <i class="fas fa-comment fa-fw" aria-hidden="true"></i>
+            </a>
+        </div><script type="text/javascript" src="/lib/autocomplete/autocomplete.min.js"></script><script type="text/javascript" src="/lib/lunr/lunr.min.js"></script><script type="text/javascript" src="/lib/lazysizes/lazysizes.min.js"></script><script type="text/javascript" src="/lib/clipboard/clipboard.min.js"></script><script type="text/javascript" src="/lib/sharer/sharer.min.js"></script><script type="text/javascript" src="/lib/typeit/index.umd.js"></script><script type="text/javascript">window.config={"code":{"copyTitle":"Copy to clipboard","maxShownLines":50},"comment":{},"data":{"id-1":"MidAug's  Blog","id-2":"MidAug's  Blog"},"search":{"highlightTag":"em","lunrIndexURL":"/index.json","maxResultLength":10,"noResultsFound":"No results found","snippetLength":80,"type":"lunr"},"typeit":{"cursorChar":"|","cursorSpeed":1000,"data":{"id-1":["id-1"],"id-2":["id-2"]},"duration":-1,"speed":30}};</script><script type="text/javascript" src="/js/theme.min.js"></script></body>
+</html>
