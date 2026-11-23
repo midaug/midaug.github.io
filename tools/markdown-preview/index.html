@@ -36,8 +36,16 @@
   }
   * { box-sizing: border-box; }
   /* ★ height:100%（不是 min-height）—— 顶栏才落在滚动容器外，只有 main 内部滚 */
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.5 var(--mono); -webkit-font-smoothing: antialiased; }
-  body { display: flex; flex-direction: column; }
+  /* ★ overflow:hidden 必须加在 html/body 上：Chrome 会把 #preview 里超长内容的
+       可滚动溢出"漏"到文档层（col 的 overflow:hidden 挡不住），导致整页能往下拖。
+       锁死文档层后，页面只有两个面板各自滚动。 */
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text); font: 13px/1.5 var(--mono); -webkit-font-smoothing: antialiased;
+  }
+  html { height: 100dvh; }
+  body { display: flex; flex-direction: column; overscroll-behavior: none; }
+
 
   header {
     display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap;
@@ -77,7 +85,9 @@
   #vwSel { padding: 5px 8px; font-size: 12px; }
 
   .duo { flex: 1; min-height: 0; display: flex; gap: 10px; }
-  .duo .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  /* contain:paint —— 光靠 overflow:hidden，Chrome 仍会把预览内容的溢出算进文档滚动高度
+     （表现为整页能往下拖出一片空白），加 paint 包含后文档高度就锁死在视口内 */
+  .duo .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; contain: paint; }
   .colhead {
     flex: none; padding: 7px 11px; font-size: 11.5px; font-weight: 600; color: var(--text-2);
     background: var(--panel-2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
