@@ -729,6 +729,27 @@ $$
   }
   $("vwSel").onchange = function () { setWidth(+this.value); };
 
+  /* ===== 两栏联动滚动 =====
+     源码和渲染结果的字符数/行高差得远，按行号对齐没意义，用「滚动进度」等比映射：
+     scrollTop / (scrollHeight - clientHeight) 相等即视为同一位置。
+     自己 set scrollTop 会再触发一次 scroll 事件，用 expect 记下目标值把它认出来忽略掉，
+     否则两栏会互相推来推去（尤其回推时抖）。 */
+  var expect = null;
+  function syncScroll(from, to) {
+    if (expect && expect.el === from && Math.abs(from.scrollTop - expect.top) < 1.5) {
+      expect = null;                    /* 这条事件是我刚设进去的，不往回推 */
+      return;
+    }
+    expect = null;
+    var a = from.scrollHeight - from.clientHeight;
+    var b = to.scrollHeight - to.clientHeight;
+    if (a <= 0 || b <= 0) return;       /* 有一边短到不用滚，就别联动 */
+    to.scrollTop = (from.scrollTop / a) * b;
+    expect = { el: to, top: to.scrollTop };
+  }
+  src.addEventListener("scroll", function () { syncScroll(src, preview); }, { passive: true });
+  preview.addEventListener("scroll", function () { syncScroll(preview, src); }, { passive: true });
+
   function loadDemo() {
     src.value = $("demoDoc").textContent.replace(/^\n+/, "");
     render(); saveDoc();
