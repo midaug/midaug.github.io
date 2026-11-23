@@ -73,12 +73,8 @@
     width: min(100%, max(1280px, 86.2vw)); margin: 0 auto; flex: 1; min-height: 0;
     display: flex; flex-direction: column;
   }
-  .bar {
-    flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    margin-bottom: 8px; font-size: 11.5px; color: var(--text-2);
-  }
-  .bar .lbl { font-weight: 600; color: var(--text); }
-  .bar .sp { margin-left: auto; }
+  /* 顶栏里的宽度选择器：比主按钮窄一点，避免和主题分段挤在一起 */
+  #vwSel { padding: 5px 8px; font-size: 12px; }
 
   .duo { flex: 1; min-height: 0; display: flex; gap: 10px; }
   .duo .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
@@ -243,6 +239,13 @@
     <button type="button" id="themeBlog" aria-pressed="true" title="贴近本博客 LoveIt 主题的正文样式">博客风格</button>
     <button type="button" id="themeGfm" aria-pressed="false" title="GitHub 风格的通用 GFM 样式">通用 GFM</button>
   </div>
+  <span class="sep"></span>
+  <select id="vwSel" title="模拟窄屏宽度，核对手机上的显示效果">
+    <option value="0">宽度：自适应</option>
+    <option value="375">宽度：375px 手机</option>
+    <option value="414">宽度：414px 手机</option>
+    <option value="768">宽度：768px 平板</option>
+  </select>
   <span class="sep hide-sm"></span>
   <span class="stat privacy-stat">全部在本地浏览器内解析，内容不会上传</span>
   <button class="mini" id="btnReset" title="恢复为内置的语法示例">载入示例</button>
@@ -250,21 +253,9 @@
 
 <main>
   <div class="wrap">
-    <div class="bar">
-      <span class="lbl">Markdown 语法预览</span>
-      <span>左侧编辑，右侧实时渲染 · GFM 全套 + KaTeX 公式</span>
-      <span class="sp"></span>
-      <select id="vwSel" title="模拟窄屏宽度，核对手机上的显示效果">
-        <option value="0">宽度：自适应</option>
-        <option value="375">宽度：375px 手机</option>
-        <option value="414">宽度：414px 大屏手机</option>
-        <option value="768">宽度：768px 平板</option>
-      </select>
-      <span id="stat">—</span>
-    </div>
     <div class="duo">
       <section class="col">
-        <div class="colhead">源码 <span class="sp" id="srcInfo">UTF-8</span></div>
+        <div class="colhead">源码 <span class="sp" id="stat">—</span></div>
         <textarea id="src" spellcheck="false" placeholder="在此输入 Markdown…"></textarea>
       </section>
       <section class="col">
