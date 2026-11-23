@@ -107,7 +107,7 @@
     font-weight: 700; line-height: 1.35; color: var(--text);
   }
   #preview.blog h1 { font-size: 2rem; margin: 3rem 0 1rem; }
-  #preview.blog h2 { font-size: 1.75rem; margin: 2.75rem 0 1rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
+  #preview.blog h2 { font-size: 1.75rem; margin: 2.75rem 0 1rem; }
   #preview.blog h3 { font-size: 1.5rem; margin: 2.25rem 0 1rem; }
   #preview.blog h4 { font-size: 1.25rem; margin: 1.75rem 0 .8rem; }
   #preview.blog h5 { font-size: 1.125rem; margin: 1.5rem 0 .8rem; }
@@ -123,7 +123,7 @@
     background: var(--panel-2); border-radius: 0 6px 6px 0; color: var(--text-2);
   }
   #preview.blog blockquote > :last-child { margin-bottom: 0; }
-  #preview.blog ul, #preview.blog ol { margin: 0 0 1.1rem; padding-left: 1.8rem; }
+  #preview.blog ul, #preview.blog ol { margin: 0 0 1.1rem; padding-left: 2.5rem; }
   #preview.blog li { margin: .25rem 0; }
   #preview.blog li > ul, #preview.blog li > ol { margin: .25rem 0; }
   #preview.blog .task-list-item { list-style: none; margin-left: -1.4rem; }
@@ -131,7 +131,7 @@
   #preview.blog hr { border: 0; border-top: 1px solid var(--border-2); margin: 2rem 0; }
   #preview.blog :not(pre) > code {
     font-family: var(--mono); font-size: .87em; background: var(--surface-1);
-    padding: .12em .38em; border-radius: 4px; color: var(--accent);
+    padding: .12em .38em; border-radius: 3px; color: #e74c3c;
   }
   #preview.blog pre {
     margin: 0 0 1.3rem; padding: 14px 16px; background: var(--panel-2);
@@ -146,10 +146,14 @@
   #preview.blog .tok-c { color: #8a97a8; }
   #preview.blog .tok-a { color: #0550ae; }
   #preview.blog .table-wrap { overflow-x: auto; margin: 0 0 1.3rem; scrollbar-width: thin; }
-  #preview.blog table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0 0 1.3rem; display: block; overflow-x: auto; }
+  #preview.blog table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0 0 1.3rem; display: block; overflow-x: auto; background: var(--panel); }
   #preview.blog thead { background: var(--panel-2); }
-  #preview.blog th, #preview.blog td { border: 1px solid var(--border-2); padding: 6px 11px; }
-  #preview.blog img { max-width: 100%; height: auto; border-radius: 4px; }
+  #preview.blog th, #preview.blog td { border: 1px solid var(--border-2); padding: .3rem 1rem; }
+  #preview.blog img { max-width: 100%; height: auto; min-height: 1em; border-radius: 4px; }
+  /* 与主题 figure 一致：块内图片撑满、图注居中灰字 */
+  #preview.blog figure { margin: .5rem; text-align: center; }
+  #preview.blog figure img { display: block; width: 100%; margin: 0 auto; }
+  #preview.blog figcaption { font-size: .875rem; color: #969696; padding: .5rem; }
   #preview.blog .footnotes { margin-top: 2rem; padding-top: .8rem; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
   #preview.blog .footnotes ol { padding-left: 1.4rem; }
   #preview.blog .footnote-ref { font-size: .75em; color: var(--accent); vertical-align: super; }
@@ -214,8 +218,11 @@
   }
 
   @media (max-width: 900px) {
+    /* 堆叠后两栏各自定高、各自内滚；main 放开滚动，短屏（横屏手机）也不会被裁掉 */
+    main { display: block; overflow: auto; }
+    .wrap { display: block; }
     .duo { flex-direction: column; }
-    .duo .col { min-height: 220px; flex: 1 1 0; }
+    .duo .col { flex: none; height: 60vh; min-height: 300px; }
     #preview { padding: 14px 16px 30px; }
   }
   @media (max-width: 640px) {
