@@ -128,6 +128,8 @@
   main {
     flex: 1; min-height: 0; overflow: auto; padding: 14px;
     scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent;
+    /* 纵向 flex：下面唯一的那个面板靠 flex:1 吃掉剩余高度（见 .card.panel） */
+    display: flex; flex-direction: column;
   }
   main::-webkit-scrollbar { width: 10px; height: 10px; }
   main::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; border: 3px solid var(--bg); }
@@ -143,6 +145,29 @@
      窄到装不下才退化成 100%，再窄进手机布局。 */
   .card.panel { width: min(100%, max(860px, 57.9vw)); margin: 0 auto; }
   .card.panel[hidden] { display: none; }
+
+  /* ★ 面板撑满可视高度（2026-11-26 用户反馈：输入框只有 76px 高，下面整片空白）。
+     做法是让面板成为纵向 flex 容器、自身 flex:1 0 auto 吃掉 main 的剩余高度，
+     面板里的文本域再 flex:1 平分 —— 窗口多高，编辑区就多高，不会再有「半屏白卡 + 半屏灰底」。
+     ★ flex-basis 取 auto（不是 0）配合 min-height:min-content：窗口很矮时（如横屏手机）
+       面板保持自身最小高度、由 main 出滚动条，而不是把内容挤到溢出卡片外面。 */
+  .card.panel {
+    display: flex; flex-direction: column;
+    flex: 1 0 auto; min-height: min-content;
+  }
+
+  /* 面板里直接放的文本域平分剩余高度。
+     ★ 必须同时关掉 resize：flex-basis:0 时用户拖动 resize 手柄改的是 height，
+       而主轴方向上 height 被 flex-basis 覆盖 —— 拖了没反应，反而像坏了。 */
+  .card.panel > .io { flex: 1 1 0; resize: none; }
+
+  /* 「文件Base64」两个方向各是一个盒子，里面的文本域才是要长高的那个 */
+  #fEncBox, #fDecBox { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
+  #fEncBox[hidden], #fDecBox[hidden] { display: none; }
+  #fEncBox > .io, #fDecBox > .io { flex: 1 1 0; resize: none; }
+
+  /* 进制转换没有能长高的文本域，撑满只剩一大片白 + 内容挤在顶上，按内容高度收住 */
+  #panel-base { flex: 0 0 auto; }
   .card > h2 {
     margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--text);
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -241,6 +266,9 @@
      上面是「方向」切换（文件→Base64 / Base64→文件），再下面才是对应方向的控件。
      两个方向共用一块面板而不是两个 tab：它们操作的是同一个对象，来回切着对照最方便。 */
   .seg {
+    /* align-self: flex-start 是必需的：面板现在是 flex 容器，默认 stretch 会把这个
+       行内块级的切换条拉成整行宽，右边留一大截空灰底，看着像没做完 */
+    align-self: flex-start;
     display: inline-flex; gap: 2px; padding: 2px; margin-bottom: 10px;
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
   }
@@ -272,7 +300,8 @@
   /* 选中文件后：虚线变实线、提示语换成文件名，一眼看出「已经拿到东西了」 */
   .drop.has { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-  #fOut, #fB64 { max-height: 46vh; }
+  /* 文本域高度由 flex 分配（见 .card.panel > .io），这里不再用 max-height 限制，
+     否则大屏下还是会停在 46vh、下面留空 */
   #fOut { margin-top: 8px; }
   #fName { flex: 1 1 150px; max-width: 300px; }
   .fmeta { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
