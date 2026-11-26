@@ -143,6 +143,14 @@
   /* ===== 波形 ===== */
   .wavebox { position: relative; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   #wave { display: block; width: 100%; height: 150px; touch-action: none; cursor: pointer; }
+  /* ===== 频谱（频谱图本身是暗底热力图，和浅色页面区分开）===== */
+  #specwrap { position: relative; border-top: 1px solid var(--border); background: #0c0f16; }
+  #spec { display: block; width: 100%; height: 116px; touch-action: none; cursor: pointer; }
+  #specAxis {
+    position: absolute; left: 8px; bottom: 5px; font-size: 10.5px; letter-spacing: .2px;
+    color: rgba(255,255,255,.5); pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  }
+  #specAxis b { color: rgba(255,255,255,.78); font-weight: 600; }
   #waveEmpty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--text-3); font-size: 12.5px; pointer-events: none; text-align: center; padding: 0 16px;
@@ -210,6 +218,8 @@
     .card > h2 { margin-bottom: 10px; }
     button, select { font-size: 12px; }
     #wave { height: 112px; }
+    #spec { height: 84px; }
+    #specAxis { font-size: 10px; }
     .pick { padding: 16px 10px; }
     input[type="range"] { width: 72px; }
   }
@@ -254,15 +264,19 @@
       <input type="file" id="file" accept="audio/*,.pcm,.raw,.s16,.s24,.s32,.f32,.f64,.sw,.aif,.aiff,.flac,.opus,.m4a,.webm,.caf" hidden />
     </section>
 
-    <!-- ============ 2. 波形与播放 ============ -->
+    <!-- ============ 2. 波形、频谱与播放 ============ -->
     <section class="card">
       <h2>
-        波形与播放
-        <span class="hint">点击波形任意位置跳转；空格播放 / 暂停，← → 前后 5 秒</span>
+        波形与频谱
+        <span class="hint">点击波形或频谱任意位置跳转；空格播放 / 暂停，← → 前后 5 秒</span>
       </h2>
 
       <div class="wavebox">
         <canvas id="wave" aria-label="波形，可点击跳转"></canvas>
+        <div id="specwrap">
+          <canvas id="spec" aria-label="频谱图，可点击跳转"></canvas>
+          <span id="specAxis"></span>
+        </div>
         <div id="waveEmpty">还没有载入音频</div>
       </div>
 
@@ -448,6 +462,7 @@
       说明：转换走浏览器内置解码 + 本站实现的 WAV / 裸 PCM 封装；MP3 用 lamejs（首次导出时才加载，
       优先读本机 <code>vendor/lame.min.js</code>，缺失时回退 CDN）。OGG / FLAC / M4A 目前只有解码器没有编码器，
       故不作为导出格式。大于 250 MB 的文件建议先用 <code>ffmpeg</code> 切段。
+      频谱图在载入时算一次（STFT，Hann 窗，对数频率，−75 dB 动态范围），换文件重算，不随窗口宽度重算。
     </div>
 
   </div>
@@ -849,12 +864,209 @@
     }
     $('#tCur').textContent = fmtT(pos(), true);
     $('#tDur').textContent = fmtT(S.dur, true);
+    paintSpec();
   }
 
   var repaintQueued = 0;
   function queuePaint() {
     if (repaintQueued) return;
     repaintQueued = requestAnimationFrame(function () { repaintQueued = 0; paint(); });
+  }
+
+  /* ============================================================
+     频谱图：整段音频的 STFT 热力图
+     - 横轴与波形共用时间轴（点击、播放头一致），纵轴对数频率
+     - 只算一份 1200×224 的位图，换宽度只缩放不重算；分片跑，播放不被卡住
+     ============================================================ */
+  var SPEC_COLS = 1200, SPEC_ROWS = 224;
+  var spec = null;                 // { cv, fmin, fmax }
+  var specGen = 0;                 // 换文件 / 重新解析时 +1，作废在跑的旧计算
+  var specCv = $('#spec'), specG = null;
+
+  /* 暗→靛蓝→紫→橙→亮黄，热度越高越亮；与全站 accent 同色系 */
+  var SPEC_LUT = (function () {
+    var stops = [
+      [0.00, [9, 11, 18]], [0.14, [24, 30, 74]], [0.30, [48, 55, 138]],
+      [0.46, [96, 58, 176]], [0.62, [166, 60, 142]], [0.78, [226, 96, 62]],
+      [0.90, [247, 168, 54]], [1.00, [255, 238, 176]]
+    ];
+    var lut = new Uint32Array(256);
+    for (var i = 0; i < 256; i++) {
+      var t = i / 255, k = 0;
+      while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+      var a = stops[k], b = stops[k + 1];
+      var f = (t - a[0]) / Math.max(1e-6, b[0] - a[0]);
+      var r = Math.round(a[1][0] + (b[1][0] - a[1][0]) * f);
+      var g = Math.round(a[1][1] + (b[1][1] - a[1][1]) * f);
+      var bl = Math.round(a[1][2] + (b[1][2] - a[1][2]) * f);
+      lut[i] = (255 << 24) | (bl << 16) | (g << 8) | r;
+    }
+    return lut;
+  })();
+
+  function hannWin(n) {
+    var w = new Float32Array(n);
+    for (var i = 0; i < n; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (n - 1));
+    return w;
+  }
+
+  /* 迭代 radix-2 FFT（原位），表只算一次 */
+  function makeFFT(n) {
+    var lv = Math.round(Math.log2(n));
+    var rev = new Uint32Array(n);
+    for (var i = 0; i < n; i++) {
+      var r = 0;
+      for (var b = 0; b < lv; b++) r = (r << 1) | ((i >>> b) & 1);
+      rev[i] = r;
+    }
+    var cs = new Float64Array(n >> 1), sn = new Float64Array(n >> 1);
+    for (var k = 0; k < (n >> 1); k++) { cs[k] = Math.cos(2 * Math.PI * k / n); sn[k] = Math.sin(2 * Math.PI * k / n); }
+    return function (re, im) {
+      for (var i = 0; i < n; i++) {
+        var j = rev[i];
+        if (j > i) {
+          var tr = re[i]; re[i] = re[j]; re[j] = tr;
+          var ti = im[i]; im[i] = im[j]; im[j] = ti;
+        }
+      }
+      for (var size = 2; size <= n; size <<= 1) {
+        var half = size >> 1, step = n / size;
+        for (var s = 0; s < n; s += size) {
+          for (var t = 0, w = 0; t < half; t++, w += step) {
+            var wr = cs[w], wi = -sn[w];
+            var p = s + t, q = p + half;
+            var xr = re[q] * wr - im[q] * wi;
+            var xi = re[q] * wi + im[q] * wr;
+            re[q] = re[p] - xr; im[q] = im[p] - xi;
+            re[p] += xr; im[p] += xi;
+          }
+        }
+      }
+    };
+  }
+
+  function fmtHz(f) {
+    return f >= 1000 ? (f / 1000).toFixed(f % 1000 ? 1 : 0) + ' kHz' : Math.round(f) + ' Hz';
+  }
+
+  function setSpecAxis(text) {
+    var el = $('#specAxis');
+    if (text === undefined) {
+      el.innerHTML = spec
+        ? '频谱 · 对数频率 <b>' + fmtHz(spec.fmin) + '–' + fmtHz(spec.fmax) + '</b>'
+        : '';
+    } else {
+      el.textContent = text;
+    }
+  }
+
+  function computeSpec(audio) {
+    var gen = ++specGen;
+    var sr = audio.sampleRate, nyq = sr / 2;
+    var N = sr >= 32000 ? 2048 : 1024;
+    var half = N >> 1;
+    var win = hannWin(N), fft = makeFFT(N);
+    var re = new Float64Array(N), im = new Float64Array(N);
+    var chs = Math.min(2, audio.numberOfChannels);
+    var ch = [];
+    for (var c = 0; c < chs; c++) ch.push(audio.getChannelData(c));
+    var len = audio.length;
+    var cols = SPEC_COLS, rows = SPEC_ROWS;
+    var fmin = 20, fmax = Math.min(nyq, 20000);
+    if (fmax <= fmin) { fmin = 10; fmax = Math.max(nyq, 20); }
+
+    /* 每行对应的 FFT bin 区间（对数频率，r=0 在最上面 = 高频） */
+    var edges = new Int32Array(rows + 1);
+    for (var r = 0; r <= rows; r++) {
+      var f = fmax * Math.pow(fmin / fmax, r / rows);
+      edges[r] = Math.max(1, Math.min(half - 1, Math.round(f / nyq * half)));
+    }
+    for (var r2 = 1; r2 <= rows; r2++) if (edges[r2] >= edges[r2 - 1]) edges[r2] = Math.max(1, edges[r2 - 1] - 1);
+
+    var db = new Float32Array(cols * rows);
+    var winGain = 1 / (0.5 * N);     // Hann 相干增益 0.5：满幅正弦 → 0 dBFS
+
+    function doCol(j) {
+      var start = Math.round((j + 0.5) / cols * len) - half;
+      for (var i = 0; i < N; i++) {
+        var idx = start + i, v = 0;
+        if (idx >= 0 && idx < len) {
+          for (var c2 = 0; c2 < chs; c2++) v += ch[c2][idx];
+          v /= chs;
+        }
+        re[i] = v * win[i];
+        im[i] = 0;
+      }
+      fft(re, im);
+      var o = j * rows;
+      for (var y = 0; y < rows; y++) {
+        var b0 = edges[y + 1], b1 = edges[y], mx = 0;
+        for (var b = b0; b < b1; b++) {
+          var m = re[b] * re[b] + im[b] * im[b];
+          if (m > mx) mx = m;
+        }
+        db[o + y] = 20 * Math.log10(Math.sqrt(mx) * winGain + 1e-9);
+      }
+    }
+
+    function finish() {
+      if (gen !== specGen) return;
+      var top = -Infinity;
+      for (var i = 0; i < db.length; i++) if (db[i] > top) top = db[i];
+      if (!isFinite(top)) top = -120;
+      top = Math.max(top, -60);          // 极安静的素材也别把噪声底拉成满屏
+      var floor = top - 75;
+      var tmp = document.createElement('canvas');
+      tmp.width = cols; tmp.height = rows;
+      var tg = tmp.getContext('2d');
+      var img = tg.createImageData(cols, rows);
+      var px = new Uint32Array(img.data.buffer);
+      var span = top - floor;
+      /* ★ db 是「按列存」的（j*rows+y），ImageData 是「按行存」的（y*cols+x）：
+         这里必须转置写，否则整张图会斜着碎成一片条纹。 */
+      for (var j = 0; j < cols; j++) {
+        var o = j * rows;
+        for (var y = 0; y < rows; y++) {
+          var t = (db[o + y] - floor) / span;
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          px[y * cols + j] = SPEC_LUT[(Math.pow(t, 0.85) * 255) | 0];
+        }
+      }
+      tg.putImageData(img, 0, 0);
+      spec = { cv: tmp, fmin: fmin, fmax: fmax };
+      setSpecAxis();
+      paintSpec();
+    }
+
+    var j = 0, step = 150;
+    (function run() {
+      if (gen !== specGen) return;
+      var end = Math.min(cols, j + step);
+      for (; j < end; j++) doCol(j);
+      if (j < cols) requestAnimationFrame(run); else finish();
+    })();
+  }
+
+  function paintSpec() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var w = Math.max(1, Math.round(specCv.clientWidth * dpr));
+    var h = Math.max(1, Math.round(specCv.clientHeight * dpr));
+    if (specCv.width !== w) specCv.width = w;
+    if (specCv.height !== h) specCv.height = h;
+    if (!specG) specG = specCv.getContext('2d');
+    var g = specG;
+    g.clearRect(0, 0, w, h);
+    if (spec) {
+      g.drawImage(spec.cv, 0, 0, w, h);
+    } else {
+      g.fillStyle = '#0c0f16';
+      g.fillRect(0, 0, w, h);
+    }
+    if (S.audio && S.dur > 0) {
+      var x = Math.round(clamp(pos() / S.dur, 0, 1) * w);
+      g.fillStyle = 'rgba(255,255,255,.88)';
+      g.fillRect(Math.max(0, x - 1), 0, 2, h);
+    }
   }
 
   /* ============================================================
@@ -960,6 +1172,8 @@
     S.pausedAt = clamp(oldPos, 0, S.dur);
     S.peaks = null;
     layerW = layerH = 0;      // 换文件必须丢掉旧的波形图层，否则会先闪一下上一首
+    spec = null; specGen++;   // 频谱同理：旧图立即作废，图谱算完再补上
+    setSpecAxis('频谱 · 计算中…');
     setMsg('');
     $('#waveEmpty').style.display = 'none';
     setEnabled(true);
@@ -969,11 +1183,12 @@
     updateSummary();
     setPlayIcon();
     paint();
-    // 峰值放到下一帧算，避免和首帧绘制抢时间
+    // 峰值与频谱放到下一帧算，避免和首帧绘制抢时间
     setTimeout(function () {
       S.peaks = computePeaks(audio);
       layerW = layerH = 0;
       paint();
+      computeSpec(audio);
     }, 0);
   }
 
@@ -1014,6 +1229,8 @@
     killSrc();
     setPlayIcon();
     layerW = layerH = 0;
+    spec = null; specGen++;
+    setSpecAxis('');
     paint();
     // 上一次是「自动兜底」翻到无头模式的，换文件时复位 —— 否则下一个正常 mp3 会被当裸数据糊掉
     if (S.rawAuto) { $('#rawMode').checked = false; S.rawAuto = false; }
@@ -1188,25 +1405,27 @@
     else paint();
   });
 
-  // 波形拖动 / 点击
+  // 波形 / 频谱拖动、点击跳转（两块画布共用时间轴）
   var scrubbing = false;
-  function waveSeek(e) {
+  function seekAt(e, el) {
     if (!S.audio) return;
-    var r = wave.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
     var p = clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1);
     seek(p * S.dur);
   }
-  wave.addEventListener('pointerdown', function (e) {
-    if (!S.audio) return;
-    scrubbing = true;
-    try { wave.setPointerCapture(e.pointerId); } catch (err) {}
-    waveSeek(e);
-  });
-  wave.addEventListener('pointermove', function (e) {
-    if (scrubbing) waveSeek(e);
-  });
-  ['pointerup', 'pointercancel'].forEach(function (ev) {
-    wave.addEventListener(ev, function () { scrubbing = false; });
+  [wave, specCv].forEach(function (el) {
+    el.addEventListener('pointerdown', function (e) {
+      if (!S.audio) return;
+      scrubbing = true;
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      seekAt(e, el);
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (scrubbing) seekAt(e, el);
+    });
+    ['pointerup', 'pointercancel'].forEach(function (ev) {
+      el.addEventListener(ev, function () { scrubbing = false; });
+    });
   });
 
   // 参数变化 → 重新解析（只在无头模式下有意义）
