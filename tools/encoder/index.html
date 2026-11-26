@@ -237,6 +237,50 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ===== 文件 Base64 =====
+     上面是「方向」切换（文件→Base64 / Base64→文件），再下面才是对应方向的控件。
+     两个方向共用一块面板而不是两个 tab：它们操作的是同一个对象，来回切着对照最方便。 */
+  .seg {
+    display: inline-flex; gap: 2px; padding: 2px; margin-bottom: 10px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .segbtn {
+    border: 0; box-shadow: none; background: none;
+    padding: 5px 11px; border-radius: 6px; font-size: 12px; color: var(--text-2);
+  }
+  .segbtn:hover { background: var(--hover); border-color: transparent; color: var(--accent); }
+  .segbtn[aria-pressed="true"] {
+    background: var(--panel); color: var(--accent); font-weight: 600;
+    box-shadow: 0 1px 3px rgba(15,23,42,.12);
+  }
+  .segbtn[aria-pressed="true"]:hover { background: var(--panel); }
+
+  /* 拖放框：用虚线而不是普通按钮 —— 它同时还承担「说明这里能干什么」的职责 */
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    padding: 20px 12px; text-align: center; cursor: pointer;
+    background: var(--panel-2); color: var(--text-2);
+    border: 1px dashed var(--border-2); border-radius: 9px;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .drop:hover, .drop:focus-visible, .drop.over {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent); outline: 0;
+  }
+  .drop b { font-size: 12.5px; font-weight: 600; }
+  .drop .sub { font-size: 11px; color: var(--text-3); }
+  .drop:hover .sub, .drop.over .sub { color: var(--text-2); }
+  /* 选中文件后：虚线变实线、提示语换成文件名，一眼看出「已经拿到东西了」 */
+  .drop.has { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+
+  #fOut, #fB64 { max-height: 46vh; }
+  #fOut { margin-top: 8px; }
+  #fName { flex: 1 1 150px; max-width: 300px; }
+  .fmeta { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+  #fPrev img {
+    display: block; margin-top: 10px; max-width: 100%; max-height: 168px;
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+
   /* 窄屏：tab 栏收紧内距，多出来的 tab 横向滚动 */
   @media (max-width: 900px) {
     .hide-sm { display: none; }
@@ -276,6 +320,7 @@
      空隙混淆、让人看不出边界在哪（面板内的 <h2> 标题仍保留空格）。 -->
 <div class="tabs" role="tablist" aria-label="编码类型">
   <button class="tab" type="button" role="tab" data-tab="b64"  id="tab-b64"  aria-controls="panel-b64"  aria-selected="true">Base64</button>
+  <button class="tab" type="button" role="tab" data-tab="file" id="tab-file" aria-controls="panel-file" aria-selected="false" tabindex="-1">文件Base64</button>
   <button class="tab" type="button" role="tab" data-tab="url"  id="tab-url"  aria-controls="panel-url"  aria-selected="false" tabindex="-1">URL编码</button>
   <button class="tab" type="button" role="tab" data-tab="uni"  id="tab-uni"  aria-controls="panel-uni"  aria-selected="false" tabindex="-1">Unicode转义</button>
   <button class="tab" type="button" role="tab" data-tab="html" id="tab-html" aria-controls="panel-html" aria-selected="false" tabindex="-1">HTML实体</button>
@@ -305,6 +350,58 @@
     </div>
     <textarea class="io out" id="b64Out" readonly spellcheck="false" placeholder="结果"></textarea>
     <div class="note" id="b64Note"></div>
+  </section>
+
+  <!-- ============ 1b. 文件 Base64 ============ -->
+  <section class="card panel" role="tabpanel" id="panel-file" data-tab="file" aria-labelledby="tab-file" hidden>
+    <h2>
+      文件 Base64
+      <span class="hint">任意文件 ↔ Base64 / Data URL，读写都在本地</span>
+      <span class="right">
+        <button class="mini" id="fCopy">复制结果</button>
+        <button class="mini" id="fDl">存为 .txt</button>
+      </span>
+    </h2>
+
+    <div class="seg" role="group" aria-label="转换方向">
+      <button class="segbtn" type="button" id="fDirEnc" aria-pressed="true">文件 → Base64</button>
+      <button class="segbtn" type="button" id="fDirDec" aria-pressed="false">Base64 → 文件</button>
+    </div>
+
+    <!-- 编码方向 -->
+    <div id="fEncBox">
+      <div class="drop" id="fDrop" tabindex="0" role="button" aria-label="选择文件或把文件拖到这里">
+        <b>拖文件到这里</b>
+        <span class="sub">或点击选择 · 任意类型 · 单个文件最大 16 MB</span>
+      </div>
+      <input type="file" id="fIn" hidden />
+      <div class="ops">
+        <select id="fForm" title="输出形式">
+          <option value="b64">纯 Base64</option>
+          <option value="url">Data URL</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="fWrap">每 76 字符换行</label>
+        <span class="sp"></span>
+        <span class="fmeta" id="fMeta"></span>
+      </div>
+      <textarea class="io out tall" id="fOut" readonly spellcheck="false" placeholder="选好文件后，这里出现 Base64"></textarea>
+    </div>
+
+    <!-- 解码方向 -->
+    <div id="fDecBox" hidden>
+      <textarea class="io tall" id="fB64" spellcheck="false" autocomplete="off"
+        placeholder="粘贴 Base64，带 data:image/png;base64, 前缀也行"></textarea>
+      <div class="ops">
+        <button id="fParse">解析</button>
+        <input type="text" id="fName" spellcheck="false" autocomplete="off" placeholder="下载时的文件名" />
+        <button class="primary" id="fSave" disabled>下载文件</button>
+        <span class="sp"></span>
+        <span class="fmeta" id="fMeta2"></span>
+      </div>
+      <div id="fPrev"></div>
+    </div>
+
+    <div class="note" id="fileNote"></div>
   </section>
 
   <!-- ============ 2. URL ============ -->
@@ -756,6 +853,396 @@
   }
 
   /* ============================================================
+     文件 Base64
+     ============================================================ */
+
+  const FILE_MAX = 16 * 1024 * 1024;
+  /* ★ 分块必须是 3 的倍数。Base64 每 3 字节一组、不足补 '='；在非 3 倍数处切块时
+     每块尾部会各自补 '='，拼起来就是坏数据（而且不报错，解码出来少几个字节）。
+     32766 = 3 × 10922，同时小于 String.fromCharCode.apply 的参数上限。 */
+  const B64_STEP = 32766;
+
+  const F = {
+    dir: "enc",
+    b64: "", bytes: null, name: "", mime: "",
+    decBytes: null, decB64: "", info: null, autoName: "", imgUrl: "",
+    notes: { enc: "", dec: "" }
+  };
+
+  function fmtSize(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB";
+    return (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + " MB";
+  }
+
+  function bytesToB64Big(bytes) {
+    if (bytes.length <= B64_STEP) return bytesToB64(bytes);
+    const parts = [];
+    for (let i = 0; i < bytes.length; i += B64_STEP) {
+      parts.push(bytesToB64(bytes.subarray(i, i + B64_STEP)));
+    }
+    return parts.join("");
+  }
+
+  /* RFC 2045：每行 76 个字符。逐段 push 再 join，不用正则 replace（大串上会多占一份内存） */
+  function wrap76(s) {
+    const lines = [];
+    for (let i = 0; i < s.length; i += 76) lines.push(s.slice(i, i + 76));
+    return lines.join("\n");
+  }
+
+  /* 当前方向该显示 / 复制的文本 */
+  function fileResult() {
+    if (!F.bytes) return "";
+    const asUrl = $("fForm").value === "url";
+    const body = ($("fWrap").checked && !asUrl) ? wrap76(F.b64) : F.b64;
+    return asUrl ? "data:" + (F.mime || "application/octet-stream") + ";base64," + body : body;
+  }
+
+  function syncFileBtns() {
+    const enc = F.dir === "enc";
+    const dl = $("fDl");
+    /* 解码方向的下载按钮就在文件名旁边，顶栏不再放第二个 —— 同屏两个「下载文件」会让人愣一下 */
+    dl.hidden = !enc;
+    dl.textContent = "存为 .txt";
+    dl.disabled = !F.bytes;
+    $("fSave").disabled = !F.decBytes;
+    $("fCopy").disabled = enc ? !F.bytes : !F.decB64;
+  }
+
+  /* ★ 提示要按「产生它的方向」存，而不是按「当前方向」存：
+     parseB64 是防抖 / 手动触发的，回调可能在用户切到编码方向之后才跑，
+     那时若按 F.dir 写，就会把解码方向的文案贴到编码方向上。 */
+  function noteTo(dir, html) {
+    F.notes[dir] = html || "";
+    if (F.dir === dir) setNote("fileNote", F.notes[dir]);
+  }
+  const encNote = html => noteTo("enc", html);
+  const decNote = html => noteTo("dec", html);
+  function setFileNote(html) { noteTo(F.dir, html); }
+
+  const DROP_HTML = '<b>拖文件到这里</b><span class="sub">或点击选择 · 任意类型 · 单个文件最大 ' + fmtSize(FILE_MAX) + "</span>";
+
+  function resetDrop() {
+    const d = $("fDrop");
+    d.classList.remove("has", "over");
+    d.innerHTML = DROP_HTML;
+  }
+
+  function renderFileOut() {
+    const t = fileResult();
+    const out = $("fOut");
+    out.value = t;
+    out.classList.toggle("filled", !!F.bytes);
+    $("fMeta").textContent = F.bytes
+      ? fmtSize(F.bytes.length) + " → " + fmtSize(t.length)
+        + "（+" + Math.round(t.length / Math.max(1, F.bytes.length) * 100 - 100) + "%）"
+      : "";
+    syncFileBtns();
+  }
+
+  function setFileDir(dir) {
+    F.dir = dir;
+    $("fDirEnc").setAttribute("aria-pressed", dir === "enc" ? "true" : "false");
+    $("fDirDec").setAttribute("aria-pressed", dir === "dec" ? "true" : "false");
+    $("fEncBox").hidden = dir !== "enc";
+    $("fDecBox").hidden = dir !== "dec";
+    setNote("fileNote", F.notes[dir]);
+    syncFileBtns();
+  }
+
+  /* ---------- 编码：文件 → Base64 ---------- */
+  async function loadFile(f) {
+    if (!f) return;
+    if (f.size > FILE_MAX) {
+      encNote('<span class="err-tip">「' + eh(f.name) + '」有 ' + fmtSize(f.size)
+        + '，超过 ' + fmtSize(FILE_MAX) + ' 上限：Base64 还会再膨胀约 1/3，'
+        + '再往上整页都会被一个字符串拖慢。</span>');
+      return;
+    }
+    encNote('<span class="empty-tip">正在读取 ' + eh(f.name) + "…</span>");
+    let bytes;
+    try {
+      bytes = new Uint8Array(await f.arrayBuffer());
+    } catch (e) {
+      encNote('<span class="err-tip">读取失败：' + eh(e.message) + "</span>");
+      return;
+    }
+    F.bytes = bytes;
+    F.name = f.name;
+    F.mime = f.type || "";
+
+    const t0 = performance.now();
+    F.b64 = bytesToB64Big(bytes);
+    const ms = Math.round(performance.now() - t0);
+
+    const d = $("fDrop");
+    d.classList.add("has");
+    d.innerHTML = "<b>" + eh(f.name) + '</b><span class="sub">' + fmtSize(f.size)
+      + (f.type ? " · " + eh(f.type) : "") + " · 点击可换一个</span>";
+
+    renderFileOut();
+
+    const ratio = Math.round(F.b64.length / Math.max(1, bytes.length) * 100 - 100);
+    encNote(
+      "<b>" + eh(F.name) + "</b>：" + bytes.length + " 字节 → Base64 <b>" + F.b64.length
+      + "</b> 个字符（+" + ratio + "%，编码耗时 " + ms + " ms）。"
+      + "<br>「Data URL」可以直接写进 <code>&lt;img src&gt;</code>、CSS <code>url()</code> 或 <code>fetch()</code>；"
+      + "每 76 字符换行是 MIME / PEM（邮件附件、证书、SSH 密钥）的写法，"
+      + "而 data URL 里一旦换行就断了，所以选 Data URL 时该项自动禁用。"
+      + "<br>文件不会离开这台机器 —— 读盘走 <code>File.arrayBuffer()</code>，编码走 <code>btoa</code>。"
+    );
+  }
+
+  /* ---------- 解码：Base64 → 文件 ---------- */
+
+  /* 按文件头认类型。认错也没关系 —— 它只用来给个默认扩展名，用户随时可改。 */
+  function sniff(b) {
+    const head = i => (i < b.length ? b[i] : -1);
+    const at = (off, arr) => { for (let i = 0; i < arr.length; i++) if (head(off + i) !== arr[i]) return false; return true; };
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) if (head(off + i) !== s.charCodeAt(i)) return false; return true; };
+    const T = (ext, mime, label) => ({ ext: ext, mime: mime, label: label });
+
+    if (at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return T("png", "image/png", "PNG 图片");
+    if (at(0, [0xff, 0xd8, 0xff])) return T("jpg", "image/jpeg", "JPEG 图片");
+    if (str(0, "GIF87a") || str(0, "GIF89a")) return T("gif", "image/gif", "GIF 图片");
+    if (str(0, "RIFF") && str(8, "WEBP")) return T("webp", "image/webp", "WebP 图片");
+    if (str(0, "RIFF") && str(8, "WAVE")) return T("wav", "audio/wav", "WAV 音频");
+    if (at(0, [0x42, 0x4d])) return T("bmp", "image/bmp", "BMP 图片");
+    if (at(0, [0x00, 0x00, 0x01, 0x00])) return T("ico", "image/x-icon", "ICO 图标");
+    if (str(0, "%PDF")) return T("pdf", "application/pdf", "PDF 文档");
+    if (str(0, "PK") && (at(2, [3, 4]) || at(2, [5, 6]) || at(2, [7, 8])))
+      return T("zip", "application/zip", "ZIP 压缩包（也可能是 docx / xlsx / apk / jar）");
+    if (at(0, [0x1f, 0x8b])) return T("gz", "application/gzip", "gzip 数据（含 .tar.gz）");
+    if (at(0, [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c])) return T("7z", "application/x-7z-compressed", "7z 压缩包");
+    if (str(0, "Rar!")) return T("rar", "application/vnd.rar", "RAR 压缩包");
+    if (at(0, [0x00, 0x61, 0x73, 0x6d])) return T("wasm", "application/wasm", "WebAssembly 模块");
+    if (at(0, [0x7f, 0x45, 0x4c, 0x46])) return T("elf", "application/octet-stream", "ELF 可执行文件（无扩展名）");
+    if (str(4, "ftyp")) return T("mp4", "video/mp4", "MP4 视频（也可能是 mov / m4a）");
+    if (str(0, "OggS")) return T("ogg", "audio/ogg", "Ogg 音频");
+    if (str(0, "fLaC")) return T("flac", "audio/flac", "FLAC 音频");
+    if (str(0, "ID3") || (head(0) === 0xff && (head(1) & 0xe0) === 0xe0)) return T("mp3", "audio/mpeg", "MP3 音频");
+    if (str(0, "wOFF")) return T("woff", "font/woff", "WOFF 字体");
+    if (str(0, "wOF2")) return T("woff2", "font/woff2", "WOFF2 字体");
+    if (str(0, "OTTO")) return T("otf", "font/otf", "OpenType 字体");
+    if (at(0, [0x00, 0x01, 0x00, 0x00]) || str(0, "true")) return T("ttf", "font/ttf", "TrueType 字体");
+    if (str(0, "SQLite format 3")) return T("sqlite", "application/vnd.sqlite3", "SQLite 数据库");
+
+    /* 没有匹配到文件头：用「有没有控制字符」判断是不是文本。
+       只扫前 512 字节 —— 真按 UTF-8 校验几十 MB 太贵，而文本开头足以区分。 */
+    const n = Math.min(b.length, 512);
+    let text = n > 0;
+    for (let i = 0; i < n; i++) {
+      const c = b[i];
+      if (c === 0 || c < 9 || (c > 13 && c < 32)) { text = false; break; }
+    }
+    if (text) {
+      let s = "";
+      for (let i = 0; i < Math.min(n, 96); i++) s += String.fromCharCode(b[i]);
+      s = s.replace(/^\uFEFF/, "").replace(/^\s+/, "").toLowerCase();
+      if (s.indexOf("<svg") === 0 || (s.indexOf("<?xml") === 0 && s.indexOf("<svg") > -1))
+        return T("svg", "image/svg+xml", "SVG 矢量图（本质是文本）");
+      if (s.indexOf("<!doctype") === 0 || s.indexOf("<html") === 0) return T("html", "text/html", "HTML 文档");
+      if (s[0] === "{" || s[0] === "[") return T("json", "application/json", "JSON 文本");
+      return T("txt", "text/plain", "纯文本");
+    }
+    return T("bin", "application/octet-stream", "未知二进制");
+  }
+
+  function parseB64() {
+    const raw = $("fB64").value;
+    const meta = $("fMeta2");
+    const prev = $("fPrev");
+
+    const reset = () => {
+      F.decBytes = null; F.decB64 = ""; F.info = null;
+      meta.textContent = ""; prev.innerHTML = "";
+      if (F.imgUrl) { URL.revokeObjectURL(F.imgUrl); F.imgUrl = ""; }
+      syncFileBtns();
+    };
+
+    if (!raw.trim()) {
+      reset();
+      decNote('<span class="empty-tip">粘贴 Base64，或把 <code>data:image/png;base64,…</code> 整条丢进来</span>');
+      return;
+    }
+
+    let s = raw.trim();
+    let mimeHint = "";
+    const dm = /^data:([^,]*),/i.exec(s);
+    if (dm) {
+      const params = dm[1].toLowerCase().split(";");
+      mimeHint = (params.shift() || "").trim();
+      if (params.indexOf("base64") < 0) {
+        reset();
+        decNote('<span class="err-tip">这是一条百分号编码的 data URL，里面没有 <code>;base64</code>，'
+          + "不是 Base64。请改用「URL编码」那一类还原。</span>");
+        return;
+      }
+      s = s.slice(dm[0].length);
+    }
+
+    const norm = normalizeB64(s);
+    if (!norm) {
+      reset();
+      decNote('<span class="err-tip">不是合法的 Base64：含非法字符，或长度对不上（长度 ÷ 4 余 1）。</span>');
+      return;
+    }
+    let bytes;
+    try {
+      bytes = b64ToBytes(norm);
+    } catch (e) {
+      reset();
+      decNote('<span class="err-tip">Base64 解码失败：' + eh(e.message) + "</span>");
+      return;
+    }
+
+    const info = sniff(bytes);
+    if (mimeHint && mimeHint.indexOf("/") > 0) info.mime = mimeHint;
+    F.decBytes = bytes;
+    F.decB64 = norm;
+    F.info = info;
+
+    const auto = "decoded." + info.ext;
+    if (!$("fName").value || $("fName").value === F.autoName) $("fName").value = auto;
+    F.autoName = auto;
+    meta.textContent = fmtSize(bytes.length) + " · " + info.ext;
+
+    decNote(
+      "解出 <b>" + bytes.length + "</b> 字节（" + fmtSize(bytes.length) + "），按文件头判断为 <b>"
+      + info.label + "</b>，建议扩展名 <code>." + info.ext + "</code>。"
+      + (mimeHint ? "<br>data URL 里声明的类型是 <code>" + eh(mimeHint) + "</code>，下载时按它来。" : "")
+      + "<br>判断只看开头几个字节，改过扩展名或截断过的文件会被认错 —— 文件名只是默认值，随时可改。"
+    );
+
+    if (F.imgUrl) { URL.revokeObjectURL(F.imgUrl); F.imgUrl = ""; }
+    prev.innerHTML = "";
+    if (bytes.length && /^image\//.test(info.mime)) {
+      F.imgUrl = URL.createObjectURL(new Blob([bytes], { type: info.mime }));
+      const img = document.createElement("img");
+      img.src = F.imgUrl;
+      img.alt = "解码结果预览";
+      prev.appendChild(img);
+    }
+    syncFileBtns();
+  }
+
+  /* ---------- 下载 / 复制 ---------- */
+  function fileName(ext) {
+    const v = ($("fName").value || "").trim().replace(/[\\/:*?"<>|]/g, "_");
+    return v || ("decoded." + ext);
+  }
+
+  function fileDl() {
+    let name, blob;
+    if (F.dir === "enc") {
+      if (!F.bytes) { toast("先选一个文件"); return; }
+      name = (F.name.replace(/\.[^.\/\\]+$/, "") || "base64") + ".base64.txt";
+      blob = new Blob([$("fOut").value], { type: "text/plain;charset=utf-8" });
+    } else {
+      if (!F.decBytes) { toast("先粘贴并解析 Base64"); return; }
+      name = fileName(F.info ? F.info.ext : "bin");
+      blob = new Blob([F.decBytes], { type: "application/octet-stream" });
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast("已开始下载 " + name);
+  }
+
+  function fileCopy() {
+    const t = F.dir === "enc" ? $("fOut").value : F.decB64;
+    if (!t) { toast("还没有可复制的结果"); return; }
+    copyText(t, F.dir === "enc" ? "已复制 Base64" : "已复制规范化后的 Base64");
+  }
+
+  function clearFile() {
+    clearTimeout(fTimer);           // 别让上一轮排队的解析在清空后又把提示写回来
+    F.b64 = ""; F.bytes = null; F.name = ""; F.mime = "";
+    F.decBytes = null; F.decB64 = ""; F.info = null; F.autoName = "";
+    if (F.imgUrl) { URL.revokeObjectURL(F.imgUrl); F.imgUrl = ""; }
+    resetDrop();
+    $("fIn").value = "";
+    $("fOut").value = "";
+    $("fOut").classList.remove("filled");
+    $("fB64").value = "";
+    $("fName").value = "";
+    $("fPrev").innerHTML = "";
+    $("fMeta").textContent = "";
+    $("fMeta2").textContent = "";
+    F.notes.enc = ""; F.notes.dec = "";
+    setNote("fileNote", "");
+    syncFileBtns();
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  const fDrop = $("fDrop"), fIn = $("fIn"), fPanel = $("panel-file");
+
+  fDrop.addEventListener("click", () => fIn.click());
+  fDrop.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fIn.click(); }
+  });
+  fIn.addEventListener("change", () => {
+    const f = fIn.files && fIn.files[0];
+    fIn.value = "";                 // 清掉，才能重复选同一个文件
+    if (f) loadFile(f);
+  });
+
+  /* 整个面板都能接住拖放，不用非得瞄准虚线框 */
+  ["dragenter", "dragover"].forEach(t => fPanel.addEventListener(t, e => {
+    if (F.dir !== "enc") return;
+    e.preventDefault();
+    e.stopPropagation();
+    fDrop.classList.add("over");
+  }));
+  fPanel.addEventListener("dragleave", e => {
+    if (!fPanel.contains(e.relatedTarget)) fDrop.classList.remove("over");
+  });
+  fPanel.addEventListener("drop", e => {
+    if (F.dir !== "enc") return;
+    e.preventDefault();
+    e.stopPropagation();
+    fDrop.classList.remove("over");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f); else toast("没拿到文件，试试「点击选择」");
+  });
+  /* 拖到面板外时也拦一下，否则浏览器会直接把文件当页面打开，当前页就没了 */
+  ["dragover", "drop"].forEach(t => document.addEventListener(t, e => {
+    const ty = e.dataTransfer && e.dataTransfer.types;
+    if (ty && Array.prototype.indexOf.call(ty, "Files") > -1) e.preventDefault();
+  }));
+
+  $("fForm").addEventListener("change", () => {
+    const asUrl = $("fForm").value === "url";
+    $("fWrap").disabled = asUrl;
+    $("fWrap").parentNode.style.opacity = asUrl ? ".45" : "";
+    renderFileOut();
+  });
+  $("fWrap").addEventListener("change", renderFileOut);
+
+  let fTimer = 0;
+  $("fB64").addEventListener("input", () => {
+    clearTimeout(fTimer);
+    if ($("fB64").value.length > 2000000) {
+      setFileNote('<span class="empty-tip">内容超过 2 MB，自动解析已暂停 —— 点「解析」再处理，'
+        + "免得每敲一个字都重算一遍。</span>");
+      return;
+    }
+    fTimer = setTimeout(parseB64, 220);
+  });
+  $("fParse").addEventListener("click", () => { clearTimeout(fTimer); parseB64(); });
+  $("fSave").addEventListener("click", fileDl);
+  $("fDl").addEventListener("click", fileDl);
+  $("fCopy").addEventListener("click", fileCopy);
+  $("fDirEnc").addEventListener("click", () => setFileDir("enc"));
+  $("fDirDec").addEventListener("click", () => setFileDir("dec"));
+
+  /* ============================================================
      进制转换（BigInt，任意长度）
      ============================================================ */
 
@@ -1021,6 +1508,7 @@
     $("baseTbl").innerHTML = "";
     setNote("baseNote", "");
     baseText = "";
+    clearFile();
     toast("已清空全部 " + tabIds.length + " 类");
   });
 
@@ -1069,6 +1557,12 @@
      提前渲染好，切过去立刻有内容，不用等一次输入才出现。 */
   run("b64"); run("url"); run("uni"); run("html"); run("hex");
   runBase();
+
+  /* 文件卡片：把拖放框文案与按钮状态刷成初始态（文案里的体积上限由 FILE_MAX 生成） */
+  resetDrop();
+  setFileDir("enc");
+  renderFileOut();
+  setFileNote('<span class="empty-tip">选一个文件，或切到「Base64 → 文件」粘贴一段 Base64</span>');
 })();
 </script>
 </body>

@@ -393,7 +393,7 @@ var TOOLS = [
   { group:'开发工具', name:'正则测试', path:'regex/', icon:'regex',
     desc:'实时匹配高亮与捕获组明细、替换预览、常用正则速查，性能保护防止灾难性回溯卡死页面。', tags:['正则','RegExp','正则表达式'] },
   { group:'开发工具', name:'编码转换', path:'encoder/', icon:'encode',
-    desc:'Base64、URL、Unicode 转义、HTML 实体、Hex 字节与任意进制互转，编解码一体、支持中文与 emoji。', tags:['Base64','URL编码','Unicode','进制','编码'] },
+    desc:'Base64、URL、Unicode 转义、HTML 实体、Hex 字节与任意进制互转，编解码一体、支持中文与 emoji。另有一类「文件 Base64」：拖入任意文件直接得到 Base64 或 data URL（可每 76 字符换行），粘贴一串 Base64 则按文件头嗅探类型、预览图片并下载回文件，全程不联网。', tags:['Base64','文件','Data URL','URL编码','Unicode','进制','编码'] },
   { group:'开发工具', name:'字符串压缩', path:'compress/', icon:'compress',
     desc:'11 种算法压缩 / 解压字符串：gzip、deflate、deflate-raw 走浏览器原生，Brotli 用本地 WASM，LZW、LZ77、LZ4、Huffman、BWT、算术编码、RLE 为本站实现。实时给出压缩率、节省空间与耗时，可一键对比全部算法在同一段文本上的排名，输出 Base64 或 Hex；标准格式能直接交给 Node / Python / Nginx / lz4 解压。', tags:['压缩','解压','gzip','deflate','zlib','Brotli','br','LZW','LZ77','LZ4','Huffman','BWT','算术编码','RLE','压缩率','Base64'] },
   { group:'开发工具', name:'乱码修复', path:'mojibake/', icon:'mojibake',
