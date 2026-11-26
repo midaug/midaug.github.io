@@ -145,12 +145,37 @@
   #wave { display: block; width: 100%; height: 150px; touch-action: none; cursor: pointer; }
   /* ===== 频谱（频谱图本身是暗底热力图，和浅色页面区分开）===== */
   #specwrap { position: relative; border-top: 1px solid var(--border); background: #0c0f16; }
-  #spec { display: block; width: 100%; height: 116px; touch-action: none; cursor: pointer; }
+  #spec { display: block; width: 100%; height: 190px; touch-action: none; cursor: pointer; }
   #specAxis {
     position: absolute; left: 8px; bottom: 5px; font-size: 10.5px; letter-spacing: .2px;
     color: rgba(255,255,255,.5); pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.6);
   }
   #specAxis b { color: rgba(255,255,255,.78); font-weight: 600; }
+  #specView {
+    position: absolute; right: 8px; bottom: 5px; font-size: 10.5px; letter-spacing: .2px;
+    color: rgba(255,255,255,.55); pointer-events: none; text-shadow: 0 1px 2px rgba(0,0,0,.6);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 缩放控件：浮在频谱右上角，不占布局高度 */
+  #specBar {
+    position: absolute; top: 7px; right: 7px; display: none; align-items: center;
+    background: rgba(10,12,20,.66); border: 1px solid rgba(255,255,255,.16); border-radius: 7px;
+    overflow: hidden; -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+  }
+  #specBar.on { display: flex; }
+  #specBar button {
+    background: none; border: 0; border-radius: 0; color: rgba(255,255,255,.82);
+    font: 600 13px/1 var(--mono); padding: 6px 8px; min-width: 27px; cursor: pointer;
+  }
+  #specBar button:hover { background: rgba(255,255,255,.14); color: #fff; }
+  #specBar button:disabled { opacity: .3; background: none; cursor: default; }
+  #specBar #zLbl { font-size: 10.5px; min-width: 42px; letter-spacing: .2px; }
+
+  /* 全览条（缩放后才出现）：整段缩略图 + 当前可见区间 */
+  #ovwrap { display: none; border-top: 1px solid var(--border); background: #0c0f16; }
+  #ovwrap.on { display: block; }
+  #ov { display: block; width: 100%; height: 18px; cursor: ew-resize; touch-action: none; }
   #waveEmpty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--text-3); font-size: 12.5px; pointer-events: none; text-align: center; padding: 0 16px;
@@ -218,8 +243,14 @@
     .card > h2 { margin-bottom: 10px; }
     button, select { font-size: 12px; }
     #wave { height: 112px; }
-    #spec { height: 84px; }
-    #specAxis { font-size: 10px; }
+    #spec { height: 140px; }
+    #specAxis, #specView { font-size: 10px; }
+    #specAxis .sfx { display: none; }
+    #ov { height: 16px; }
+    /* 窄屏把缩放控件收小一点，少压住频谱 */
+    #specBar { top: 5px; right: 5px; }
+    #specBar button { padding: 5px 6px; min-width: 24px; font-size: 12px; }
+    #specBar #zLbl { min-width: 36px; font-size: 10px; }
     .pick { padding: 16px 10px; }
     input[type="range"] { width: 72px; }
   }
@@ -268,7 +299,7 @@
     <section class="card">
       <h2>
         波形与频谱
-        <span class="hint">点击波形或频谱任意位置跳转；空格播放 / 暂停，← → 前后 5 秒</span>
+        <span class="hint">点击波形或频谱任意位置跳转；空格播放 / 暂停，← → 前后 5 秒；Ctrl + 滚轮缩放时间轴</span>
       </h2>
 
       <div class="wavebox">
@@ -276,6 +307,15 @@
         <div id="specwrap">
           <canvas id="spec" aria-label="频谱图，可点击跳转"></canvas>
           <span id="specAxis"></span>
+          <span id="specView"></span>
+          <div id="specBar">
+            <button type="button" id="zOut" title="缩小时间轴（Ctrl + 滚轮）">−</button>
+            <button type="button" id="zLbl" title="点击恢复完整时长">1×</button>
+            <button type="button" id="zIn" title="放大时间轴（Ctrl + 滚轮）">+</button>
+          </div>
+        </div>
+        <div id="ovwrap">
+          <canvas id="ov" aria-label="全览条，拖动或点击调整可见区间"></canvas>
         </div>
         <div id="waveEmpty">还没有载入音频</div>
       </div>
@@ -462,7 +502,8 @@
       说明：转换走浏览器内置解码 + 本站实现的 WAV / 裸 PCM 封装；MP3 用 lamejs（首次导出时才加载，
       优先读本机 <code>vendor/lame.min.js</code>，缺失时回退 CDN）。OGG / FLAC / M4A 目前只有解码器没有编码器，
       故不作为导出格式。大于 250 MB 的文件建议先用 <code>ffmpeg</code> 切段。
-      频谱图在载入时算一次（STFT，Hann 窗，对数频率，−75 dB 动态范围），换文件重算，不随窗口宽度重算。
+      频谱图在载入时按整段算一张（STFT，Hann 窗，对数频率，−75 dB 动态范围）；放大后只对可见的那一段
+      重算一张更细的图，所以放到 64× 也不会糊。窗口缩放不重算（只拉伸），播放时也不重算。
     </div>
 
   </div>
@@ -773,7 +814,8 @@
   /* ============================================================
      波形峰值 + 绘制
      ============================================================ */
-  var BUCKETS = 4096;
+  /* 峰值分桶数：固定开销很小，取大一点是为了放大后仍有细节 */
+  var BUCKETS = 16384;
 
   function computePeaks(audio) {
     var n = audio.length, chs = audio.numberOfChannels;
@@ -816,9 +858,11 @@
     g.globalAlpha = alpha === undefined ? 1 : alpha;
     var mn = S.peaks.mn, mx = S.peaks.mx;
     var mid = h / 2, amp = Math.max(2, h / 2 - 3) * (S.peaks.gain || 1);
+    /* 只取当前视图对应的那一段峰值（缩放时同一份 peaks 反复用，不失真也不重算） */
+    var span = viewSpan(), b0 = viewT0() * BUCKETS, b1 = b0 + span * BUCKETS;
     g.fillStyle = color;
     for (var x = 0; x < w; x++) {
-      var i0 = Math.floor(x * BUCKETS / w), i1 = Math.floor((x + 1) * BUCKETS / w);
+      var i0 = Math.floor(b0 + (b1 - b0) * x / w), i1 = Math.floor(b0 + (b1 - b0) * (x + 1) / w);
       if (i1 <= i0) i1 = i0 + 1;
       var lo = 0, hi = 0;
       for (var i = i0; i < i1 && i < BUCKETS; i++) { if (mn[i] < lo) lo = mn[i]; if (mx[i] > hi) hi = mx[i]; }
@@ -836,14 +880,16 @@
     if (wave.width !== w) wave.width = w;
     if (wave.height !== h) wave.height = h;
     if (!waveG) waveG = wave.getContext('2d');
-    if (w !== layerW || h !== layerH) {
-      layerW = w; layerH = h;
+    var key = viewZ + '@' + viewT0().toFixed(6) + '@' + w + 'x' + h;
+    if (key !== layerKey) {
+      layerW = w; layerH = h; layerKey = key;
       layerOff = buildLayer(w, h, cssVar('--text-3'), .55);   // 未播放部分淡一点，已播放的靛蓝才跳得出来
       layerOn = buildLayer(w, h, cssVar('--accent'));
     }
   }
 
   function paint() {
+    followPlayhead();
     ensureWaveSize();
     var g = waveG, w = layerW, h = layerH;
     g.clearRect(0, 0, w, h);
@@ -852,19 +898,32 @@
     g.fillRect(0, (h / 2) | 0, w, 1);
     if (layerOff) g.drawImage(layerOff, 0, 0);
     if (S.audio && S.dur > 0) {
+      var t0 = viewT0(), span = viewSpan();
       var p = clamp(pos() / S.dur, 0, 1);
-      var x = Math.round(p * w);
+      var x = Math.round((p - t0) / span * w);
       if (x > 0 && layerOn) {
         g.save(); g.beginPath(); g.rect(0, 0, x, h); g.clip();
         g.drawImage(layerOn, 0, 0);
         g.restore();
       }
-      g.fillStyle = cssVar('--accent');
-      g.fillRect(Math.max(0, x - 1), 0, 2, h);
+      if (x >= 0 && x <= w) {
+        g.fillStyle = cssVar('--accent');
+        g.fillRect(Math.max(0, x - 1), 0, 2, h);
+      }
     }
     $('#tCur').textContent = fmtT(pos(), true);
     $('#tDur').textContent = fmtT(S.dur, true);
     paintSpec();
+  }
+
+  /* 播放头跑出可见区间时把视图跟上（只在播放中，避免手动平移被拽回） */
+  function followPlayhead() {
+    if (panning || viewZ <= 1.001 || !S.playing || !S.dur) return;
+    var r = pos() / S.dur, span = viewSpan(), t0 = viewT0();
+    if (r >= t0 && r <= t0 + span * 0.92) return;
+    viewC = clamp(r - span * 0.42, span / 2, 1 - span / 2);
+    invalidateWave();
+    syncZoomUI();
   }
 
   var repaintQueued = 0;
@@ -876,12 +935,66 @@
   /* ============================================================
      频谱图：整段音频的 STFT 热力图
      - 横轴与波形共用时间轴（点击、播放头一致），纵轴对数频率
-     - 只算一份 1200×224 的位图，换宽度只缩放不重算；分片跑，播放不被卡住
+     - 只算一份位图，缩放只裁剪缩放不重算；分片跑，播放不被卡住
      ============================================================ */
-  var SPEC_COLS = 1200, SPEC_ROWS = 224;
+  var SPEC_MIN_COLS = 1200, SPEC_MAX_COLS = 5200;
   var spec = null;                 // { cv, fmin, fmax }
   var specGen = 0;                 // 换文件 / 重新解析时 +1，作废在跑的旧计算
   var specCv = $('#spec'), specG = null;
+  var ovCv = $('#ov'), ovG = null;
+
+  /* 时间轴视图：z = 1 全览，z > 1 时只显示 1/z 长的区间，中心在 viewC（0..1） */
+  var VIEW_MAX_Z = 64;
+  var viewZ = 1, viewC = 0.5;
+  var layerKey = '';
+
+  function viewSpan() { return 1 / viewZ; }
+  function viewT0() {
+    var s = viewSpan();
+    return clamp(viewC - s / 2, 0, Math.max(0, 1 - s));
+  }
+  /* 视图变了就丢掉波形图层（它是按当前窗口画的） */
+  function invalidateWave() { layerW = layerH = 0; layerKey = ''; }
+
+  function setView(z, c) {
+    z = clamp(z, 1, VIEW_MAX_Z);
+    if (z < 1.0001) { z = 1; c = 0.5; }
+    var span = 1 / z;
+    viewZ = z;
+    viewC = clamp(c, span / 2, 1 - span / 2);
+    invalidateWave();
+    syncZoomUI();
+    paint();
+    scheduleWinSpec();          // 停机后按新窗口重算高清图
+  }
+
+  /* 以 pivot（0..1，画布内的相对位置）为中心缩放 */
+  function zoomBy(f, pivot) {
+    if (!S.dur) return;
+    pivot = pivot === undefined ? 0.5 : clamp(pivot, 0, 1);
+    var span = viewSpan(), at = viewT0() + pivot * span;
+    var z2 = clamp(viewZ * f, 1, VIEW_MAX_Z);
+    if (Math.abs(z2 - viewZ) < 1e-4) return;
+    var s2 = 1 / z2;
+    setView(z2, at + (0.5 - pivot) * s2);
+  }
+
+  function syncZoomUI() {
+    var on = !!S.audio;
+    $('#specBar').classList.toggle('on', on);
+    var lbl = viewZ < 1.02 ? '1×' : (viewZ < 10 ? viewZ.toFixed(1) + '×' : Math.round(viewZ) + '×');
+    $('#zLbl').textContent = lbl;
+    $('#zOut').disabled = !on || viewZ <= 1.001;
+    $('#zIn').disabled = !on || viewZ >= VIEW_MAX_Z - 0.001;
+    $('#ovwrap').classList.toggle('on', on && viewZ > 1.001);
+    var el = $('#specView');
+    if (!S.dur || viewZ <= 1.001) { el.textContent = ''; }
+    else {
+      var a = viewT0() * S.dur;
+      el.textContent = fmtT(a, true) + ' – ' + fmtT((viewT0() + viewSpan()) * S.dur, true);
+    }
+    paintOv();
+  }
 
   /* 暗→靛蓝→紫→橙→亮黄，热度越高越亮；与全站 accent 同色系 */
   var SPEC_LUT = (function () {
@@ -953,15 +1066,16 @@
     var el = $('#specAxis');
     if (text === undefined) {
       el.innerHTML = spec
-        ? '频谱 · 对数频率 <b>' + fmtHz(spec.fmin) + '–' + fmtHz(spec.fmax) + '</b>'
+        ? '<span class="sfx">频谱 · 对数频率 </span><b>' + fmtHz(spec.fmin) + '–' + fmtHz(spec.fmax) + '</b>'
         : '';
     } else {
       el.textContent = text;
     }
   }
 
-  function computeSpec(audio) {
-    var gen = ++specGen;
+  /* 频谱渲染核心：把 [r0, r1] 这段（归一化时间）算成 cols×rows 位图。
+     norm 传已有标尺（top/floor dB），缩放重算时沿用同一标尺，颜色不会跟着跳。 */
+  function specMap(audio, r0, r1, cols, rows, norm, check, done) {
     var sr = audio.sampleRate, nyq = sr / 2;
     var N = sr >= 32000 ? 2048 : 1024;
     var half = N >> 1;
@@ -971,7 +1085,6 @@
     var ch = [];
     for (var c = 0; c < chs; c++) ch.push(audio.getChannelData(c));
     var len = audio.length;
-    var cols = SPEC_COLS, rows = SPEC_ROWS;
     var fmin = 20, fmax = Math.min(nyq, 20000);
     if (fmax <= fmin) { fmin = 10; fmax = Math.max(nyq, 20); }
 
@@ -985,9 +1098,10 @@
 
     var db = new Float32Array(cols * rows);
     var winGain = 1 / (0.5 * N);     // Hann 相干增益 0.5：满幅正弦 → 0 dBFS
+    var a = r0 * len, b = r1 * len;
 
     function doCol(j) {
-      var start = Math.round((j + 0.5) / cols * len) - half;
+      var start = Math.round(a + (j + 0.5) / cols * (b - a)) - half;
       for (var i = 0; i < N; i++) {
         var idx = start + i, v = 0;
         if (idx >= 0 && idx < len) {
@@ -1001,8 +1115,8 @@
       var o = j * rows;
       for (var y = 0; y < rows; y++) {
         var b0 = edges[y + 1], b1 = edges[y], mx = 0;
-        for (var b = b0; b < b1; b++) {
-          var m = re[b] * re[b] + im[b] * im[b];
+        for (var bb = b0; bb < b1; bb++) {
+          var m = re[bb] * re[bb] + im[bb] * im[bb];
           if (m > mx) mx = m;
         }
         db[o + y] = 20 * Math.log10(Math.sqrt(mx) * winGain + 1e-9);
@@ -1010,12 +1124,16 @@
     }
 
     function finish() {
-      if (gen !== specGen) return;
-      var top = -Infinity;
-      for (var i = 0; i < db.length; i++) if (db[i] > top) top = db[i];
-      if (!isFinite(top)) top = -120;
-      top = Math.max(top, -60);          // 极安静的素材也别把噪声底拉成满屏
-      var floor = top - 75;
+      if (!check()) return;
+      var top, floor;
+      if (norm) { top = norm.top; floor = norm.floor; }
+      else {
+        top = -Infinity;
+        for (var i = 0; i < db.length; i++) if (db[i] > top) top = db[i];
+        if (!isFinite(top)) top = -120;
+        top = Math.max(top, -60);        // 极安静的素材也别把噪声底拉成满屏
+        floor = top - 75;
+      }
       var tmp = document.createElement('canvas');
       tmp.width = cols; tmp.height = rows;
       var tg = tmp.getContext('2d');
@@ -1033,18 +1151,63 @@
         }
       }
       tg.putImageData(img, 0, 0);
-      spec = { cv: tmp, fmin: fmin, fmax: fmax };
-      setSpecAxis();
-      paintSpec();
+      done(tmp, { fmin: fmin, fmax: fmax, top: top, floor: floor });
     }
 
     var j = 0, step = 150;
     (function run() {
-      if (gen !== specGen) return;
+      if (!check()) return;
       var end = Math.min(cols, j + step);
       for (; j < end; j++) doCol(j);
       if (j < cols) requestAnimationFrame(run); else finish();
     })();
+  }
+
+  function specRows() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    return clamp(Math.round(Math.max(120, specCv.clientHeight || 190) * dpr), 192, 512);
+  }
+
+  /* 全览图：长文件封顶，短文件按 120 列/秒 */
+  function computeSpec(audio) {
+    var gen = ++specGen;
+    var dur = audio.duration || audio.length / audio.sampleRate;
+    var cols = clamp(Math.round(dur * 120), SPEC_MIN_COLS, SPEC_MAX_COLS);
+    specMap(audio, 0, 1, cols, specRows(), null,
+      function () { return gen === specGen; },
+      function (cv, nrm) {
+        spec = { cv: cv, fmin: nrm.fmin, fmax: nrm.fmax, top: nrm.top, floor: nrm.floor };
+        setSpecAxis();
+        syncZoomUI();
+        paintSpec();
+        scheduleWinSpec();       // 停在缩放状态时，接着补当前窗口的高清图
+      });
+  }
+
+  /* 放大后按可见窗口重算一张高清图：只算看得见的那一段，所以能一直算到 64× */
+  var specWin = null, winGen = 0, winTimer = 0;
+  var WIN_MAX_COLS = 2600;
+
+  function scheduleWinSpec() {
+    clearTimeout(winTimer);
+    if (S.playing) return;        // 播放中窗口一直在动，等停下来再算
+    winTimer = setTimeout(computeWinSpec, 160);
+  }
+
+  function computeWinSpec() {
+    var gen = ++winGen;
+    specWin = null;
+    if (!S.audio || viewZ <= 1.001 || !spec) { paintSpec(); return; }
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cols = clamp(Math.round(specCv.clientWidth * dpr), 400, WIN_MAX_COLS);
+    var r0 = viewT0(), r1 = r0 + viewSpan();
+    var norm = { top: spec.top, floor: spec.floor };
+    specMap(S.audio, r0, r1, cols, specRows(), norm,
+      function () { return gen === winGen; },
+      function (cv) {
+        specWin = { cv: cv, r0: r0, r1: r1 };
+        paintSpec();
+      });
   }
 
   function paintSpec() {
@@ -1056,17 +1219,62 @@
     if (!specG) specG = specCv.getContext('2d');
     var g = specG;
     g.clearRect(0, 0, w, h);
-    if (spec) {
-      g.drawImage(spec.cv, 0, 0, w, h);
+    var t0 = viewT0(), span = viewSpan();
+    var win = (specWin && viewZ > 1.001 &&
+      Math.abs(specWin.r0 - t0) < 1e-4 && Math.abs(specWin.r1 - (t0 + span)) < 1e-4) ? specWin : null;
+    if (win) {
+      g.imageSmoothingEnabled = true;
+      g.drawImage(win.cv, 0, 0, win.cv.width, win.cv.height, 0, 0, w, h);
+    } else if (spec) {
+      var sx = t0 * spec.cv.width, sw = span * spec.cv.width;
+      if (sx < 0) { sw += sx; sx = 0; }
+      if (sx + sw > spec.cv.width) sw = spec.cv.width - sx;
+      g.imageSmoothingEnabled = true;
+      if (g.imageSmoothingQuality) g.imageSmoothingQuality = 'high';
+      g.drawImage(spec.cv, sx, 0, Math.max(1, sw), spec.cv.height, 0, 0, w, h);
     } else {
       g.fillStyle = '#0c0f16';
       g.fillRect(0, 0, w, h);
     }
     if (S.audio && S.dur > 0) {
-      var x = Math.round(clamp(pos() / S.dur, 0, 1) * w);
-      g.fillStyle = 'rgba(255,255,255,.88)';
-      g.fillRect(Math.max(0, x - 1), 0, 2, h);
+      var x = Math.round((clamp(pos() / S.dur, 0, 1) - t0) / span * w);
+      if (x >= 0 && x <= w) {
+        g.fillStyle = 'rgba(255,255,255,.88)';
+        g.fillRect(Math.max(0, x - 1), 0, 2, h);
+      }
     }
+  }
+
+  /* 全览条：整段缩略图 + 当前可见区间（缩放后才有） */
+  function paintOv() {
+    if (!ovCv) return;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var w = Math.max(1, Math.round(ovCv.clientWidth * dpr));
+    var h = Math.max(1, Math.round(ovCv.clientHeight * dpr));
+    if (ovCv.width !== w) ovCv.width = w;
+    if (ovCv.height !== h) ovCv.height = h;
+    if (!ovG) ovG = ovCv.getContext('2d');
+    var g = ovG;
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = '#0c0f16';
+    g.fillRect(0, 0, w, h);
+    if (!spec) return;
+    g.globalAlpha = .85;
+    g.imageSmoothingEnabled = true;
+    g.drawImage(spec.cv, 0, 0, w, h);
+    g.globalAlpha = 1;
+    var t0 = viewT0(), span = viewSpan();
+    g.fillStyle = 'rgba(6,8,14,.55)';
+    g.fillRect(0, 0, Math.round(t0 * w), h);
+    g.fillRect(Math.round((t0 + span) * w), 0, w, h);
+    /* 选框：外深内白，压在彩色缩略图上也能看清 */
+    var bx = Math.round(t0 * w), bw = Math.max(2, Math.round(span * w));
+    g.lineWidth = Math.max(2, dpr);
+    g.strokeStyle = 'rgba(8,10,16,.55)';
+    g.strokeRect(bx + .5, .5, bw - 1, h - 1);
+    g.lineWidth = Math.max(1, dpr);
+    g.strokeStyle = 'rgba(255,255,255,.95)';
+    g.strokeRect(bx + .5, .5, bw - 1, h - 1);
   }
 
   /* ============================================================
@@ -1119,6 +1327,7 @@
     killSrc();
     setPlayIcon();
     paint();
+    scheduleWinSpec();
   }
 
   function toggle() { S.playing ? pause() : play(); }
@@ -1127,13 +1336,26 @@
     killSrc();
     S.pausedAt = 0;
     setPlayIcon();
+    showTime(0);
     paint();
+    scheduleWinSpec();
   }
 
   function seek(t) {
     if (!S.audio) return;
     t = clamp(t, 0, S.dur);
+    showTime(t);
     if (S.playing) play(t); else { S.pausedAt = t; paint(); }
+  }
+
+  /* 缩放状态下，跳到窗口外的时刻就把视图跟过去（拖动擦洗时不跟，否则手感会跳） */
+  function showTime(t) {
+    if (scrubbing || viewZ <= 1.001 || !S.dur) return;
+    var r = t / S.dur, span = viewSpan(), t0 = viewT0();
+    if (r >= t0 + span * 0.04 && r <= t0 + span * 0.96) return;
+    viewC = clamp(r, span / 2, 1 - span / 2);
+    invalidateWave();
+    syncZoomUI();
   }
 
   var rafId = 0;
@@ -1172,11 +1394,14 @@
     S.pausedAt = clamp(oldPos, 0, S.dur);
     S.peaks = null;
     layerW = layerH = 0;      // 换文件必须丢掉旧的波形图层，否则会先闪一下上一首
+    viewZ = 1; viewC = 0.5; invalidateWave();   // 新文件从全览开始
     spec = null; specGen++;   // 频谱同理：旧图立即作废，图谱算完再补上
+    specWin = null; winGen++; clearTimeout(winTimer);
     setSpecAxis('频谱 · 计算中…');
     setMsg('');
     $('#waveEmpty').style.display = 'none';
     setEnabled(true);
+    syncZoomUI();
     hdr(audio.sampleRate + ' Hz · ' + ({ 1: '单声道', 2: '立体声' }[audio.numberOfChannels] || audio.numberOfChannels + ' 声道') + ' · ' + fmtT(S.dur, true));
     paintMeta();
     $('#pcmNote').textContent = noteFor();
@@ -1229,8 +1454,11 @@
     killSrc();
     setPlayIcon();
     layerW = layerH = 0;
+    viewZ = 1; viewC = 0.5; invalidateWave();
     spec = null; specGen++;
+    specWin = null; winGen++; clearTimeout(winTimer);
     setSpecAxis('');
+    syncZoomUI();
     paint();
     // 上一次是「自动兜底」翻到无头模式的，换文件时复位 —— 否则下一个正常 mp3 会被当裸数据糊掉
     if (S.rawAuto) { $('#rawMode').checked = false; S.rawAuto = false; }
@@ -1405,27 +1633,69 @@
     else paint();
   });
 
-  // 波形 / 频谱拖动、点击跳转（两块画布共用时间轴）
-  var scrubbing = false;
+  // 波形 / 频谱拖动、点击跳转（两块画布共用时间轴）；Shift + 拖动平移
+  var scrubbing = false, panning = false, panX = 0, panC = 0;
   function seekAt(e, el) {
     if (!S.audio) return;
     var r = el.getBoundingClientRect();
     var p = clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1);
-    seek(p * S.dur);
+    seek((viewT0() + p * viewSpan()) * S.dur);
   }
   [wave, specCv].forEach(function (el) {
     el.addEventListener('pointerdown', function (e) {
       if (!S.audio) return;
-      scrubbing = true;
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      if (e.shiftKey && viewZ > 1.001) {
+        panning = true; panX = e.clientX; panC = viewC;
+        el.style.cursor = 'grabbing';
+        return;
+      }
+      scrubbing = true;
       seekAt(e, el);
     });
     el.addEventListener('pointermove', function (e) {
-      if (scrubbing) seekAt(e, el);
+      if (panning) {
+        var r = el.getBoundingClientRect();
+        setView(viewZ, panC - (e.clientX - panX) / Math.max(1, r.width) * viewSpan());
+      } else if (scrubbing) seekAt(e, el);
     });
     ['pointerup', 'pointercancel'].forEach(function (ev) {
-      el.addEventListener(ev, function () { scrubbing = false; });
+      el.addEventListener(ev, function () {
+        scrubbing = false; panning = false; el.style.cursor = '';
+      });
     });
+  });
+
+  // Ctrl / ⌘ + 滚轮：以指针位置为中心缩放（触控板双指捏合也会走这里）
+  $('.wavebox').addEventListener('wheel', function (e) {
+    if (!S.audio || !(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    var r = specCv.getBoundingClientRect();
+    var pv = clamp((e.clientX - r.left) / Math.max(1, r.width), 0, 1);
+    zoomBy(e.deltaY < 0 ? 1.3 : 1 / 1.3, pv);
+  }, { passive: false });
+
+  // 缩放按钮
+  $('#zIn').addEventListener('click', function () { zoomBy(1.6); });
+  $('#zOut').addEventListener('click', function () { zoomBy(1 / 1.6); });
+  $('#zLbl').addEventListener('click', function () { setView(1, 0.5); });
+
+  // 全览条：点击 / 拖动把可见区间移过去
+  var ovDrag = false;
+  function ovSeek(e) {
+    if (!spec) return;
+    var r = ovCv.getBoundingClientRect();
+    setView(viewZ, (e.clientX - r.left) / Math.max(1, r.width));
+  }
+  ovCv.addEventListener('pointerdown', function (e) {
+    if (!spec) return;
+    ovDrag = true;
+    try { ovCv.setPointerCapture(e.pointerId); } catch (err) {}
+    ovSeek(e);
+  });
+  ovCv.addEventListener('pointermove', function (e) { if (ovDrag) ovSeek(e); });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    ovCv.addEventListener(ev, function () { ovDrag = false; });
   });
 
   // 参数变化 → 重新解析（只在无头模式下有意义）
@@ -1452,7 +1722,9 @@
      ============================================================ */
   document.addEventListener('keydown', function (e) {
     var t = e.target;
-    if (t && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName)) return;
+    // 输入控件里不抢键；按钮上只放过空格（保留「空格激活按钮」的原生行为）
+    if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
+    if (t && t.tagName === 'BUTTON' && e.code === 'Space') return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (!S.audio) return;
     if (e.code === 'Space') { e.preventDefault(); toggle(); }
@@ -1460,6 +1732,9 @@
     else if (e.key === 'ArrowRight') { e.preventDefault(); seek(pos() + 5); }
     else if (e.key === 'Home') { e.preventDefault(); seek(0); }
     else if (e.key === 'End') { e.preventDefault(); seek(S.dur); }
+    else if (e.key === '=' || e.key === '+') { e.preventDefault(); zoomBy(1.6); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomBy(1 / 1.6); }
+    else if (e.key === '0') { e.preventDefault(); setView(1, 0.5); }
   });
 
   /* ============================================================
@@ -1782,6 +2057,8 @@
     rzTimer = setTimeout(function () {
       layerW = layerH = 0;
       paint();
+      paintOv();
+      scheduleWinSpec();
     }, 80);
   });
 
@@ -1791,6 +2068,7 @@
   syncFmtRows();
   updateSummary();
   setEnabled(false);
+  syncZoomUI();
   paint();
 })();
 </script>
